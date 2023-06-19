@@ -19,6 +19,14 @@ type GinRoute struct {
 	instance *gin.Engine
 }
 
+func NewGinRoute(config config.Config) *GinRoute {
+	gin.SetMode(gin.ReleaseMode)
+	return &GinRoute{
+		config:   config,
+		instance: gin.New(),
+	}
+}
+
 func (r *GinRoute) Fallback(handler httpcontract.HandlerFunc) {
 	r.instance.NoRoute(handlerToGinHandler(handler))
 }

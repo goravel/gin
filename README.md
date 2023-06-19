@@ -16,15 +16,15 @@ Gin http driver for Goravel.
 go get -u github.com/goravel/gin
 ```
 
-2. Register service provider
+2. Register service provider, make sure it is registered first.
 
 ```
 // config/app.go
 import "github.com/goravel/gin"
 
 "providers": []foundation.ServiceProvider{
-    ...
     &gin.ServiceProvider{},
+    ...
 }
 ```
 

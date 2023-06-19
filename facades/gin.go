@@ -8,7 +8,7 @@ import (
 )
 
 func Http() http.Context {
-	instance, err := gin.App.Make(gin.Binding)
+	instance, err := gin.App.Make(gin.HttpBinding)
 	if err != nil {
 		log.Fatalln(err)
 		return nil
@@ -18,7 +18,7 @@ func Http() http.Context {
 }
 
 func Route() route.Engine {
-	instance, err := gin.App.Make(gin.Binding)
+	instance, err := gin.App.Make(gin.RouteBinding)
 	if err != nil {
 		log.Fatalln(err)
 		return nil

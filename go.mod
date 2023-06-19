@@ -6,8 +6,11 @@ require (
 	github.com/gin-gonic/gin v1.9.1
 	github.com/gookit/color v1.5.3
 	github.com/gookit/validate v1.4.6
-	github.com/goravel/framework v1.12.1-0.20230619144811-f6176275293d
+	github.com/goravel/framework v1.12.1-0.20230619160335-80dc15061e3b
+	github.com/opentracing/opentracing-go v1.2.0
+	github.com/rs/cors v1.9.0
 	github.com/spf13/cast v1.5.1
+	github.com/unrolled/secure v1.13.0
 )
 
 require (
@@ -19,6 +22,7 @@ require (
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-playground/validator/v10 v10.14.0 // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
+	github.com/golang-module/carbon/v2 v2.2.3 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/gookit/filter v1.1.4 // indirect
 	github.com/gookit/goutil v0.5.15 // indirect

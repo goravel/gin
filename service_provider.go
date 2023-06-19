@@ -1,6 +1,8 @@
 package gin
 
 import (
+	"github.com/gin-gonic/gin"
+
 	"github.com/goravel/framework/contracts/cache"
 	"github.com/goravel/framework/contracts/config"
 	"github.com/goravel/framework/contracts/foundation"
@@ -9,7 +11,8 @@ import (
 	"github.com/goravel/framework/contracts/validation"
 )
 
-const Binding = "goravel.gin"
+const HttpBinding = "goravel.gin.http"
+const RouteBinding = "goravel.gin.route"
 
 var App foundation.Application
 
@@ -27,8 +30,11 @@ type ServiceProvider struct {
 func (receiver *ServiceProvider) Register(app foundation.Application) {
 	App = app
 
-	app.Bind(Binding, func(app foundation.Application) (any, error) {
-		return nil, nil
+	app.Bind(HttpBinding, func(app foundation.Application) (any, error) {
+		return NewGinContext(&gin.Context{}), nil
+	})
+	app.Bind(RouteBinding, func(app foundation.Application) (any, error) {
+		return NewGinRoute(app.MakeConfig()), nil
 	})
 }
 
