@@ -7,16 +7,6 @@ import (
 	"log"
 )
 
-func Route() route.Engine {
-	instance, err := gin.App.Make(gin.Binding)
-	if err != nil {
-		log.Fatalln(err)
-		return nil
-	}
-
-	return instance.(*gin.GinRoute)
-}
-
 func Http() http.Context {
 	instance, err := gin.App.Make(gin.Binding)
 	if err != nil {
@@ -25,4 +15,14 @@ func Http() http.Context {
 	}
 
 	return instance.(*gin.GinContext)
+}
+
+func Route() route.Engine {
+	instance, err := gin.App.Make(gin.Binding)
+	if err != nil {
+		log.Fatalln(err)
+		return nil
+	}
+
+	return instance.(*gin.GinRoute)
 }
