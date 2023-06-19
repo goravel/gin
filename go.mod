@@ -2,7 +2,7 @@ module github.com/goravel/gin
 
 go 1.18
 
-require github.com/goravel/framework v1.12.1-0.20230619105153-87db2a79203e
+require github.com/goravel/framework v1.12.1-0.20230619144811-f6176275293d
 
 require (
 	github.com/golang/protobuf v1.5.3 // indirect

@@ -10,6 +10,8 @@ github.com/goravel/framework v1.12.0 h1:5cQ8zdX6fBF4Sd7xlLWe44pZDugjLLBivzqthFRZ
 github.com/goravel/framework v1.12.0/go.mod h1:d9oEiN6DjhV4Kf8x/bXUH2aEit3h0huItxMnOKelkZg=
 github.com/goravel/framework v1.12.1-0.20230619105153-87db2a79203e h1:kbRqGuhiOKYhxNuz9fEQRGuAx8cR+w6y3LIWX0zmKGM=
 github.com/goravel/framework v1.12.1-0.20230619105153-87db2a79203e/go.mod h1:d9oEiN6DjhV4Kf8x/bXUH2aEit3h0huItxMnOKelkZg=
+github.com/goravel/framework v1.12.1-0.20230619144811-f6176275293d h1:sCqKjbNiMvlK+8rArF7XtNW2mMcDioXKRP1+tUatlD4=
+github.com/goravel/framework v1.12.1-0.20230619144811-f6176275293d/go.mod h1:96GRS8270PKLfJU9zrrLE7XKlp20S2TJ9RB337jBMy4=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/sirupsen/logrus v1.9.3 h1:dueUQJ1C2q9oE3F7wvmSGAaVtTmUizReu6fjN8uqzbQ=

@@ -11,7 +11,6 @@ import (
 	"github.com/goravel/framework/contracts/config"
 	httpcontract "github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/contracts/route"
-	goravelhttp "github.com/goravel/framework/http"
 )
 
 type GinRoute struct {
@@ -32,7 +31,7 @@ func (r *GinRoute) GlobalMiddleware(middlewares ...httpcontract.Middleware) {
 		r.instance.Group("/"),
 		"",
 		[]httpcontract.Middleware{},
-		[]httpcontract.Middleware{goravelhttp.GinResponseMiddleware()},
+		[]httpcontract.Middleware{GinResponseMiddleware()},
 	)
 }
 

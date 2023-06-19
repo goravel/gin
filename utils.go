@@ -11,7 +11,6 @@ import (
 
 	"github.com/goravel/framework/contracts/config"
 	httpcontract "github.com/goravel/framework/contracts/http"
-	frameworkhttp "github.com/goravel/framework/http"
 )
 
 func pathToGinPath(relativePath string) string {
@@ -29,13 +28,13 @@ func middlewaresToGinHandlers(middlewares []httpcontract.Middleware) []gin.Handl
 
 func handlerToGinHandler(handler httpcontract.HandlerFunc) gin.HandlerFunc {
 	return func(ginCtx *gin.Context) {
-		handler(frameworkhttp.NewGinContext(ginCtx))
+		handler(NewGinContext(ginCtx))
 	}
 }
 
 func middlewareToGinHandler(handler httpcontract.Middleware) gin.HandlerFunc {
 	return func(ginCtx *gin.Context) {
-		handler(frameworkhttp.NewGinContext(ginCtx))
+		handler(NewGinContext(ginCtx))
 	}
 }
 
