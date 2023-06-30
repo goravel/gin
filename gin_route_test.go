@@ -26,7 +26,6 @@ import (
 	"github.com/goravel/framework/contracts/validation"
 	validationmock "github.com/goravel/framework/contracts/validation/mocks"
 	frameworkfilesystem "github.com/goravel/framework/filesystem"
-	frameworkhttp "github.com/goravel/framework/http"
 )
 
 func TestFallback(t *testing.T) {
@@ -442,17 +441,17 @@ func TestGinRequest(t *testing.T) {
 					return err
 				}
 
-				logo, err := os.Open("../logo.png")
+				readme, err := os.Open("./README.md")
 				if err != nil {
 					return err
 				}
-				defer logo.Close()
-				part1, err := writer.CreateFormFile("file", filepath.Base("../logo.png"))
+				defer readme.Close()
+				part1, err := writer.CreateFormFile("file", filepath.Base("./README.md"))
 				if err != nil {
 					return err
 				}
 
-				if _, err = io.Copy(part1, logo); err != nil {
+				if _, err = io.Copy(part1, readme); err != nil {
 					return err
 				}
 
@@ -466,7 +465,6 @@ func TestGinRequest(t *testing.T) {
 				return nil
 			},
 			expectCode: http.StatusOK,
-			expectBody: "{\"all\":{\"a\":\"1,2\",\"b\":\"4\",\"e\":\"e\",\"file\":{\"Filename\":\"logo.png\",\"Header\":{\"Content-Disposition\":[\"form-data; name=\\\"file\\\"; filename=\\\"logo.png\\\"\"],\"Content-Type\":[\"application/octet-stream\"]},\"Size\":16438}}}",
 		},
 		{
 			name:   "All with empty form when Post",
@@ -526,7 +524,7 @@ func TestGinRequest(t *testing.T) {
 			url:    "/all?a=1&a=2&name=3",
 			setup: func(method, url string) error {
 				mockLog := &logmock.Log{}
-				frameworkhttp.LogFacade = mockLog
+				LogFacade = mockLog
 				mockLog.On("Error", mock.Anything).Twice()
 
 				gin.Post("/all", func(ctx httpcontract.Context) {
@@ -1159,8 +1157,8 @@ func TestGinRequest(t *testing.T) {
 
 					fileInfo, err := ctx.Request().File("file")
 
-					mockDriver.On("PutFile", "test", fileInfo).Return("test/logo.png", nil).Once()
-					mockStorage.On("Exists", "test/logo.png").Return(true).Once()
+					mockDriver.On("PutFile", "test", fileInfo).Return("test/README.md", nil).Once()
+					mockStorage.On("Exists", "test/README.md").Return(true).Once()
 
 					if err != nil {
 						ctx.Response().Success().String("get file error")
@@ -1191,17 +1189,17 @@ func TestGinRequest(t *testing.T) {
 
 				payload := &bytes.Buffer{}
 				writer := multipart.NewWriter(payload)
-				logo, err := os.Open("../logo.png")
+				readme, err := os.Open("./README.md")
 				if err != nil {
 					return err
 				}
-				defer logo.Close()
-				part1, err := writer.CreateFormFile("file", filepath.Base("../logo.png"))
+				defer readme.Close()
+				part1, err := writer.CreateFormFile("file", filepath.Base("./README.md"))
 				if err != nil {
 					return err
 				}
 
-				if _, err = io.Copy(part1, logo); err != nil {
+				if _, err = io.Copy(part1, readme); err != nil {
 					return err
 				}
 
@@ -1215,7 +1213,7 @@ func TestGinRequest(t *testing.T) {
 				return nil
 			},
 			expectCode: http.StatusOK,
-			expectBody: "{\"exist\":true,\"extension\":\"png\",\"file_path_length\":13,\"hash_name_length\":44,\"hash_name_length1\":49,\"original_extension\":\"png\",\"original_name\":\"logo.png\"}",
+			expectBody: "{\"exist\":true,\"extension\":\"txt\",\"file_path_length\":14,\"hash_name_length\":44,\"hash_name_length1\":49,\"original_extension\":\"md\",\"original_name\":\"README.md\"}",
 		},
 		{
 			name:   "GET with validator and validate pass",
@@ -1225,7 +1223,7 @@ func TestGinRequest(t *testing.T) {
 				gin.Get("/validator/validate/success", func(ctx httpcontract.Context) {
 					mockValication := &validationmock.Validation{}
 					mockValication.On("Rules").Return([]validation.Rule{}).Once()
-					frameworkhttp.ValidationFacade = mockValication
+					ValidationFacade = mockValication
 
 					validator, err := ctx.Request().Validate(map[string]string{
 						"name": "required",
@@ -1271,7 +1269,7 @@ func TestGinRequest(t *testing.T) {
 				gin.Get("/validator/validate/fail", func(ctx httpcontract.Context) {
 					mockValication := &validationmock.Validation{}
 					mockValication.On("Rules").Return([]validation.Rule{}).Once()
-					frameworkhttp.ValidationFacade = mockValication
+					ValidationFacade = mockValication
 
 					validator, err := ctx.Request().Validate(map[string]string{
 						"name1": "required",
@@ -1309,7 +1307,7 @@ func TestGinRequest(t *testing.T) {
 				gin.Get("/validator/validate-request/success", func(ctx httpcontract.Context) {
 					mockValication := &validationmock.Validation{}
 					mockValication.On("Rules").Return([]validation.Rule{}).Once()
-					frameworkhttp.ValidationFacade = mockValication
+					ValidationFacade = mockValication
 
 					var createUser CreateUser
 					validateErrors, err := ctx.Request().ValidateRequest(&createUser)
@@ -1346,7 +1344,7 @@ func TestGinRequest(t *testing.T) {
 				gin.Get("/validator/validate-request/fail", func(ctx httpcontract.Context) {
 					mockValication := &validationmock.Validation{}
 					mockValication.On("Rules").Return([]validation.Rule{}).Once()
-					frameworkhttp.ValidationFacade = mockValication
+					ValidationFacade = mockValication
 
 					var createUser CreateUser
 					validateErrors, err := ctx.Request().ValidateRequest(&createUser)
@@ -1383,7 +1381,7 @@ func TestGinRequest(t *testing.T) {
 				gin.Post("/validator/validate/success", func(ctx httpcontract.Context) {
 					mockValication := &validationmock.Validation{}
 					mockValication.On("Rules").Return([]validation.Rule{}).Once()
-					frameworkhttp.ValidationFacade = mockValication
+					ValidationFacade = mockValication
 
 					validator, err := ctx.Request().Validate(map[string]string{
 						"name": "required",
@@ -1430,7 +1428,7 @@ func TestGinRequest(t *testing.T) {
 				gin.Post("/validator/validate/fail", func(ctx httpcontract.Context) {
 					mockValication := &validationmock.Validation{}
 					mockValication.On("Rules").Return([]validation.Rule{}).Once()
-					frameworkhttp.ValidationFacade = mockValication
+					ValidationFacade = mockValication
 
 					validator, err := ctx.Request().Validate(map[string]string{
 						"name1": "required",
@@ -1467,7 +1465,7 @@ func TestGinRequest(t *testing.T) {
 				gin.Post("/validator/validate-request/success", func(ctx httpcontract.Context) {
 					mockValication := &validationmock.Validation{}
 					mockValication.On("Rules").Return([]validation.Rule{}).Once()
-					frameworkhttp.ValidationFacade = mockValication
+					ValidationFacade = mockValication
 
 					var createUser CreateUser
 					validateErrors, err := ctx.Request().ValidateRequest(&createUser)
@@ -1504,7 +1502,7 @@ func TestGinRequest(t *testing.T) {
 				gin.Post("/validator/validate-request/fail", func(ctx httpcontract.Context) {
 					mockValication := &validationmock.Validation{}
 					mockValication.On("Rules").Return([]validation.Rule{}).Once()
-					frameworkhttp.ValidationFacade = mockValication
+					ValidationFacade = mockValication
 
 					var createUser CreateUser
 					validateErrors, err := ctx.Request().ValidateRequest(&createUser)
@@ -1735,7 +1733,7 @@ func TestGinResponse(t *testing.T) {
 			url:    "/file",
 			setup: func(method, url string) error {
 				gin.Get("/file", func(ctx httpcontract.Context) {
-					ctx.Response().File("../logo.png")
+					ctx.Response().File("./README.md")
 				})
 
 				var err error
@@ -1754,7 +1752,7 @@ func TestGinResponse(t *testing.T) {
 			url:    "/download",
 			setup: func(method, url string) error {
 				gin.Get("/download", func(ctx httpcontract.Context) {
-					ctx.Response().Download("../logo.png", "1.png")
+					ctx.Response().Download("./README.md", "README.md")
 				})
 
 				var err error

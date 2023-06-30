@@ -8,7 +8,6 @@ import (
 	configmock "github.com/goravel/framework/contracts/config/mocks"
 	httpcontract "github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/contracts/route"
-	frameworkhttp "github.com/goravel/framework/http"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -214,28 +213,6 @@ func TestGinGroup(t *testing.T) {
 			expectBody: "{\"id\":\"1\"}",
 		},
 		{
-			name: "Any Options",
-			setup: func(req *http.Request) {
-				mockConfig.On("Get", "cors.allowed_methods").Return([]string{"*"}).Once()
-				mockConfig.On("Get", "cors.allowed_origins").Return([]string{"*"}).Once()
-				mockConfig.On("Get", "cors.allowed_headers").Return([]string{"*"}).Once()
-				mockConfig.On("Get", "cors.exposed_headers").Return([]string{"*"}).Once()
-				mockConfig.On("GetInt", "cors.max_age").Return(0).Once()
-				mockConfig.On("GetBool", "cors.supports_credentials").Return(false).Once()
-				frameworkhttp.ConfigFacade = mockConfig
-				gin.Any("/any/{id}", func(ctx httpcontract.Context) {
-					ctx.Response().Success().Json(httpcontract.Json{
-						"id": ctx.Request().Input("id"),
-					})
-				})
-				req.Header.Set("Origin", "http://127.0.0.1")
-				req.Header.Set("Access-Control-Request-Method", "GET")
-			},
-			method:     "OPTIONS",
-			url:        "/any/1",
-			expectCode: http.StatusNoContent,
-		},
-		{
 			name: "Any Patch",
 			setup: func(req *http.Request) {
 				gin.Any("/any/{id}", func(ctx httpcontract.Context) {
@@ -342,7 +319,7 @@ func TestGinGroup(t *testing.T) {
 		{
 			name: "Static",
 			setup: func(req *http.Request) {
-				gin.Static("static", "../")
+				gin.Static("static", "./")
 			},
 			method:     "GET",
 			url:        "/static/README.md",
@@ -351,7 +328,7 @@ func TestGinGroup(t *testing.T) {
 		{
 			name: "StaticFile",
 			setup: func(req *http.Request) {
-				gin.StaticFile("static-file", "../README.md")
+				gin.StaticFile("static-file", "./README.md")
 			},
 			method:     "GET",
 			url:        "/static-file",

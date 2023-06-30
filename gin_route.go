@@ -33,7 +33,7 @@ func NewGinRoute(config config.Config) *GinRoute {
 			[]httpcontract.Middleware{GinResponseMiddleware()},
 		),
 		config:   config,
-		instance: gin.New(),
+		instance: engine,
 	}
 }
 
