@@ -21,7 +21,17 @@ type GinRoute struct {
 
 func NewGinRoute(config config.Config) *GinRoute {
 	gin.SetMode(gin.ReleaseMode)
+	engine := gin.New()
+	if debugLog := getDebugLog(config); debugLog != nil {
+		engine.Use(debugLog)
+	}
+
 	return &GinRoute{
+		Route: NewGinGroup(engine.Group("/"),
+			"",
+			[]httpcontract.Middleware{},
+			[]httpcontract.Middleware{GinResponseMiddleware()},
+		),
 		config:   config,
 		instance: gin.New(),
 	}
