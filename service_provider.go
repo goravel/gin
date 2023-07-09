@@ -11,8 +11,8 @@ import (
 	"github.com/goravel/framework/contracts/validation"
 )
 
-const HttpBinding = "goravel.gin.http"
-const RouteBinding = "goravel.gin.route"
+const HttpBinding = "goravel.http"
+const RouteBinding = "goravel.route"
 
 var App foundation.Application
 
