@@ -139,3 +139,7 @@ func (w *BodyWriter) WriteString(s string) (int, error) {
 func (w *BodyWriter) Body() *bytes.Buffer {
 	return w.body
 }
+
+func (w *BodyWriter) Header() http.Header {
+	return w.ResponseWriter.Header()
+}
