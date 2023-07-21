@@ -5,9 +5,9 @@ go 1.18
 require (
 	github.com/bytedance/sonic v1.9.2
 	github.com/gin-gonic/gin v1.9.1
-	github.com/gookit/color v1.5.3
+	github.com/gookit/color v1.5.4
 	github.com/gookit/validate v1.4.6
-	github.com/goravel/framework v1.12.1-0.20230709060620-9413ec8d0f76
+	github.com/goravel/framework v1.12.5
 	github.com/opentracing/opentracing-go v1.2.0
 	github.com/rs/cors v1.9.0
 	github.com/spf13/cast v1.5.1
