@@ -1,0 +1,77 @@
+package gin
+
+import (
+	"context"
+	"net/http/httptest"
+	"time"
+
+	"github.com/gin-gonic/gin"
+
+	"github.com/goravel/framework/contracts/http"
+)
+
+func Background() http.Context {
+	ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
+	return NewContext(ctx)
+}
+
+type Context struct {
+	instance *gin.Context
+	request  http.Request
+}
+
+type ctxKey string
+
+func NewContext(ctx *gin.Context) http.Context {
+	return &Context{instance: ctx}
+}
+
+func (c *Context) Request() http.Request {
+	if c.request == nil {
+		c.request = NewRequest(c, LogFacade, ValidationFacade)
+	}
+
+	return c.request
+}
+
+func (c *Context) Response() http.Response {
+	responseOrigin := c.Value("responseOrigin")
+	if responseOrigin != nil {
+		return NewResponse(c.instance, responseOrigin.(http.ResponseOrigin))
+	}
+
+	return NewResponse(c.instance, &BodyWriter{ResponseWriter: c.instance.Writer})
+}
+
+func (c *Context) WithValue(key string, value any) {
+	c.instance.Set(key, value)
+}
+
+func (c *Context) Context() context.Context {
+	ctx := context.Background()
+	for key, value := range c.instance.Keys {
+		ctx = context.WithValue(ctx, ctxKey(key), value)
+	}
+
+	return ctx
+}
+
+func (c *Context) Deadline() (deadline time.Time, ok bool) {
+	return c.instance.Deadline()
+}
+
+func (c *Context) Done() <-chan struct{} {
+	return c.instance.Done()
+}
+
+func (c *Context) Err() error {
+	return c.instance.Err()
+}
+
+func (c *Context) Value(key any) any {
+	return c.instance.Value(key)
+}
+
+func (c *Context) Instance() *gin.Context {
+	return c.instance
+}

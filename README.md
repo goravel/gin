@@ -14,7 +14,7 @@ Gin http driver for Goravel.
 
 | goravel/gin | goravel/framework |
 |-------------|-------------------|
-| v1.0.2      | v1.13.0           |
+| v1.1.x      | v1.13.x           |
 
 ## Install
 
@@ -44,13 +44,13 @@ import (
     ginfacades "github.com/goravel/gin/facades"
 )
 
-"driver": "gin",
+"default": "gin",
 
 "drivers": map[string]any{
     ...
     "gin": map[string]any{
-        "http": func() (http.Context, error) {
-            return ginfacades.Http(), nil
+        "context": func() (http.Context, error) {
+            return ginfacades.Context(), nil
         },
         "route": func() (route.Engine, error) {
             return ginfacades.Route(), nil

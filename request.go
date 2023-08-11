@@ -22,32 +22,32 @@ import (
 	"github.com/goravel/framework/validation"
 )
 
-type GinRequest struct {
-	ctx        *GinContext
+type Request struct {
+	ctx        *Context
 	instance   *gin.Context
 	postData   map[string]any
 	log        log.Log
 	validation validatecontract.Validation
 }
 
-func NewGinRequest(ctx *GinContext, log log.Log, validation validatecontract.Validation) httpcontract.Request {
+func NewRequest(ctx *Context, log log.Log, validation validatecontract.Validation) httpcontract.Request {
 	postData, err := getPostData(ctx)
 	if err != nil {
 		LogFacade.Error(fmt.Sprintf("%+v", errors.Unwrap(err)))
 	}
 
-	return &GinRequest{ctx: ctx, instance: ctx.instance, postData: postData, log: log, validation: validation}
+	return &Request{ctx: ctx, instance: ctx.instance, postData: postData, log: log, validation: validation}
 }
 
-func (r *GinRequest) AbortWithStatus(code int) {
+func (r *Request) AbortWithStatus(code int) {
 	r.instance.AbortWithStatus(code)
 }
 
-func (r *GinRequest) AbortWithStatusJson(code int, jsonObj any) {
+func (r *Request) AbortWithStatusJson(code int, jsonObj any) {
 	r.instance.AbortWithStatusJSON(code, jsonObj)
 }
 
-func (r *GinRequest) All() map[string]any {
+func (r *Request) All() map[string]any {
 	var (
 		dataMap  = make(map[string]any)
 		queryMap = make(map[string]any)
@@ -72,11 +72,11 @@ func (r *GinRequest) All() map[string]any {
 	return dataMap
 }
 
-func (r *GinRequest) Bind(obj any) error {
+func (r *Request) Bind(obj any) error {
 	return r.instance.ShouldBind(obj)
 }
 
-func (r *GinRequest) Form(key string, defaultValue ...string) string {
+func (r *Request) Form(key string, defaultValue ...string) string {
 	if len(defaultValue) == 0 {
 		return r.instance.PostForm(key)
 	}
@@ -84,7 +84,7 @@ func (r *GinRequest) Form(key string, defaultValue ...string) string {
 	return r.instance.DefaultPostForm(key, defaultValue[0])
 }
 
-func (r *GinRequest) File(name string) (filesystemcontract.File, error) {
+func (r *Request) File(name string) (filesystemcontract.File, error) {
 	file, err := r.instance.FormFile(name)
 	if err != nil {
 		return nil, err
@@ -93,7 +93,7 @@ func (r *GinRequest) File(name string) (filesystemcontract.File, error) {
 	return filesystem.NewFileFromRequest(file)
 }
 
-func (r *GinRequest) FullUrl() string {
+func (r *Request) FullUrl() string {
 	prefix := "https://"
 	if r.instance.Request.TLS == nil {
 		prefix = "http://"
@@ -106,7 +106,7 @@ func (r *GinRequest) FullUrl() string {
 	return prefix + r.instance.Request.Host + r.instance.Request.RequestURI
 }
 
-func (r *GinRequest) Header(key string, defaultValue ...string) string {
+func (r *Request) Header(key string, defaultValue ...string) string {
 	header := r.instance.GetHeader(key)
 	if header != "" {
 		return header
@@ -119,15 +119,15 @@ func (r *GinRequest) Header(key string, defaultValue ...string) string {
 	return defaultValue[0]
 }
 
-func (r *GinRequest) Headers() http.Header {
+func (r *Request) Headers() http.Header {
 	return r.instance.Request.Header
 }
 
-func (r *GinRequest) Host() string {
+func (r *Request) Host() string {
 	return r.instance.Request.Host
 }
 
-func (r *GinRequest) Json(key string, defaultValue ...string) string {
+func (r *Request) Json(key string, defaultValue ...string) string {
 	var data map[string]any
 	if err := r.Bind(&data); err != nil {
 		if len(defaultValue) == 0 {
@@ -148,15 +148,15 @@ func (r *GinRequest) Json(key string, defaultValue ...string) string {
 	return defaultValue[0]
 }
 
-func (r *GinRequest) Method() string {
+func (r *Request) Method() string {
 	return r.instance.Request.Method
 }
 
-func (r *GinRequest) Next() {
+func (r *Request) Next() {
 	r.instance.Next()
 }
 
-func (r *GinRequest) Query(key string, defaultValue ...string) string {
+func (r *Request) Query(key string, defaultValue ...string) string {
 	if len(defaultValue) > 0 {
 		return r.instance.DefaultQuery(key, defaultValue[0])
 	}
@@ -164,7 +164,7 @@ func (r *GinRequest) Query(key string, defaultValue ...string) string {
 	return r.instance.Query(key)
 }
 
-func (r *GinRequest) QueryInt(key string, defaultValue ...int) int {
+func (r *Request) QueryInt(key string, defaultValue ...int) int {
 	if val, ok := r.instance.GetQuery(key); ok {
 		return cast.ToInt(val)
 	}
@@ -176,7 +176,7 @@ func (r *GinRequest) QueryInt(key string, defaultValue ...int) int {
 	return 0
 }
 
-func (r *GinRequest) QueryInt64(key string, defaultValue ...int64) int64 {
+func (r *Request) QueryInt64(key string, defaultValue ...int64) int64 {
 	if val, ok := r.instance.GetQuery(key); ok {
 		return cast.ToInt64(val)
 	}
@@ -188,7 +188,7 @@ func (r *GinRequest) QueryInt64(key string, defaultValue ...int64) int64 {
 	return 0
 }
 
-func (r *GinRequest) QueryBool(key string, defaultValue ...bool) bool {
+func (r *Request) QueryBool(key string, defaultValue ...bool) bool {
 	if value, ok := r.instance.GetQuery(key); ok {
 		return stringToBool(value)
 	}
@@ -200,15 +200,15 @@ func (r *GinRequest) QueryBool(key string, defaultValue ...bool) bool {
 	return false
 }
 
-func (r *GinRequest) QueryArray(key string) []string {
+func (r *Request) QueryArray(key string) []string {
 	return r.instance.QueryArray(key)
 }
 
-func (r *GinRequest) QueryMap(key string) map[string]string {
+func (r *Request) QueryMap(key string) map[string]string {
 	return r.instance.QueryMap(key)
 }
 
-func (r *GinRequest) Queries() map[string]string {
+func (r *Request) Queries() map[string]string {
 	queries := make(map[string]string)
 
 	for key, query := range r.instance.Request.URL.Query() {
@@ -218,15 +218,15 @@ func (r *GinRequest) Queries() map[string]string {
 	return queries
 }
 
-func (r *GinRequest) Origin() *http.Request {
+func (r *Request) Origin() *http.Request {
 	return r.instance.Request
 }
 
-func (r *GinRequest) Path() string {
+func (r *Request) Path() string {
 	return r.instance.Request.URL.Path
 }
 
-func (r *GinRequest) Input(key string, defaultValue ...string) string {
+func (r *Request) Input(key string, defaultValue ...string) string {
 	if value, exist := r.postData[key]; exist {
 		return cast.ToString(value)
 	}
@@ -243,7 +243,7 @@ func (r *GinRequest) Input(key string, defaultValue ...string) string {
 	return value
 }
 
-func (r *GinRequest) InputInt(key string, defaultValue ...int) int {
+func (r *Request) InputInt(key string, defaultValue ...int) int {
 	value := r.Input(key)
 	if value == "" && len(defaultValue) > 0 {
 		return defaultValue[0]
@@ -252,7 +252,7 @@ func (r *GinRequest) InputInt(key string, defaultValue ...int) int {
 	return cast.ToInt(value)
 }
 
-func (r *GinRequest) InputInt64(key string, defaultValue ...int64) int64 {
+func (r *Request) InputInt64(key string, defaultValue ...int64) int64 {
 	value := r.Input(key)
 	if value == "" && len(defaultValue) > 0 {
 		return defaultValue[0]
@@ -261,7 +261,7 @@ func (r *GinRequest) InputInt64(key string, defaultValue ...int64) int64 {
 	return cast.ToInt64(value)
 }
 
-func (r *GinRequest) InputBool(key string, defaultValue ...bool) bool {
+func (r *Request) InputBool(key string, defaultValue ...bool) bool {
 	value := r.Input(key)
 	if value == "" && len(defaultValue) > 0 {
 		return defaultValue[0]
@@ -270,31 +270,31 @@ func (r *GinRequest) InputBool(key string, defaultValue ...bool) bool {
 	return stringToBool(value)
 }
 
-func (r *GinRequest) Ip() string {
+func (r *Request) Ip() string {
 	return r.instance.ClientIP()
 }
 
-func (r *GinRequest) Route(key string) string {
+func (r *Request) Route(key string) string {
 	return r.instance.Param(key)
 }
 
-func (r *GinRequest) RouteInt(key string) int {
+func (r *Request) RouteInt(key string) int {
 	val := r.instance.Param(key)
 
 	return cast.ToInt(val)
 }
 
-func (r *GinRequest) RouteInt64(key string) int64 {
+func (r *Request) RouteInt64(key string) int64 {
 	val := r.instance.Param(key)
 
 	return cast.ToInt64(val)
 }
 
-func (r *GinRequest) Url() string {
+func (r *Request) Url() string {
 	return r.instance.Request.RequestURI
 }
 
-func (r *GinRequest) Validate(rules map[string]string, options ...validatecontract.Option) (validatecontract.Validator, error) {
+func (r *Request) Validate(rules map[string]string, options ...validatecontract.Option) (validatecontract.Validator, error) {
 	if len(rules) == 0 {
 		return nil, errors.New("rules can't be empty")
 	}
@@ -324,7 +324,7 @@ func (r *GinRequest) Validate(rules map[string]string, options ...validatecontra
 	return validation.NewValidator(v, dataFace), nil
 }
 
-func (r *GinRequest) ValidateRequest(request httpcontract.FormRequest) (validatecontract.Errors, error) {
+func (r *Request) ValidateRequest(request httpcontract.FormRequest) (validatecontract.Errors, error) {
 	if err := request.Authorize(r.ctx); err != nil {
 		return nil, err
 	}
@@ -343,7 +343,7 @@ func (r *GinRequest) ValidateRequest(request httpcontract.FormRequest) (validate
 	return validator.Errors(), nil
 }
 
-func getPostData(ctx *GinContext) (map[string]any, error) {
+func getPostData(ctx *Context) (map[string]any, error) {
 	request := ctx.instance.Request
 	if request == nil || request.Body == nil || request.ContentLength == 0 {
 		return nil, nil

@@ -54,16 +54,16 @@ func (c resourceController) Destroy(ctx httpcontract.Context) {
 	})
 }
 
-func TestGinGroup(t *testing.T) {
+func TestGroup(t *testing.T) {
 	var (
-		gin        *GinRoute
+		gin        *Route
 		mockConfig *configmock.Config
 	)
 	beforeEach := func() {
 		mockConfig = &configmock.Config{}
 		mockConfig.On("GetBool", "app.debug").Return(true).Once()
 
-		gin = NewGinRoute(mockConfig)
+		gin = NewRoute(mockConfig)
 	}
 	tests := []struct {
 		name       string

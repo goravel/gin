@@ -9,107 +9,107 @@ import (
 	httpcontract "github.com/goravel/framework/contracts/http"
 )
 
-type GinResponse struct {
+type Response struct {
 	instance *gin.Context
 	origin   httpcontract.ResponseOrigin
 }
 
-func NewGinResponse(instance *gin.Context, origin httpcontract.ResponseOrigin) *GinResponse {
-	return &GinResponse{instance, origin}
+func NewResponse(instance *gin.Context, origin httpcontract.ResponseOrigin) *Response {
+	return &Response{instance, origin}
 }
 
-func (r *GinResponse) Data(code int, contentType string, data []byte) {
+func (r *Response) Data(code int, contentType string, data []byte) {
 	r.instance.Data(code, contentType, data)
 }
 
-func (r *GinResponse) Download(filepath, filename string) {
+func (r *Response) Download(filepath, filename string) {
 	r.instance.FileAttachment(filepath, filename)
 }
 
-func (r *GinResponse) File(filepath string) {
+func (r *Response) File(filepath string) {
 	r.instance.File(filepath)
 }
 
-func (r *GinResponse) Header(key, value string) httpcontract.Response {
+func (r *Response) Header(key, value string) httpcontract.Response {
 	r.instance.Header(key, value)
 
 	return r
 }
 
-func (r *GinResponse) Json(code int, obj any) {
+func (r *Response) Json(code int, obj any) {
 	r.instance.JSON(code, obj)
 }
 
-func (r *GinResponse) Origin() httpcontract.ResponseOrigin {
+func (r *Response) Origin() httpcontract.ResponseOrigin {
 	return r.origin
 }
 
-func (r *GinResponse) Redirect(code int, location string) {
+func (r *Response) Redirect(code int, location string) {
 	r.instance.Redirect(code, location)
 }
 
-func (r *GinResponse) String(code int, format string, values ...any) {
+func (r *Response) String(code int, format string, values ...any) {
 	r.instance.String(code, format, values...)
 }
 
-func (r *GinResponse) Success() httpcontract.ResponseSuccess {
+func (r *Response) Success() httpcontract.ResponseSuccess {
 	return NewGinSuccess(r.instance)
 }
 
-func (r *GinResponse) Status(code int) httpcontract.ResponseStatus {
+func (r *Response) Status(code int) httpcontract.ResponseStatus {
 	return NewGinStatus(r.instance, code)
 }
 
-func (r *GinResponse) Writer() http.ResponseWriter {
+func (r *Response) Writer() http.ResponseWriter {
 	return r.instance.Writer
 }
 
-type GinSuccess struct {
+type Success struct {
 	instance *gin.Context
 }
 
 func NewGinSuccess(instance *gin.Context) httpcontract.ResponseSuccess {
-	return &GinSuccess{instance}
+	return &Success{instance}
 }
 
-func (r *GinSuccess) Data(contentType string, data []byte) {
+func (r *Success) Data(contentType string, data []byte) {
 	r.instance.Data(http.StatusOK, contentType, data)
 }
 
-func (r *GinSuccess) Json(obj any) {
+func (r *Success) Json(obj any) {
 	r.instance.JSON(http.StatusOK, obj)
 }
 
-func (r *GinSuccess) String(format string, values ...any) {
+func (r *Success) String(format string, values ...any) {
 	r.instance.String(http.StatusOK, format, values...)
 }
 
-type GinStatus struct {
+type Status struct {
 	instance *gin.Context
 	status   int
 }
 
 func NewGinStatus(instance *gin.Context, code int) httpcontract.ResponseSuccess {
-	return &GinStatus{instance, code}
+	return &Status{instance, code}
 }
 
-func (r *GinStatus) Data(contentType string, data []byte) {
+func (r *Status) Data(contentType string, data []byte) {
 	r.instance.Data(r.status, contentType, data)
 }
 
-func (r *GinStatus) Json(obj any) {
+func (r *Status) Json(obj any) {
 	r.instance.JSON(r.status, obj)
 }
 
-func (r *GinStatus) String(format string, values ...any) {
+func (r *Status) String(format string, values ...any) {
 	r.instance.String(r.status, format, values...)
 }
 
-func GinResponseMiddleware() httpcontract.Middleware {
+func ResponseMiddleware() httpcontract.Middleware {
 	return func(ctx httpcontract.Context) {
 		blw := &BodyWriter{body: bytes.NewBufferString("")}
 		switch ctx := ctx.(type) {
-		case *GinContext:
+		case *Context:
 			blw.ResponseWriter = ctx.Instance().Writer
 			ctx.Instance().Writer = blw
 		}

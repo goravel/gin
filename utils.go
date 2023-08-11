@@ -2,7 +2,6 @@ package gin
 
 import (
 	"fmt"
-	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -28,13 +27,13 @@ func middlewaresToGinHandlers(middlewares []httpcontract.Middleware) []gin.Handl
 
 func handlerToGinHandler(handler httpcontract.HandlerFunc) gin.HandlerFunc {
 	return func(ginCtx *gin.Context) {
-		handler(NewGinContext(ginCtx))
+		handler(NewContext(ginCtx))
 	}
 }
 
 func middlewareToGinHandler(handler httpcontract.Middleware) gin.HandlerFunc {
 	return func(ginCtx *gin.Context) {
-		handler(NewGinContext(ginCtx))
+		handler(NewContext(ginCtx))
 	}
 }
 
@@ -97,10 +96,4 @@ func mergeSlashForPath(path string) string {
 	path = strings.ReplaceAll(path, "//", "/")
 
 	return strings.ReplaceAll(path, "//", "/")
-}
-
-func runningInConsole() bool {
-	args := os.Args
-
-	return len(args) >= 2 && args[1] == "artisan"
 }

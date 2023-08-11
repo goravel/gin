@@ -11,49 +11,50 @@ import (
 	"github.com/goravel/framework/contracts/config"
 	httpcontract "github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/contracts/route"
+	"github.com/goravel/framework/support"
 )
 
-type GinRoute struct {
+type Route struct {
 	route.Route
 	config   config.Config
 	instance *gin.Engine
 }
 
-func NewGinRoute(config config.Config) *GinRoute {
+func NewRoute(config config.Config) *Route {
 	gin.SetMode(gin.ReleaseMode)
 	engine := gin.New()
 	if debugLog := getDebugLog(config); debugLog != nil {
 		engine.Use(debugLog)
 	}
 
-	return &GinRoute{
-		Route: NewGinGroup(engine.Group("/"),
+	return &Route{
+		Route: NewGroup(engine.Group("/"),
 			"",
 			[]httpcontract.Middleware{},
-			[]httpcontract.Middleware{GinResponseMiddleware()},
+			[]httpcontract.Middleware{ResponseMiddleware()},
 		),
 		config:   config,
 		instance: engine,
 	}
 }
 
-func (r *GinRoute) Fallback(handler httpcontract.HandlerFunc) {
+func (r *Route) Fallback(handler httpcontract.HandlerFunc) {
 	r.instance.NoRoute(handlerToGinHandler(handler))
 }
 
-func (r *GinRoute) GlobalMiddleware(middlewares ...httpcontract.Middleware) {
+func (r *Route) GlobalMiddleware(middlewares ...httpcontract.Middleware) {
 	if len(middlewares) > 0 {
 		r.instance.Use(middlewaresToGinHandlers(middlewares)...)
 	}
-	r.Route = NewGinGroup(
+	r.Route = NewGroup(
 		r.instance.Group("/"),
 		"",
 		[]httpcontract.Middleware{},
-		[]httpcontract.Middleware{GinResponseMiddleware()},
+		[]httpcontract.Middleware{ResponseMiddleware()},
 	)
 }
 
-func (r *GinRoute) Run(host ...string) error {
+func (r *Route) Run(host ...string) error {
 	if len(host) == 0 {
 		defaultHost := r.config.GetString("http.host")
 		if defaultHost == "" {
@@ -79,7 +80,7 @@ func (r *GinRoute) Run(host ...string) error {
 	return server.ListenAndServe()
 }
 
-func (r *GinRoute) RunTLS(host ...string) error {
+func (r *Route) RunTLS(host ...string) error {
 	if len(host) == 0 {
 		defaultHost := r.config.GetString("http.tls.host")
 		if defaultHost == "" {
@@ -100,7 +101,7 @@ func (r *GinRoute) RunTLS(host ...string) error {
 	return r.RunTLSWithCert(host[0], certFile, keyFile)
 }
 
-func (r *GinRoute) RunTLSWithCert(host, certFile, keyFile string) error {
+func (r *Route) RunTLSWithCert(host, certFile, keyFile string) error {
 	if host == "" {
 		return errors.New("host can't be empty")
 	}
@@ -114,12 +115,12 @@ func (r *GinRoute) RunTLSWithCert(host, certFile, keyFile string) error {
 	return r.instance.RunTLS(host, certFile, keyFile)
 }
 
-func (r *GinRoute) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
+func (r *Route) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	r.instance.ServeHTTP(writer, request)
 }
 
-func (r *GinRoute) outputRoutes() {
-	if r.config.GetBool("app.debug") && !runningInConsole() {
+func (r *Route) outputRoutes() {
+	if r.config.GetBool("app.debug") && support.Env != support.EnvArtisan {
 		for _, item := range r.instance.Routes() {
 			fmt.Printf("%-10s %s\n", item.Method, colonToBracket(item.Path))
 		}

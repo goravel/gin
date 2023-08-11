@@ -30,14 +30,14 @@ import (
 
 func TestFallback(t *testing.T) {
 	var (
-		gin        *GinRoute
+		gin        *Route
 		mockConfig *configmock.Config
 	)
 	beforeEach := func() {
 		mockConfig = &configmock.Config{}
 		mockConfig.On("GetBool", "app.debug").Return(true).Once()
 
-		gin = NewGinRoute(mockConfig)
+		gin = NewRoute(mockConfig)
 	}
 	tests := []struct {
 		name       string
@@ -80,7 +80,7 @@ func TestFallback(t *testing.T) {
 
 func TestRun(t *testing.T) {
 	var mockConfig *configmock.Config
-	var route *GinRoute
+	var route *Route
 
 	tests := []struct {
 		name        string
@@ -154,7 +154,7 @@ func TestRun(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			mockConfig = &configmock.Config{}
 			mockConfig.On("GetBool", "app.debug").Return(true).Once()
-			route = NewGinRoute(mockConfig)
+			route = NewRoute(mockConfig)
 			route.Get("/", func(ctx httpcontract.Context) {
 				ctx.Response().Json(200, httpcontract.Json{
 					"Hello": "Goravel",
@@ -181,7 +181,7 @@ func TestRun(t *testing.T) {
 
 func TestRunTLS(t *testing.T) {
 	var mockConfig *configmock.Config
-	var route *GinRoute
+	var route *Route
 
 	tests := []struct {
 		name        string
@@ -257,7 +257,7 @@ func TestRunTLS(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			mockConfig = &configmock.Config{}
 			mockConfig.On("GetBool", "app.debug").Return(true).Once()
-			route = NewGinRoute(mockConfig)
+			route = NewRoute(mockConfig)
 			route.Get("/", func(ctx httpcontract.Context) {
 				ctx.Response().Json(200, httpcontract.Json{
 					"Hello": "Goravel",
@@ -288,7 +288,7 @@ func TestRunTLS(t *testing.T) {
 
 func TestRunTLSWithCert(t *testing.T) {
 	var mockConfig *configmock.Config
-	var route *GinRoute
+	var route *Route
 
 	tests := []struct {
 		name        string
@@ -339,7 +339,7 @@ func TestRunTLSWithCert(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			mockConfig = &configmock.Config{}
 			mockConfig.On("GetBool", "app.debug").Return(true).Once()
-			route = NewGinRoute(mockConfig)
+			route = NewRoute(mockConfig)
 			route.Get("/", func(ctx httpcontract.Context) {
 				ctx.Response().Json(200, httpcontract.Json{
 					"Hello": "Goravel",
@@ -364,9 +364,9 @@ func TestRunTLSWithCert(t *testing.T) {
 	}
 }
 
-func TestGinRequest(t *testing.T) {
+func TestRequest(t *testing.T) {
 	var (
-		gin        *GinRoute
+		gin        *Route
 		req        *http.Request
 		mockConfig *configmock.Config
 	)
@@ -374,7 +374,7 @@ func TestGinRequest(t *testing.T) {
 		mockConfig = &configmock.Config{}
 		mockConfig.On("GetBool", "app.debug").Return(true).Once()
 
-		gin = NewGinRoute(mockConfig)
+		gin = NewRoute(mockConfig)
 	}
 	tests := []struct {
 		name       string
@@ -1582,9 +1582,9 @@ func TestGinRequest(t *testing.T) {
 	}
 }
 
-func TestGinResponse(t *testing.T) {
+func TestResponse(t *testing.T) {
 	var (
-		gin        *GinRoute
+		gin        *Route
 		req        *http.Request
 		mockConfig *configmock.Config
 	)
@@ -1592,7 +1592,7 @@ func TestGinResponse(t *testing.T) {
 		mockConfig = &configmock.Config{}
 		mockConfig.On("GetBool", "app.debug").Return(true).Once()
 
-		gin = NewGinRoute(mockConfig)
+		gin = NewRoute(mockConfig)
 	}
 	tests := []struct {
 		name         string
