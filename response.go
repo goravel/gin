@@ -64,6 +64,10 @@ func (r *Response) Writer() http.ResponseWriter {
 	return r.instance.Writer
 }
 
+func (r *Response) Flush() {
+	r.instance.Writer.Flush()
+}
+
 type Success struct {
 	instance *gin.Context
 }
