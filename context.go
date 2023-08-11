@@ -20,8 +20,6 @@ type Context struct {
 	request  http.Request
 }
 
-type ctxKey string
-
 func NewContext(ctx *gin.Context) http.Context {
 	return &Context{instance: ctx}
 }
@@ -50,7 +48,8 @@ func (c *Context) WithValue(key string, value any) {
 func (c *Context) Context() context.Context {
 	ctx := context.Background()
 	for key, value := range c.instance.Keys {
-		ctx = context.WithValue(ctx, ctxKey(key), value)
+		// nolint
+		ctx = context.WithValue(ctx, key, value)
 	}
 
 	return ctx
