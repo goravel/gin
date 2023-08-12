@@ -49,9 +49,6 @@ import (
 "drivers": map[string]any{
     ...
     "gin": map[string]any{
-        "context": func() (http.Context, error) {
-            return ginfacades.Context(), nil
-        },
         "route": func() (route.Engine, error) {
             return ginfacades.Route(), nil
         },
