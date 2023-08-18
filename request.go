@@ -382,6 +382,17 @@ func getPostData(ctx *Context) (map[string]any, error) {
 		}
 	}
 
+	if contentType == "application/x-www-form-urlencoded" {
+		if request.PostForm == nil {
+			if err := request.ParseForm(); err != nil {
+				return nil, fmt.Errorf("parse form error: %v", err)
+			}
+		}
+		for k, v := range request.PostForm {
+			data[k] = strings.Join(v, ",")
+		}
+	}
+
 	return data, nil
 }
 
