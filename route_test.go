@@ -154,6 +154,8 @@ func TestRun(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			mockConfig = &configmock.Config{}
 			mockConfig.On("GetBool", "app.debug").Return(true).Once()
+			mockConfig.On("Get", "cors.paths").Return([]string{}).Once()
+
 			route = NewRoute(mockConfig)
 			route.Get("/", func(ctx httpcontract.Context) {
 				ctx.Response().Json(200, httpcontract.Json{
@@ -257,6 +259,8 @@ func TestRunTLS(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			mockConfig = &configmock.Config{}
 			mockConfig.On("GetBool", "app.debug").Return(true).Once()
+			mockConfig.On("Get", "cors.paths").Return([]string{}).Once()
+
 			route = NewRoute(mockConfig)
 			route.Get("/", func(ctx httpcontract.Context) {
 				ctx.Response().Json(200, httpcontract.Json{
@@ -339,6 +343,8 @@ func TestRunTLSWithCert(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			mockConfig = &configmock.Config{}
 			mockConfig.On("GetBool", "app.debug").Return(true).Once()
+			mockConfig.On("Get", "cors.paths").Return([]string{}).Once()
+
 			route = NewRoute(mockConfig)
 			route.Get("/", func(ctx httpcontract.Context) {
 				ctx.Response().Json(200, httpcontract.Json{
@@ -373,6 +379,7 @@ func TestRequest(t *testing.T) {
 	beforeEach := func() {
 		mockConfig = &configmock.Config{}
 		mockConfig.On("GetBool", "app.debug").Return(true).Once()
+		mockConfig.On("Get", "cors.paths").Return([]string{}).Once()
 
 		gin = NewRoute(mockConfig)
 	}
@@ -1657,6 +1664,7 @@ func TestResponse(t *testing.T) {
 	beforeEach := func() {
 		mockConfig = &configmock.Config{}
 		mockConfig.On("GetBool", "app.debug").Return(true).Once()
+		mockConfig.On("Get", "cors.paths").Return([]string{}).Once()
 
 		gin = NewRoute(mockConfig)
 	}
@@ -1857,6 +1865,12 @@ func TestResponse(t *testing.T) {
 			method: "GET",
 			url:    "/origin",
 			setup: func(method, url string) error {
+				mockConfig.On("GetString", "http.tls.host").Return("").Once()
+				mockConfig.On("GetString", "http.tls.port").Return("").Once()
+				mockConfig.On("GetString", "http.tls.ssl.cert").Return("").Once()
+				mockConfig.On("GetString", "http.tls.ssl.key").Return("").Once()
+				ConfigFacade = mockConfig
+
 				gin.GlobalMiddleware(func(ctx httpcontract.Context) {
 					ctx.Response().Header("global", "goravel")
 					ctx.Request().Next()
