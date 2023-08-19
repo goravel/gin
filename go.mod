@@ -7,7 +7,7 @@ require (
 	github.com/gin-gonic/gin v1.9.1
 	github.com/gookit/color v1.5.4
 	github.com/gookit/validate v1.5.1
-	github.com/goravel/framework v1.12.1-0.20230818042920-477a94b11cae
+	github.com/goravel/framework v1.12.1-0.20230818141008-0b2d88e8929d
 	github.com/rs/cors v1.9.0
 	github.com/spf13/cast v1.5.1
 	github.com/stretchr/testify v1.8.4
