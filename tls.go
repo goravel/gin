@@ -1,7 +1,6 @@
 package gin
 
 import (
-	"fmt"
 	"net/http"
 
 	contractshttp "github.com/goravel/framework/contracts/http"
@@ -14,8 +13,6 @@ func Tls() contractshttp.Middleware {
 		port := ConfigFacade.GetString("http.tls.port")
 		cert := ConfigFacade.GetString("http.tls.ssl.cert")
 		key := ConfigFacade.GetString("http.tls.ssl.key")
-
-		fmt.Println("hwb-=--", ctx.Request().Origin().TLS)
 
 		if host == "" || cert == "" || key == "" || ctx.Request().Origin().TLS == nil {
 			ctx.Request().Next()
