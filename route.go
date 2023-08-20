@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gookit/color"
@@ -28,7 +29,9 @@ func NewRoute(config config.Config) *Route {
 	}
 
 	return &Route{
-		Route: NewGroup(engine.Group("/"),
+		Route: NewGroup(
+			config,
+			engine.Group("/"),
 			"",
 			[]httpcontract.Middleware{},
 			[]httpcontract.Middleware{ResponseMiddleware()},
@@ -43,10 +46,13 @@ func (r *Route) Fallback(handler httpcontract.HandlerFunc) {
 }
 
 func (r *Route) GlobalMiddleware(middlewares ...httpcontract.Middleware) {
+	middlewares = append(middlewares, Tls())
+
 	if len(middlewares) > 0 {
 		r.instance.Use(middlewaresToGinHandlers(middlewares)...)
 	}
 	r.Route = NewGroup(
+		r.config,
 		r.instance.Group("/"),
 		"",
 		[]httpcontract.Middleware{},
@@ -107,6 +113,12 @@ func (r *Route) RunTLSWithCert(host, certFile, keyFile string) error {
 	}
 	if certFile == "" || keyFile == "" {
 		return errors.New("certificate can't be empty")
+	}
+	if strings.HasPrefix(certFile, "/") {
+		certFile = "." + certFile
+	}
+	if strings.HasPrefix(keyFile, "/") {
+		keyFile = "." + keyFile
 	}
 
 	r.outputRoutes()

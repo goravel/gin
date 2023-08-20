@@ -24,15 +24,15 @@ Gin http driver for Goravel.
 go get -u github.com/goravel/gin
 ```
 
-2. Register service provider, make sure it is registered first.
+2. Register service provider
 
 ```
 // config/app.go
 import "github.com/goravel/gin"
 
 "providers": []foundation.ServiceProvider{
-    &gin.ServiceProvider{},
     ...
+    &gin.ServiceProvider{},
 }
 ```
 
@@ -47,13 +47,12 @@ import (
 "default": "gin",
 
 "drivers": map[string]any{
-    ...
     "gin": map[string]any{
         "route": func() (route.Engine, error) {
             return ginfacades.Route(), nil
         },
     },
-}
+},
 ```
 
 ## Testing
