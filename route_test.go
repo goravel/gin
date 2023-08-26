@@ -154,7 +154,6 @@ func TestRun(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			mockConfig = &configmock.Config{}
 			mockConfig.On("GetBool", "app.debug").Return(true).Once()
-			mockConfig.On("Get", "cors.paths").Return([]string{}).Once()
 
 			route = NewRoute(mockConfig)
 			route.Get("/", func(ctx httpcontract.Context) {
@@ -259,7 +258,6 @@ func TestRunTLS(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			mockConfig = &configmock.Config{}
 			mockConfig.On("GetBool", "app.debug").Return(true).Once()
-			mockConfig.On("Get", "cors.paths").Return([]string{}).Once()
 
 			route = NewRoute(mockConfig)
 			route.Get("/", func(ctx httpcontract.Context) {
@@ -343,7 +341,6 @@ func TestRunTLSWithCert(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			mockConfig = &configmock.Config{}
 			mockConfig.On("GetBool", "app.debug").Return(true).Once()
-			mockConfig.On("Get", "cors.paths").Return([]string{}).Once()
 
 			route = NewRoute(mockConfig)
 			route.Get("/", func(ctx httpcontract.Context) {

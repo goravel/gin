@@ -62,7 +62,6 @@ func TestGroup(t *testing.T) {
 	beforeEach := func() {
 		mockConfig = &configmock.Config{}
 		mockConfig.On("GetBool", "app.debug").Return(true).Once()
-		mockConfig.On("Get", "cors.paths").Return([]string{}).Once()
 		ConfigFacade = mockConfig
 
 		gin = NewRoute(mockConfig)
@@ -231,7 +230,7 @@ func TestGroup(t *testing.T) {
 		{
 			name: "Resource Index",
 			setup: func(req *http.Request) {
-				mockConfig.On("Get", "cors.paths").Return([]string{}).Times(5)
+				mockConfig.On("Get", "cors.paths").Return([]string{}).Once()
 				mockConfig.On("GetString", "http.tls.host").Return("").Once()
 				mockConfig.On("GetString", "http.tls.port").Return("").Once()
 				mockConfig.On("GetString", "http.tls.ssl.cert").Return("").Once()
@@ -252,7 +251,7 @@ func TestGroup(t *testing.T) {
 		{
 			name: "Resource Show",
 			setup: func(req *http.Request) {
-				mockConfig.On("Get", "cors.paths").Return([]string{}).Times(5)
+				mockConfig.On("Get", "cors.paths").Return([]string{}).Once()
 				mockConfig.On("GetString", "http.tls.host").Return("").Once()
 				mockConfig.On("GetString", "http.tls.port").Return("").Once()
 				mockConfig.On("GetString", "http.tls.ssl.cert").Return("").Once()
@@ -273,7 +272,7 @@ func TestGroup(t *testing.T) {
 		{
 			name: "Resource Store",
 			setup: func(req *http.Request) {
-				mockConfig.On("Get", "cors.paths").Return([]string{}).Times(5)
+				mockConfig.On("Get", "cors.paths").Return([]string{}).Once()
 				mockConfig.On("GetString", "http.tls.host").Return("").Once()
 				mockConfig.On("GetString", "http.tls.port").Return("").Once()
 				mockConfig.On("GetString", "http.tls.ssl.cert").Return("").Once()
@@ -294,7 +293,7 @@ func TestGroup(t *testing.T) {
 		{
 			name: "Resource Update (PUT)",
 			setup: func(req *http.Request) {
-				mockConfig.On("Get", "cors.paths").Return([]string{}).Times(5)
+				mockConfig.On("Get", "cors.paths").Return([]string{}).Once()
 				mockConfig.On("GetString", "http.tls.host").Return("").Once()
 				mockConfig.On("GetString", "http.tls.port").Return("").Once()
 				mockConfig.On("GetString", "http.tls.ssl.cert").Return("").Once()
@@ -315,7 +314,7 @@ func TestGroup(t *testing.T) {
 		{
 			name: "Resource Update (PATCH)",
 			setup: func(req *http.Request) {
-				mockConfig.On("Get", "cors.paths").Return([]string{}).Times(5)
+				mockConfig.On("Get", "cors.paths").Return([]string{}).Once()
 				mockConfig.On("GetString", "http.tls.host").Return("").Once()
 				mockConfig.On("GetString", "http.tls.port").Return("").Once()
 				mockConfig.On("GetString", "http.tls.ssl.cert").Return("").Once()
@@ -336,7 +335,7 @@ func TestGroup(t *testing.T) {
 		{
 			name: "Resource Destroy",
 			setup: func(req *http.Request) {
-				mockConfig.On("Get", "cors.paths").Return([]string{}).Times(5)
+				mockConfig.On("Get", "cors.paths").Return([]string{}).Once()
 				mockConfig.On("GetString", "http.tls.host").Return("").Once()
 				mockConfig.On("GetString", "http.tls.port").Return("").Once()
 				mockConfig.On("GetString", "http.tls.ssl.cert").Return("").Once()
@@ -427,8 +426,6 @@ func TestGroup(t *testing.T) {
 		{
 			name: "Multiple Prefix Group Middleware",
 			setup: func(req *http.Request) {
-				mockConfig.On("Get", "cors.paths").Return([]string{}).Once()
-
 				gin.Prefix("group1").Middleware(contextMiddleware()).Group(func(route1 route.Route) {
 					route1.Prefix("group2").Middleware(contextMiddleware1()).Group(func(route2 route.Route) {
 						route2.Get("/middleware/{id}", func(ctx httpcontract.Context) {
@@ -456,8 +453,6 @@ func TestGroup(t *testing.T) {
 		{
 			name: "Multiple Group Middleware",
 			setup: func(req *http.Request) {
-				mockConfig.On("Get", "cors.paths").Return([]string{}).Once()
-
 				gin.Prefix("group1").Middleware(contextMiddleware()).Group(func(route1 route.Route) {
 					route1.Prefix("group2").Middleware(contextMiddleware1()).Group(func(route2 route.Route) {
 						route2.Get("/middleware/{id}", func(ctx httpcontract.Context) {
@@ -485,6 +480,7 @@ func TestGroup(t *testing.T) {
 		{
 			name: "Global Middleware",
 			setup: func(req *http.Request) {
+				mockConfig.On("Get", "cors.paths").Return([]string{}).Once()
 				mockConfig.On("GetString", "http.tls.host").Return("").Once()
 				mockConfig.On("GetString", "http.tls.port").Return("").Once()
 				mockConfig.On("GetString", "http.tls.ssl.cert").Return("").Once()
@@ -508,8 +504,6 @@ func TestGroup(t *testing.T) {
 		{
 			name: "Middleware Conflict",
 			setup: func(req *http.Request) {
-				mockConfig.On("Get", "cors.paths").Return([]string{}).Once()
-
 				gin.Prefix("conflict").Group(func(route1 route.Route) {
 					route1.Middleware(contextMiddleware()).Get("/middleware1/{id}", func(ctx httpcontract.Context) {
 						ctx.Response().Success().Json(httpcontract.Json{
