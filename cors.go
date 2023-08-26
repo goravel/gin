@@ -1,7 +1,8 @@
 package gin
 
 import (
-	nethttp "net/http"
+	"net/http"
+	"strings"
 
 	httpcontract "github.com/goravel/framework/contracts/http"
 	"github.com/rs/cors"
@@ -9,9 +10,38 @@ import (
 
 func Cors() httpcontract.Middleware {
 	return func(ctx httpcontract.Context) {
+		path := ctx.Request().Path()
+		corsPaths, ok := ConfigFacade.Get("cors.paths").([]string)
+		if !ok {
+			ctx.Request().Next()
+			return
+		}
+
+		needCors := false
+		for _, corsPath := range corsPaths {
+			corsPath = pathToGinPath(corsPath)
+			if strings.HasSuffix(corsPath, "*") {
+				corsPath = strings.ReplaceAll(corsPath, "*", "")
+				if corsPath == "" || strings.HasPrefix(strings.TrimPrefix(path, "/"), strings.TrimPrefix(corsPath, "/")) {
+					needCors = true
+					break
+				}
+			} else {
+				if strings.TrimPrefix(path, "/") == strings.TrimPrefix(corsPath, "/") {
+					needCors = true
+					break
+				}
+			}
+		}
+
+		if !needCors {
+			ctx.Request().Next()
+			return
+		}
+
 		allowedMethods := ConfigFacade.Get("cors.allowed_methods").([]string)
 		if len(allowedMethods) == 1 && allowedMethods[0] == "*" {
-			allowedMethods = []string{nethttp.MethodPost, nethttp.MethodGet, nethttp.MethodOptions, nethttp.MethodPut, nethttp.MethodDelete}
+			allowedMethods = []string{http.MethodGet, http.MethodPost, http.MethodHead, http.MethodPut, http.MethodDelete, http.MethodPatch}
 		}
 
 		instance := cors.New(cors.Options{
@@ -26,9 +56,9 @@ func Cors() httpcontract.Middleware {
 
 		instance.HandlerFunc(ctx.Response().Writer(), ctx.Request().Origin())
 
-		if ctx.Request().Origin().Method == nethttp.MethodOptions &&
+		if ctx.Request().Origin().Method == http.MethodOptions &&
 			ctx.Request().Header("Access-Control-Request-Method") != "" {
-			ctx.Request().AbortWithStatus(nethttp.StatusNoContent)
+			ctx.Request().AbortWithStatus(http.StatusNoContent)
 		}
 
 		ctx.Request().Next()

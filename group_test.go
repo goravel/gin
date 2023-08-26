@@ -5,7 +5,6 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/gin-gonic/gin"
 	configmock "github.com/goravel/framework/contracts/config/mocks"
 	httpcontract "github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/contracts/route"
@@ -549,83 +548,6 @@ func TestGroup(t *testing.T) {
 			}
 			assert.Equal(t, test.expectCode, w.Code, test.name)
 			mockConfig.AssertExpectations(t)
-		})
-	}
-}
-
-func TestAddCorsMiddleware(t *testing.T) {
-	var (
-		group       *Group
-		mockConfig  *configmock.Config
-		middlewares []gin.HandlerFunc
-	)
-
-	beforeEach := func() {
-		mockConfig = new(configmock.Config)
-		group = &Group{config: mockConfig}
-	}
-
-	tests := []struct {
-		name                   string
-		setup                  func()
-		fullPath               string
-		expectMiddlewareLength int
-	}{
-		{
-			name: "cors.paths is empty",
-			setup: func() {
-				mockConfig.On("Get", "cors.paths").Return([]string{}).Once()
-			},
-			expectMiddlewareLength: 0,
-		},
-		{
-			name: "cors.paths contains *",
-			setup: func() {
-				mockConfig.On("Get", "cors.paths").Return([]string{"api/*"}).Once()
-			},
-			fullPath:               "/api/v1/user",
-			expectMiddlewareLength: 1,
-		},
-		{
-			name: "cors.paths contains * and path has no /",
-			setup: func() {
-				mockConfig.On("Get", "cors.paths").Return([]string{"/api/*"}).Once()
-			},
-			fullPath:               "api/v1/user",
-			expectMiddlewareLength: 1,
-		},
-		{
-			name: "cors.paths is *",
-			setup: func() {
-				mockConfig.On("Get", "cors.paths").Return([]string{"*"}).Once()
-			},
-			fullPath:               "/api/v1/user",
-			expectMiddlewareLength: 1,
-		},
-		{
-			name: "cors.paths is a specific path",
-			setup: func() {
-				mockConfig.On("Get", "cors.paths").Return([]string{"api"}).Once()
-			},
-			fullPath:               "/api",
-			expectMiddlewareLength: 1,
-		},
-		{
-			name: "cors.paths is a specific path and path has no /",
-			setup: func() {
-				mockConfig.On("Get", "cors.paths").Return([]string{"/api"}).Once()
-			},
-			fullPath:               "api",
-			expectMiddlewareLength: 1,
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			beforeEach()
-			test.setup()
-			result := group.addCorsMiddleware(middlewares, test.fullPath)
-			assert.Equal(t, test.expectMiddlewareLength, len(result))
 		})
 	}
 }
