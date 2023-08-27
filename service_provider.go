@@ -24,7 +24,7 @@ func (receiver *ServiceProvider) Register(app foundation.Application) {
 	App = app
 
 	app.BindWith(RouteBinding, func(app foundation.Application, parameters map[string]any) (any, error) {
-		return NewRoute(app.MakeConfig(), parameters), nil
+		return NewRoute(app.MakeConfig(), parameters)
 	})
 }
 

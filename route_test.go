@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/bytedance/sonic"
+	"github.com/gin-gonic/gin/render"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
@@ -30,14 +31,13 @@ import (
 
 func TestFallback(t *testing.T) {
 	var (
+		err        error
 		gin        *Route
 		mockConfig *configmock.Config
 	)
 	beforeEach := func() {
 		mockConfig = &configmock.Config{}
 		mockConfig.On("GetBool", "app.debug").Return(true).Once()
-
-		gin = NewRoute(mockConfig)
 	}
 	tests := []struct {
 		name       string
@@ -65,9 +65,14 @@ func TestFallback(t *testing.T) {
 			beforeEach()
 			w := httptest.NewRecorder()
 			req, _ := http.NewRequest(test.method, test.url, nil)
+
+			gin, err = NewRoute(mockConfig, nil)
+			assert.Nil(t, err)
+
 			if test.setup != nil {
 				test.setup(req)
 			}
+
 			gin.ServeHTTP(w, req)
 
 			if test.expectBody != "" {
@@ -79,8 +84,11 @@ func TestFallback(t *testing.T) {
 }
 
 func TestRun(t *testing.T) {
-	var mockConfig *configmock.Config
-	var route *Route
+	var (
+		err        error
+		mockConfig *configmock.Config
+		route      *Route
+	)
 
 	tests := []struct {
 		name        string
@@ -155,7 +163,8 @@ func TestRun(t *testing.T) {
 			mockConfig = &configmock.Config{}
 			mockConfig.On("GetBool", "app.debug").Return(true).Once()
 
-			route = NewRoute(mockConfig)
+			route, err = NewRoute(mockConfig, nil)
+			assert.Nil(t, err)
 			route.Get("/", func(ctx httpcontract.Context) {
 				ctx.Response().Json(200, httpcontract.Json{
 					"Hello": "Goravel",
@@ -181,8 +190,11 @@ func TestRun(t *testing.T) {
 }
 
 func TestRunTLS(t *testing.T) {
-	var mockConfig *configmock.Config
-	var route *Route
+	var (
+		err        error
+		mockConfig *configmock.Config
+		route      *Route
+	)
 
 	tests := []struct {
 		name        string
@@ -259,7 +271,8 @@ func TestRunTLS(t *testing.T) {
 			mockConfig = &configmock.Config{}
 			mockConfig.On("GetBool", "app.debug").Return(true).Once()
 
-			route = NewRoute(mockConfig)
+			route, err = NewRoute(mockConfig, nil)
+			assert.Nil(t, err)
 			route.Get("/", func(ctx httpcontract.Context) {
 				ctx.Response().Json(200, httpcontract.Json{
 					"Hello": "Goravel",
@@ -289,8 +302,11 @@ func TestRunTLS(t *testing.T) {
 }
 
 func TestRunTLSWithCert(t *testing.T) {
-	var mockConfig *configmock.Config
-	var route *Route
+	var (
+		err        error
+		mockConfig *configmock.Config
+		route      *Route
+	)
 
 	tests := []struct {
 		name        string
@@ -342,7 +358,8 @@ func TestRunTLSWithCert(t *testing.T) {
 			mockConfig = &configmock.Config{}
 			mockConfig.On("GetBool", "app.debug").Return(true).Once()
 
-			route = NewRoute(mockConfig)
+			route, err = NewRoute(mockConfig, nil)
+			assert.Nil(t, err)
 			route.Get("/", func(ctx httpcontract.Context) {
 				ctx.Response().Json(200, httpcontract.Json{
 					"Hello": "Goravel",
@@ -369,6 +386,7 @@ func TestRunTLSWithCert(t *testing.T) {
 
 func TestRequest(t *testing.T) {
 	var (
+		err        error
 		gin        *Route
 		req        *http.Request
 		mockConfig *configmock.Config
@@ -377,8 +395,6 @@ func TestRequest(t *testing.T) {
 		mockConfig = &configmock.Config{}
 		mockConfig.On("GetBool", "app.debug").Return(true).Once()
 		mockConfig.On("Get", "cors.paths").Return([]string{}).Once()
-
-		gin = NewRoute(mockConfig)
 	}
 	tests := []struct {
 		name       string
@@ -1638,10 +1654,13 @@ func TestRequest(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			beforeEach()
-			err := test.setup(test.method, test.url)
+			gin, err = NewRoute(mockConfig, nil)
 			assert.Nil(t, err)
 
+			assert.Nil(t, test.setup(test.method, test.url))
+
 			w := httptest.NewRecorder()
+
 			gin.ServeHTTP(w, req)
 
 			if test.expectBody != "" {
@@ -1654,6 +1673,7 @@ func TestRequest(t *testing.T) {
 
 func TestResponse(t *testing.T) {
 	var (
+		err        error
 		gin        *Route
 		req        *http.Request
 		mockConfig *configmock.Config
@@ -1662,8 +1682,6 @@ func TestResponse(t *testing.T) {
 		mockConfig = &configmock.Config{}
 		mockConfig.On("GetBool", "app.debug").Return(true).Once()
 		mockConfig.On("Get", "cors.paths").Return([]string{}).Once()
-
-		gin = NewRoute(mockConfig)
 	}
 	tests := []struct {
 		name         string
@@ -1917,10 +1935,13 @@ func TestResponse(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			beforeEach()
-			err := test.setup(test.method, test.url)
+			gin, err = NewRoute(mockConfig, nil)
 			assert.Nil(t, err)
 
+			assert.Nil(t, test.setup(test.method, test.url))
+
 			w := httptest.NewRecorder()
+
 			gin.ServeHTTP(w, req)
 
 			if test.expectBody != "" {
@@ -1930,6 +1951,67 @@ func TestResponse(t *testing.T) {
 				assert.Equal(t, test.expectHeader, strings.Join(w.Header().Values("Hello"), ""), test.name)
 			}
 			assert.Equal(t, test.expectCode, w.Code, test.name)
+		})
+	}
+}
+
+func TestNewRoute(t *testing.T) {
+	var mockConfig *configmock.Config
+	defaultTemplate, err := DefaultTemplate()
+	assert.Nil(t, err)
+
+	tests := []struct {
+		name             string
+		parameters       map[string]any
+		setup            func()
+		expectHTMLRender render.HTMLRender
+		expectError      error
+	}{
+		{
+			name:             "parameters is nil",
+			setup:            func() {},
+			expectHTMLRender: defaultTemplate,
+		},
+		{
+			name:       "template is instance",
+			parameters: map[string]any{"driver": "gin"},
+			setup: func() {
+				mockConfig.On("Get", "http.drivers.gin.template").Return(defaultTemplate).Once()
+			},
+			expectHTMLRender: defaultTemplate,
+		},
+		{
+			name:       "template is callback and returns success",
+			parameters: map[string]any{"driver": "gin"},
+			setup: func() {
+				mockConfig.On("Get", "http.drivers.gin.template").Return(func() (render.HTMLRender, error) {
+					return defaultTemplate, nil
+				}).Twice()
+			},
+			expectHTMLRender: defaultTemplate,
+		},
+		{
+			name:       "template is callback and returns error",
+			parameters: map[string]any{"driver": "gin"},
+			setup: func() {
+				mockConfig.On("Get", "http.drivers.gin.template").Return(func() (render.HTMLRender, error) {
+					return nil, errors.New("error")
+				}).Twice()
+			},
+			expectError: errors.New("error"),
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mockConfig = configmock.NewConfig(t)
+			mockConfig.On("GetBool", "app.debug").Return(true).Once()
+			test.setup()
+			route, err := NewRoute(mockConfig, test.parameters)
+			assert.Equal(t, test.expectError, err)
+			if route != nil {
+				assert.Equal(t, test.expectHTMLRender, route.instance.HTMLRender)
+			}
 		})
 	}
 }

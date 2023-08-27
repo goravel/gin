@@ -21,7 +21,7 @@ type RenderOptions struct {
 	FuncMap template.FuncMap
 }
 
-func NewTemplate(options RenderOptions) *render.HTMLProduction {
+func NewTemplate(options RenderOptions) (*render.HTMLProduction, error) {
 	instance := template.New("")
 	if options.Delims != nil {
 		instance.Delims(options.Delims.Left, options.Delims.Right)
@@ -36,7 +36,7 @@ func NewTemplate(options RenderOptions) *render.HTMLProduction {
 	}
 
 	if !file.Exists(dir) {
-		return nil
+		return nil, nil
 	}
 
 	var files []string
@@ -50,19 +50,19 @@ func NewTemplate(options RenderOptions) *render.HTMLProduction {
 
 		return nil
 	}); err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	if len(files) == 0 {
-		return nil
+		return nil, nil
 	}
 
-	templ := template.Must(instance.ParseFiles(files...))
+	tmpl := template.Must(instance.ParseFiles(files...))
 
-	return &render.HTMLProduction{Template: templ}
+	return &render.HTMLProduction{Template: tmpl}, nil
 }
 
 // DefaultTemplate creates a TemplateRender instance with default options.
-func DefaultTemplate() *render.HTMLProduction {
+func DefaultTemplate() (*render.HTMLProduction, error) {
 	return NewTemplate(RenderOptions{})
 }

@@ -63,8 +63,6 @@ func TestGroup(t *testing.T) {
 		mockConfig = &configmock.Config{}
 		mockConfig.On("GetBool", "app.debug").Return(true).Once()
 		ConfigFacade = mockConfig
-
-		gin = NewRoute(mockConfig)
 	}
 	tests := []struct {
 		name       string
@@ -531,10 +529,16 @@ func TestGroup(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			beforeEach()
 			w := httptest.NewRecorder()
-			req, _ := http.NewRequest(test.method, test.url, nil)
+			req, err := http.NewRequest(test.method, test.url, nil)
+			assert.Nil(t, err)
+
+			gin, err = NewRoute(mockConfig, nil)
+			assert.Nil(t, err)
+
 			if test.setup != nil {
 				test.setup(req)
 			}
+
 			gin.ServeHTTP(w, req)
 
 			if test.expectBody != "" {

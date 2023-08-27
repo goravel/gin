@@ -22,7 +22,7 @@ type Route struct {
 	instance *gin.Engine
 }
 
-func NewRoute(config config.Config, parameters map[string]any) *Route {
+func NewRoute(config config.Config, parameters map[string]any) (*Route, error) {
 	gin.SetMode(gin.ReleaseMode)
 	engine := gin.New()
 	if debugLog := getDebugLog(config); debugLog != nil {
@@ -33,21 +33,25 @@ func NewRoute(config config.Config, parameters map[string]any) *Route {
 		htmlRender, ok := config.Get("http.drivers." + driver.(string) + ".template").(render.HTMLRender)
 		if ok {
 			engine.HTMLRender = htmlRender
-		}
+		} else {
+			htmlRenderCallback, ok := config.Get("http.drivers." + driver.(string) + ".template").(func() (render.HTMLRender, error))
+			if ok {
+				htmlRender, err := htmlRenderCallback()
+				if err != nil {
+					return nil, err
+				}
 
-		htmlRenderCallback, ok := config.Get("http.drivers." + driver.(string) + ".template").(func() (render.HTMLRender, error))
-		if ok {
-			htmlRender, err := htmlRenderCallback()
-			if err != nil {
-				panic(err)
+				engine.HTMLRender = htmlRender
 			}
-
-			engine.HTMLRender = htmlRender
 		}
 	}
 
 	if engine.HTMLRender == nil {
-		engine.HTMLRender = DefaultTemplate()
+		var err error
+		engine.HTMLRender, err = DefaultTemplate()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &Route{
@@ -60,7 +64,7 @@ func NewRoute(config config.Config, parameters map[string]any) *Route {
 		),
 		config:   config,
 		instance: engine,
-	}
+	}, nil
 }
 
 func (r *Route) Fallback(handler httpcontract.HandlerFunc) {
@@ -70,7 +74,6 @@ func (r *Route) Fallback(handler httpcontract.HandlerFunc) {
 func (r *Route) GlobalMiddleware(middlewares ...httpcontract.Middleware) {
 	middlewares = append(middlewares, Cors(), Tls())
 	r.instance.Use(middlewaresToGinHandlers(middlewares)...)
-
 	r.Route = NewGroup(
 		r.config,
 		r.instance.Group("/"),

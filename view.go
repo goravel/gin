@@ -30,24 +30,10 @@ func (receive *View) Make(view string, data ...any) {
 			}
 			receive.instance.HTML(200, view, shared)
 		case reflect.Map:
-			item := data[0]
-			dataValue := reflect.ValueOf(item)
-			keys := dataValue.MapKeys()
-			for key, value := range shared {
-				exist := false
-				for _, k := range keys {
-					if k.String() == key {
-						exist = true
-						break
-					}
-				}
-				if !exist {
-					dataValue.SetMapIndex(reflect.ValueOf(key), reflect.ValueOf(value))
-				}
-			}
-			receive.instance.HTML(200, view, item)
+			fillShared(data[0], shared)
+			receive.instance.HTML(200, view, data[0])
 		default:
-			panic(fmt.Sprintf("make %s view failed, data must be map[string]any or struct", view))
+			panic(fmt.Sprintf("make %s view failed, data must be map or struct", view))
 		}
 	}
 }
@@ -85,4 +71,21 @@ func structToMap(data any) map[string]any {
 	}
 
 	return res
+}
+
+func fillShared(data any, shared map[string]any) {
+	dataValue := reflect.ValueOf(data)
+	keys := dataValue.MapKeys()
+	for key, value := range shared {
+		exist := false
+		for _, k := range keys {
+			if k.String() == key {
+				exist = true
+				break
+			}
+		}
+		if !exist {
+			dataValue.SetMapIndex(reflect.ValueOf(key), reflect.ValueOf(value))
+		}
+	}
 }
