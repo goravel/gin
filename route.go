@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/render"
 	"github.com/gookit/color"
 
 	"github.com/goravel/framework/contracts/config"
@@ -21,11 +22,32 @@ type Route struct {
 	instance *gin.Engine
 }
 
-func NewRoute(config config.Config) *Route {
+func NewRoute(config config.Config, parameters map[string]any) *Route {
 	gin.SetMode(gin.ReleaseMode)
 	engine := gin.New()
 	if debugLog := getDebugLog(config); debugLog != nil {
 		engine.Use(debugLog)
+	}
+
+	if driver, exist := parameters["driver"]; exist {
+		htmlRender, ok := config.Get("http.drivers." + driver.(string) + ".template").(render.HTMLRender)
+		if ok {
+			engine.HTMLRender = htmlRender
+		}
+
+		htmlRenderCallback, ok := config.Get("http.drivers." + driver.(string) + ".template").(func() (render.HTMLRender, error))
+		if ok {
+			htmlRender, err := htmlRenderCallback()
+			if err != nil {
+				panic(err)
+			}
+
+			engine.HTMLRender = htmlRender
+		}
+	}
+
+	if engine.HTMLRender == nil {
+		engine.HTMLRender = DefaultTemplate()
 	}
 
 	return &Route{
@@ -48,6 +70,7 @@ func (r *Route) Fallback(handler httpcontract.HandlerFunc) {
 func (r *Route) GlobalMiddleware(middlewares ...httpcontract.Middleware) {
 	middlewares = append(middlewares, Cors(), Tls())
 	r.instance.Use(middlewaresToGinHandlers(middlewares)...)
+
 	r.Route = NewGroup(
 		r.config,
 		r.instance.Group("/"),
