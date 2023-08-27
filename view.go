@@ -20,11 +20,10 @@ func (receive *View) Make(view string, data ...any) {
 	if len(data) == 0 {
 		receive.instance.HTML(200, view, shared)
 	} else {
-		dataMap := make(map[string]any)
 		dataType := reflect.TypeOf(data[0])
 		switch dataType.Kind() {
 		case reflect.Struct:
-			dataMap = structToMap(data[0])
+			dataMap := structToMap(data[0])
 			for key, value := range dataMap {
 				shared[key] = value
 			}
