@@ -46,11 +46,8 @@ func (r *Route) Fallback(handler httpcontract.HandlerFunc) {
 }
 
 func (r *Route) GlobalMiddleware(middlewares ...httpcontract.Middleware) {
-	middlewares = append(middlewares, Tls())
-
-	if len(middlewares) > 0 {
-		r.instance.Use(middlewaresToGinHandlers(middlewares)...)
-	}
+	middlewares = append(middlewares, Cors(), Tls())
+	r.instance.Use(middlewaresToGinHandlers(middlewares)...)
 	r.Route = NewGroup(
 		r.config,
 		r.instance.Group("/"),
