@@ -1,15 +1,14 @@
 package gin
 
 import (
-	"net/http"
 	"strings"
 
-	httpcontract "github.com/goravel/framework/contracts/http"
+	"github.com/goravel/framework/contracts/http"
 	"github.com/rs/cors"
 )
 
-func Cors() httpcontract.Middleware {
-	return func(ctx httpcontract.Context) {
+func Cors() http.Middleware {
+	return func(ctx http.Context) {
 		path := ctx.Request().Path()
 		corsPaths, ok := ConfigFacade.Get("cors.paths").([]string)
 		if !ok {

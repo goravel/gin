@@ -55,7 +55,8 @@ func TestTls(t *testing.T) {
 			beforeEach()
 			test.setup()
 
-			g := NewRoute(mockConfig)
+			g, err := NewRoute(mockConfig, nil)
+			assert.Nil(t, err)
 			g.GlobalMiddleware()
 			g.Any("/any/{id}", func(ctx contractshttp.Context) {
 				ctx.Response().Success().Json(contractshttp.Json{

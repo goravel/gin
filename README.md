@@ -42,6 +42,8 @@ import "github.com/goravel/gin"
 // config/http.go
 import (
     ginfacades "github.com/goravel/gin/facades"
+    "github.com/gin-gonic/gin/render"
+    "github.com/goravel/gin"
 )
 
 "default": "gin",
@@ -50,6 +52,10 @@ import (
     "gin": map[string]any{
         "route": func() (route.Engine, error) {
             return ginfacades.Route(), nil
+        },
+        // Optional, default is http/template
+        "template": func() (render.HTMLRender, error) {
+            return gin.DefaultTemplate()
         },
     },
 },
