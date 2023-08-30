@@ -134,7 +134,7 @@ func TestCors(t *testing.T) {
 				mockConfig.On("GetBool", "app.debug").Return(true).Once()
 				mockConfig.On("Get", "cors.paths").Return([]string{"*"}).Once()
 				mockConfig.On("Get", "cors.allowed_methods").Return([]string{"*"}).Once()
-				mockConfig.On("Get", "cors.allowed_origins").Return([]string{"goravel.com"}).Once()
+				mockConfig.On("Get", "cors.allowed_origins").Return([]string{"https://goravel.com"}).Once()
 				mockConfig.On("Get", "cors.allowed_headers").Return([]string{"*"}).Once()
 				mockConfig.On("Get", "cors.exposed_headers").Return([]string{"*"}).Once()
 				mockConfig.On("GetInt", "cors.max_age").Return(0).Once()

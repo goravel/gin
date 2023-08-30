@@ -30,57 +30,25 @@ import (
 )
 
 func TestFallback(t *testing.T) {
-	var (
-		err        error
-		gin        *Route
-		mockConfig *configmock.Config
-	)
-	beforeEach := func() {
-		mockConfig = &configmock.Config{}
-		mockConfig.On("GetBool", "app.debug").Return(true).Once()
-	}
-	tests := []struct {
-		name       string
-		setup      func(req *http.Request)
-		method     string
-		url        string
-		expectCode int
-		expectBody string
-	}{
-		{
-			name: "success",
-			setup: func(req *http.Request) {
-				gin.Fallback(func(ctx httpcontract.Context) {
-					ctx.Response().String(404, "not found")
-				})
-			},
-			method:     "GET",
-			url:        "/fallback",
-			expectCode: http.StatusNotFound,
-			expectBody: "not found",
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			beforeEach()
-			w := httptest.NewRecorder()
-			req, _ := http.NewRequest(test.method, test.url, nil)
+	mockConfig := &configmock.Config{}
+	mockConfig.On("GetBool", "app.debug").Return(true).Once()
 
-			gin, err = NewRoute(mockConfig, nil)
-			assert.Nil(t, err)
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/fallback", nil)
 
-			if test.setup != nil {
-				test.setup(req)
-			}
+	gin, err := NewRoute(mockConfig, nil)
+	assert.Nil(t, err)
 
-			gin.ServeHTTP(w, req)
+	gin.Fallback(func(ctx httpcontract.Context) {
+		ctx.Response().String(404, "not found")
+	})
 
-			if test.expectBody != "" {
-				assert.Equal(t, test.expectBody, w.Body.String(), test.name)
-			}
-			assert.Equal(t, test.expectCode, w.Code, test.name)
-		})
-	}
+	gin.ServeHTTP(w, req)
+
+	assert.Equal(t, "not found", w.Body.String())
+	assert.Equal(t, http.StatusNotFound, w.Code)
+
+	mockConfig.AssertExpectations(t)
 }
 
 func TestRun(t *testing.T) {
@@ -394,7 +362,6 @@ func TestRequest(t *testing.T) {
 	beforeEach := func() {
 		mockConfig = &configmock.Config{}
 		mockConfig.On("GetBool", "app.debug").Return(true).Once()
-		mockConfig.On("Get", "cors.paths").Return([]string{}).Once()
 	}
 	tests := []struct {
 		name       string
@@ -415,7 +382,10 @@ func TestRequest(t *testing.T) {
 					})
 				})
 
-				req, _ = http.NewRequest(method, url, nil)
+				req, err = http.NewRequest(method, url, nil)
+				if err != nil {
+					return err
+				}
 
 				return nil
 			},
@@ -433,7 +403,10 @@ func TestRequest(t *testing.T) {
 					})
 				})
 
-				req, _ = http.NewRequest(method, url, nil)
+				req, err = http.NewRequest(method, url, nil)
+				if err != nil {
+					return err
+				}
 
 				return nil
 			},
@@ -479,7 +452,11 @@ func TestRequest(t *testing.T) {
 					return err
 				}
 
-				req, _ = http.NewRequest(method, url, payload)
+				req, err = http.NewRequest(method, url, payload)
+				if err != nil {
+					return err
+				}
+
 				req.Header.Set("Content-Type", writer.FormDataContentType())
 
 				return nil
@@ -497,7 +474,11 @@ func TestRequest(t *testing.T) {
 					})
 				})
 
-				req, _ = http.NewRequest(method, url, nil)
+				req, err = http.NewRequest(method, url, nil)
+				if err != nil {
+					return err
+				}
+
 				req.Header.Set("Content-Type", "multipart/form-data;boundary=0")
 
 				return nil
@@ -530,7 +511,11 @@ func TestRequest(t *testing.T) {
 					"Name": "goravel",
 					"Age": 1
 				}`)
-				req, _ = http.NewRequest(method, url, payload)
+				req, err = http.NewRequest(method, url, payload)
+				if err != nil {
+					return err
+				}
+
 				req.Header.Set("Content-Type", "application/json")
 
 				return nil
@@ -567,7 +552,11 @@ func TestRequest(t *testing.T) {
 					"Name": "goravel",
 					"Age": 1,
 				}`)
-				req, _ = http.NewRequest(method, url, payload)
+				req, err = http.NewRequest(method, url, payload)
+				if err != nil {
+					return err
+				}
+
 				req.Header.Set("Content-Type", "application/json")
 
 				return nil
@@ -586,7 +575,11 @@ func TestRequest(t *testing.T) {
 					})
 				})
 
-				req, _ = http.NewRequest(method, url, nil)
+				req, err = http.NewRequest(method, url, nil)
+				if err != nil {
+					return err
+				}
+
 				req.Header.Set("Content-Type", "application/json")
 
 				return nil
@@ -609,7 +602,11 @@ func TestRequest(t *testing.T) {
 					"b": 4,
 					"e": "e"
 				}`)
-				req, _ = http.NewRequest(method, url, payload)
+				req, err = http.NewRequest(method, url, payload)
+				if err != nil {
+					return err
+				}
+
 				req.Header.Set("Content-Type", "application/json")
 
 				return nil
@@ -632,7 +629,11 @@ func TestRequest(t *testing.T) {
 					"b": 4,
 					"e": "e"
 				}`)
-				req, _ = http.NewRequest(method, url, payload)
+				req, err = http.NewRequest(method, url, payload)
+				if err != nil {
+					return err
+				}
+
 				req.Header.Set("Content-Type", "application/json")
 
 				return nil
@@ -663,6 +664,7 @@ func TestRequest(t *testing.T) {
 				if err != nil {
 					return err
 				}
+
 				req.Header.Set("Hello", "goravel")
 
 				return nil
@@ -731,7 +733,11 @@ func TestRequest(t *testing.T) {
 				payload := strings.NewReader(`{
 					"id": "3"
 				}`)
-				req, _ = http.NewRequest(method, url, payload)
+				req, err = http.NewRequest(method, url, payload)
+				if err != nil {
+					return err
+				}
+
 				req.Header.Set("Content-Type", "application/json")
 
 				return nil
@@ -759,7 +765,11 @@ func TestRequest(t *testing.T) {
 					return err
 				}
 
-				req, _ = http.NewRequest(method, url, payload)
+				req, err = http.NewRequest(method, url, payload)
+				if err != nil {
+					return err
+				}
+
 				req.Header.Set("Content-Type", writer.FormDataContentType())
 
 				return nil
@@ -787,7 +797,11 @@ func TestRequest(t *testing.T) {
 				payload := strings.NewReader(`{
 					"name": "Goravel"
 				}`)
-				req, _ = http.NewRequest(method, url, payload)
+				req, err = http.NewRequest(method, url, payload)
+				if err != nil {
+					return err
+				}
+
 				req.Header.Set("Content-Type", "application/json")
 
 				return nil
@@ -821,7 +835,11 @@ func TestRequest(t *testing.T) {
 					return err
 				}
 
-				req, _ = http.NewRequest(method, url, payload)
+				req, err = http.NewRequest(method, url, payload)
+				if err != nil {
+					return err
+				}
+
 				req.Header.Set("Content-Type", writer.FormDataContentType())
 
 				return nil
@@ -840,7 +858,11 @@ func TestRequest(t *testing.T) {
 					})
 				})
 
-				req, _ = http.NewRequest(method, url, nil)
+				req, err = http.NewRequest(method, url, nil)
+				if err != nil {
+					return err
+				}
+
 				req.Header.Set("Content-Type", "application/json")
 
 				return nil
@@ -859,7 +881,11 @@ func TestRequest(t *testing.T) {
 					})
 				})
 
-				req, _ = http.NewRequest(method, url, nil)
+				req, err = http.NewRequest(method, url, nil)
+				if err != nil {
+					return err
+				}
+
 				req.Header.Set("Content-Type", "application/json")
 
 				return nil
@@ -878,7 +904,11 @@ func TestRequest(t *testing.T) {
 					})
 				})
 
-				req, _ = http.NewRequest(method, url, nil)
+				req, err = http.NewRequest(method, url, nil)
+				if err != nil {
+					return err
+				}
+
 				req.Header.Set("Content-Type", "application/json")
 
 				return nil
@@ -897,7 +927,11 @@ func TestRequest(t *testing.T) {
 					})
 				})
 
-				req, _ = http.NewRequest(method, url, nil)
+				req, err = http.NewRequest(method, url, nil)
+				if err != nil {
+					return err
+				}
+
 				req.Header.Set("Content-Type", "application/json")
 
 				return nil
@@ -919,7 +953,11 @@ func TestRequest(t *testing.T) {
 				payload := strings.NewReader(`{
 					"id": {"a": "3"}
 				}`)
-				req, _ = http.NewRequest(method, url, payload)
+				req, err = http.NewRequest(method, url, payload)
+				if err != nil {
+					return err
+				}
+
 				req.Header.Set("Content-Type", "application/json")
 
 				return nil
@@ -941,7 +979,11 @@ func TestRequest(t *testing.T) {
 				payload := strings.NewReader(`{
 					"id": ["3", "4"]
 				}`)
-				req, _ = http.NewRequest(method, url, payload)
+				req, err = http.NewRequest(method, url, payload)
+				if err != nil {
+					return err
+				}
+
 				req.Header.Set("Content-Type", "application/json")
 
 				return nil
@@ -963,7 +1005,11 @@ func TestRequest(t *testing.T) {
 				payload := strings.NewReader(`{
 					"id": {"a": "3", "b": "4"}
 				}`)
-				req, _ = http.NewRequest(method, url, payload)
+				req, err = http.NewRequest(method, url, payload)
+				if err != nil {
+					return err
+				}
+
 				req.Header.Set("Content-Type", "application/json")
 
 				return nil
@@ -982,7 +1028,11 @@ func TestRequest(t *testing.T) {
 					})
 				})
 
-				req, _ = http.NewRequest(method, url, nil)
+				req, err = http.NewRequest(method, url, nil)
+				if err != nil {
+					return err
+				}
+
 				req.Header.Set("Content-Type", "application/json")
 
 				return nil
@@ -1001,7 +1051,11 @@ func TestRequest(t *testing.T) {
 					})
 				})
 
-				req, _ = http.NewRequest(method, url, nil)
+				req, err = http.NewRequest(method, url, nil)
+				if err != nil {
+					return err
+				}
+
 				req.Header.Set("Content-Type", "application/json")
 
 				return nil
@@ -1024,7 +1078,11 @@ func TestRequest(t *testing.T) {
 					})
 				})
 
-				req, _ = http.NewRequest(method, url, nil)
+				req, err = http.NewRequest(method, url, nil)
+				if err != nil {
+					return err
+				}
+
 				req.Header.Set("Content-Type", "application/json")
 
 				return nil
@@ -1053,7 +1111,11 @@ func TestRequest(t *testing.T) {
 					return err
 				}
 
-				req, _ = http.NewRequest(method, url, payload)
+				req, err = http.NewRequest(method, url, payload)
+				if err != nil {
+					return err
+				}
+
 				req.Header.Set("Content-Type", writer.FormDataContentType())
 
 				return nil
@@ -1078,7 +1140,10 @@ func TestRequest(t *testing.T) {
 					"name": "Goravel",
 					"info": {"avatar": "logo"}
 				}`)
-				req, _ = http.NewRequest(method, url, payload)
+				req, err = http.NewRequest(method, url, payload)
+				if err != nil {
+					return err
+				}
 				req.Header.Set("Content-Type", "application/json")
 
 				return nil
@@ -1105,7 +1170,11 @@ func TestRequest(t *testing.T) {
 				payload := strings.NewReader(`{
 					"Name": "Goravel"
 				}`)
-				req, _ = http.NewRequest(method, url, payload)
+				req, err = http.NewRequest(method, url, payload)
+				if err != nil {
+					return err
+				}
+
 				req.Header.Set("Content-Type", "application/json")
 
 				return nil
@@ -1133,7 +1202,11 @@ func TestRequest(t *testing.T) {
 				payload := strings.NewReader(`{
 					"Name": "Goravel"
 				}`)
-				req, _ = http.NewRequest(method, url, payload)
+				req, err = http.NewRequest(method, url, payload)
+				if err != nil {
+					return err
+				}
+
 				req.Header.Set("Content-Type", "application/json")
 
 				return nil
@@ -1162,7 +1235,11 @@ func TestRequest(t *testing.T) {
 					})
 				})
 
-				req, _ = http.NewRequest(method, url, nil)
+				req, err = http.NewRequest(method, url, nil)
+				if err != nil {
+					return err
+				}
+
 				req.Header.Set("Content-Type", "application/json")
 
 				return nil
@@ -1181,7 +1258,11 @@ func TestRequest(t *testing.T) {
 					})
 				})
 
-				req, _ = http.NewRequest(method, url, nil)
+				req, err = http.NewRequest(method, url, nil)
+				if err != nil {
+					return err
+				}
+
 				req.Header.Set("Content-Type", "application/json")
 
 				return nil
@@ -1200,7 +1281,11 @@ func TestRequest(t *testing.T) {
 					})
 				})
 
-				req, _ = http.NewRequest(method, url, nil)
+				req, err = http.NewRequest(method, url, nil)
+				if err != nil {
+					return err
+				}
+
 				req.Header.Set("Content-Type", "application/json")
 
 				return nil
@@ -1219,7 +1304,10 @@ func TestRequest(t *testing.T) {
 					})
 				})
 
-				req, _ = http.NewRequest(method, url, nil)
+				req, err = http.NewRequest(method, url, nil)
+				if err != nil {
+					return err
+				}
 
 				return nil
 			},
@@ -1293,7 +1381,11 @@ func TestRequest(t *testing.T) {
 					return err
 				}
 
-				req, _ = http.NewRequest(method, url, payload)
+				req, err = http.NewRequest(method, url, payload)
+				if err != nil {
+					return err
+				}
+
 				req.Header.Set("Content-Type", writer.FormDataContentType())
 
 				return nil
@@ -1498,7 +1590,11 @@ func TestRequest(t *testing.T) {
 				payload := strings.NewReader(`{
 					"name": "Goravel"
 				}`)
-				req, _ = http.NewRequest(method, url, payload)
+				req, err = http.NewRequest(method, url, payload)
+				if err != nil {
+					return err
+				}
+
 				req.Header.Set("Content-Type", "application/json")
 
 				return nil
@@ -1535,7 +1631,11 @@ func TestRequest(t *testing.T) {
 				payload := strings.NewReader(`{
 					"name": "Goravel"
 				}`)
-				req, _ = http.NewRequest(method, url, payload)
+				req, err = http.NewRequest(method, url, payload)
+				if err != nil {
+					return err
+				}
+
 				req.Header.Set("Content-Type", "application/json")
 
 				return nil
@@ -1572,7 +1672,11 @@ func TestRequest(t *testing.T) {
 				payload := strings.NewReader(`{
 					"name": "Goravel"
 				}`)
-				req, _ = http.NewRequest(method, url, payload)
+				req, err = http.NewRequest(method, url, payload)
+				if err != nil {
+					return err
+				}
+
 				req.Header.Set("Content-Type", "application/json")
 
 				return nil
@@ -1609,7 +1713,11 @@ func TestRequest(t *testing.T) {
 				payload := strings.NewReader(`{
 					"name1": "Goravel"
 				}`)
-				req, _ = http.NewRequest(method, url, payload)
+				req, err = http.NewRequest(method, url, payload)
+				if err != nil {
+					return err
+				}
+
 				req.Header.Set("Content-Type", "application/json")
 
 				return nil
@@ -1641,7 +1749,11 @@ func TestRequest(t *testing.T) {
 				payload := strings.NewReader(`{
 					"name": "Goravel"
 				}`)
-				req, _ = http.NewRequest(method, url, payload)
+				req, err = http.NewRequest(method, url, payload)
+				if err != nil {
+					return err
+				}
+
 				req.Header.Set("Content-Type", "application/json")
 
 				return nil
@@ -1667,6 +1779,8 @@ func TestRequest(t *testing.T) {
 				assert.Equal(t, test.expectBody, w.Body.String(), test.name)
 			}
 			assert.Equal(t, test.expectCode, w.Code)
+
+			mockConfig.AssertExpectations(t)
 		})
 	}
 }
@@ -1681,7 +1795,6 @@ func TestResponse(t *testing.T) {
 	beforeEach := func() {
 		mockConfig = &configmock.Config{}
 		mockConfig.On("GetBool", "app.debug").Return(true).Once()
-		mockConfig.On("Get", "cors.paths").Return([]string{}).Once()
 	}
 	tests := []struct {
 		name         string
@@ -1880,6 +1993,7 @@ func TestResponse(t *testing.T) {
 			method: "GET",
 			url:    "/origin",
 			setup: func(method, url string) error {
+				mockConfig.On("Get", "cors.paths").Return([]string{}).Once()
 				mockConfig.On("GetString", "http.tls.host").Return("").Once()
 				mockConfig.On("GetString", "http.tls.port").Return("").Once()
 				mockConfig.On("GetString", "http.tls.ssl.cert").Return("").Once()
@@ -1951,6 +2065,8 @@ func TestResponse(t *testing.T) {
 				assert.Equal(t, test.expectHeader, strings.Join(w.Header().Values("Hello"), ""), test.name)
 			}
 			assert.Equal(t, test.expectCode, w.Code, test.name)
+
+			mockConfig.AssertExpectations(t)
 		})
 	}
 }
@@ -2012,6 +2128,8 @@ func TestNewRoute(t *testing.T) {
 			if route != nil {
 				assert.Equal(t, test.expectHTMLRender, route.instance.HTMLRender)
 			}
+
+			mockConfig.AssertExpectations(t)
 		})
 	}
 }
