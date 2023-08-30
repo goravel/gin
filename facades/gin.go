@@ -8,7 +8,7 @@ import (
 	"github.com/goravel/gin"
 )
 
-func Route(driver string) route.Engine {
+func Route(driver string) route.Route {
 	instance, err := gin.App.MakeWith(gin.RouteBinding, map[string]any{
 		"driver": driver,
 	})
