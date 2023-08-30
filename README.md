@@ -50,7 +50,7 @@ import (
 
 "drivers": map[string]any{
     "gin": map[string]any{
-        "route": func() (route.Engine, error) {
+        "route": func() (route.Route, error) {
             return ginfacades.Route(), nil
         },
         // Optional, default is http/template

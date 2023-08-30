@@ -17,7 +17,7 @@ import (
 )
 
 type Route struct {
-	route.Route
+	route.Router
 	config   config.Config
 	instance *gin.Engine
 }
@@ -55,7 +55,7 @@ func NewRoute(config config.Config, parameters map[string]any) (*Route, error) {
 	}
 
 	return &Route{
-		Route: NewGroup(
+		Router: NewGroup(
 			config,
 			engine.Group("/"),
 			"",
@@ -74,7 +74,7 @@ func (r *Route) Fallback(handler httpcontract.HandlerFunc) {
 func (r *Route) GlobalMiddleware(middlewares ...httpcontract.Middleware) {
 	middlewares = append(middlewares, Cors(), Tls())
 	r.instance.Use(middlewaresToGinHandlers(middlewares)...)
-	r.Route = NewGroup(
+	r.Router = NewGroup(
 		r.config,
 		r.instance.Group("/"),
 		"",
