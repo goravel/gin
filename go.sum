@@ -343,6 +343,8 @@ github.com/goravel/framework v1.12.1-0.20230826095319-964e2e1b7f1c h1:8BJnya+opr
 github.com/goravel/framework v1.12.1-0.20230826095319-964e2e1b7f1c/go.mod h1:9CFRic/unj1RDBPaiZ8H96TRq5ijXTVC4jGCjVLcJwE=
 github.com/goravel/framework v1.12.1-0.20230830133129-7af35a611903 h1:HZ80Z5hZTd04QAxft38bhYxqt+rAaABfWvmxOFgtW64=
 github.com/goravel/framework v1.12.1-0.20230830133129-7af35a611903/go.mod h1:mG4qbuzEjxM/zT6yT6Eu3bIwGR9mYiQ6peFkiHaLxY0=
+github.com/goravel/framework v1.12.1-0.20230831094846-59284966f954 h1:TreZZPC54Qng+qRQn+ufL0CbpMH6dtQ6JN3xZsjggAo=
+github.com/goravel/framework v1.12.1-0.20230831094846-59284966f954/go.mod h1:mG4qbuzEjxM/zT6yT6Eu3bIwGR9mYiQ6peFkiHaLxY0=
 github.com/gorilla/securecookie v1.1.1/go.mod h1:ra0sb63/xPlUeL+yeDciTfxMRAA+MP+HVt/4epWDjd4=
 github.com/gorilla/sessions v1.2.1/go.mod h1:dk2InVEVJ0sfLlnXv9EAgkf6ecYs/i80K/zI+bUmuGM=
 github.com/grpc-ecosystem/go-grpc-middleware v1.4.0 h1:UH//fgunKIs4JdUbpDl1VZCDaL56wXCB/5+wF6uHfaI=
