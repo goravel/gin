@@ -17,28 +17,28 @@ func Background() http.Context {
 
 type Context struct {
 	instance *gin.Context
-	request  http.Request
+	request  http.ContextRequest
 }
 
 func NewContext(ctx *gin.Context) http.Context {
 	return &Context{instance: ctx}
 }
 
-func (c *Context) Request() http.Request {
+func (c *Context) Request() http.ContextRequest {
 	if c.request == nil {
-		c.request = NewRequest(c, LogFacade, ValidationFacade)
+		c.request = NewContextRequest(c, LogFacade, ValidationFacade)
 	}
 
 	return c.request
 }
 
-func (c *Context) Response() http.Response {
+func (c *Context) Response() http.ContextResponse {
 	responseOrigin := c.Value("responseOrigin")
 	if responseOrigin != nil {
-		return NewResponse(c.instance, responseOrigin.(http.ResponseOrigin))
+		return NewContextResponse(c.instance, responseOrigin.(http.ResponseOrigin))
 	}
 
-	return NewResponse(c.instance, &BodyWriter{ResponseWriter: c.instance.Writer})
+	return NewContextResponse(c.instance, &BodyWriter{ResponseWriter: c.instance.Writer})
 }
 
 func (c *Context) WithValue(key string, value any) {

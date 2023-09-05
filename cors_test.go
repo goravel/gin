@@ -201,8 +201,8 @@ func TestCors(t *testing.T) {
 			g, err := NewRoute(mockConfig, nil)
 			assert.Nil(t, err)
 			g.GlobalMiddleware()
-			g.Post("/any/{id}", func(ctx contractshttp.Context) {
-				ctx.Response().Success().Json(contractshttp.Json{
+			g.Post("/any/{id}", func(ctx contractshttp.Context) contractshttp.Response {
+				return ctx.Response().Success().Json(contractshttp.Json{
 					"id": ctx.Request().Input("id"),
 				})
 			})

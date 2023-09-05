@@ -27,7 +27,9 @@ func middlewaresToGinHandlers(middlewares []httpcontract.Middleware) []gin.Handl
 
 func handlerToGinHandler(handler httpcontract.HandlerFunc) gin.HandlerFunc {
 	return func(ginCtx *gin.Context) {
-		handler(NewContext(ginCtx))
+		if response := handler(NewContext(ginCtx)); response != nil {
+			response.Render()
+		}
 	}
 }
 

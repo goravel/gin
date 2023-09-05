@@ -5,6 +5,7 @@ import (
 	"reflect"
 
 	"github.com/gin-gonic/gin"
+	contractshttp "github.com/goravel/framework/contracts/http"
 )
 
 type View struct {
@@ -15,10 +16,10 @@ func NewView(instance *gin.Context) *View {
 	return &View{instance: instance}
 }
 
-func (receive *View) Make(view string, data ...any) {
+func (receive *View) Make(view string, data ...any) contractshttp.Response {
 	shared := ViewFacade.GetShared()
 	if len(data) == 0 {
-		receive.instance.HTML(200, view, shared)
+		return &HtmlResponse{shared, receive.instance, view}
 	} else {
 		dataType := reflect.TypeOf(data[0])
 		switch dataType.Kind() {
@@ -27,21 +28,22 @@ func (receive *View) Make(view string, data ...any) {
 			for key, value := range dataMap {
 				shared[key] = value
 			}
-			receive.instance.HTML(200, view, shared)
+
+			return &HtmlResponse{shared, receive.instance, view}
 		case reflect.Map:
 			fillShared(data[0], shared)
-			receive.instance.HTML(200, view, data[0])
+
+			return &HtmlResponse{data[0], receive.instance, view}
 		default:
 			panic(fmt.Sprintf("make %s view failed, data must be map or struct", view))
 		}
 	}
 }
 
-func (receive *View) First(views []string, data ...any) {
+func (receive *View) First(views []string, data ...any) contractshttp.Response {
 	for _, view := range views {
 		if ViewFacade.Exists(view) {
-			receive.Make(view, data...)
-			return
+			return receive.Make(view, data...)
 		}
 	}
 
