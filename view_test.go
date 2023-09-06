@@ -55,8 +55,8 @@ func TestView_Make(t *testing.T) {
 			setup: func(method, url string) error {
 				mockView.On("GetShared").Return(nil).Once()
 
-				route.Get("/make/empty", func(ctx contractshttp.Context) {
-					ctx.Response().View().Make("empty.tmpl")
+				route.Get("/make/empty", func(ctx contractshttp.Context) contractshttp.Response {
+					return ctx.Response().View().Make("empty.tmpl")
 				})
 
 				var err error
@@ -80,8 +80,8 @@ func TestView_Make(t *testing.T) {
 					"Age":  18,
 				}).Once()
 
-				route.Get("/make/data", func(ctx contractshttp.Context) {
-					ctx.Response().View().Make("data.tmpl")
+				route.Get("/make/data", func(ctx contractshttp.Context) contractshttp.Response {
+					return ctx.Response().View().Make("data.tmpl")
 				})
 
 				var err error
@@ -104,8 +104,8 @@ func TestView_Make(t *testing.T) {
 					"Name": "test",
 				}).Once()
 
-				route.Get("/make/data", func(ctx contractshttp.Context) {
-					ctx.Response().View().Make("data.tmpl", map[string]any{
+				route.Get("/make/data", func(ctx contractshttp.Context) contractshttp.Response {
+					return ctx.Response().View().Make("data.tmpl", map[string]any{
 						"Age": 18,
 					})
 				})
@@ -130,8 +130,8 @@ func TestView_Make(t *testing.T) {
 					"Name": "test",
 				}).Once()
 
-				route.Get("/make/data", func(ctx contractshttp.Context) {
-					ctx.Response().View().Make("data.tmpl", map[string]any{
+				route.Get("/make/data", func(ctx contractshttp.Context) contractshttp.Response {
+					return ctx.Response().View().Make("data.tmpl", map[string]any{
 						"Name": "test1",
 						"Age":  18,
 					})
@@ -157,8 +157,8 @@ func TestView_Make(t *testing.T) {
 					"Name": "test",
 				}).Once()
 
-				route.Get("/make/data", func(ctx contractshttp.Context) {
-					ctx.Response().View().Make("data.tmpl", struct {
+				route.Get("/make/data", func(ctx contractshttp.Context) contractshttp.Response {
+					return ctx.Response().View().Make("data.tmpl", struct {
 						Name string
 						Age  int
 					}{
@@ -185,10 +185,12 @@ func TestView_Make(t *testing.T) {
 			setup: func(method, url string) error {
 				mockView.On("GetShared").Return(nil).Once()
 
-				route.Get("/make/data", func(ctx contractshttp.Context) {
+				route.Get("/make/data", func(ctx contractshttp.Context) contractshttp.Response {
 					assert.Panics(t, func() {
 						ctx.Response().View().Make("data.tmpl", []string{"test"})
 					})
+
+					return nil
 				})
 
 				var err error
@@ -275,8 +277,8 @@ func TestView_First(t *testing.T) {
 				mockView.On("Exists", "empty.tmpl").Return(true).Once()
 				mockView.On("GetShared").Return(nil).Once()
 
-				route.Get("/first", func(ctx contractshttp.Context) {
-					ctx.Response().View().First([]string{"empty.tmpl", "data.tmpl"})
+				route.Get("/first", func(ctx contractshttp.Context) contractshttp.Response {
+					return ctx.Response().View().First([]string{"empty.tmpl", "data.tmpl"})
 				})
 
 				var err error
@@ -299,8 +301,8 @@ func TestView_First(t *testing.T) {
 				mockView.On("Exists", "data.tmpl").Return(true).Once()
 				mockView.On("GetShared").Return(nil).Once()
 
-				route.Get("/first", func(ctx contractshttp.Context) {
-					ctx.Response().View().First([]string{"empty.tmpl", "data.tmpl"}, map[string]any{
+				route.Get("/first", func(ctx contractshttp.Context) contractshttp.Response {
+					return ctx.Response().View().First([]string{"empty.tmpl", "data.tmpl"}, map[string]any{
 						"Name": "test",
 						"Age":  18,
 					})
@@ -325,13 +327,15 @@ func TestView_First(t *testing.T) {
 				mockView.On("Exists", "empty.tmpl").Return(false).Once()
 				mockView.On("Exists", "data.tmpl").Return(false).Once()
 
-				route.Get("/first", func(ctx contractshttp.Context) {
+				route.Get("/first", func(ctx contractshttp.Context) contractshttp.Response {
 					assert.Panics(t, func() {
 						ctx.Response().View().First([]string{"empty.tmpl", "data.tmpl"}, map[string]any{
 							"Name": "test",
 							"Age":  18,
 						})
 					})
+
+					return nil
 				})
 
 				var err error

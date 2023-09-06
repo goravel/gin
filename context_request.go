@@ -14,40 +14,40 @@ import (
 	"github.com/gookit/validate"
 	"github.com/spf13/cast"
 
-	filesystemcontract "github.com/goravel/framework/contracts/filesystem"
-	httpcontract "github.com/goravel/framework/contracts/http"
+	contractsfilesystem "github.com/goravel/framework/contracts/filesystem"
+	contractshttp "github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/contracts/log"
-	validatecontract "github.com/goravel/framework/contracts/validation"
+	contractsvalidate "github.com/goravel/framework/contracts/validation"
 	"github.com/goravel/framework/filesystem"
 	"github.com/goravel/framework/validation"
 )
 
-type Request struct {
+type ContextRequest struct {
 	ctx        *Context
 	instance   *gin.Context
 	postData   map[string]any
 	log        log.Log
-	validation validatecontract.Validation
+	validation contractsvalidate.Validation
 }
 
-func NewRequest(ctx *Context, log log.Log, validation validatecontract.Validation) httpcontract.Request {
+func NewContextRequest(ctx *Context, log log.Log, validation contractsvalidate.Validation) contractshttp.ContextRequest {
 	postData, err := getPostData(ctx)
 	if err != nil {
 		LogFacade.Error(fmt.Sprintf("%+v", errors.Unwrap(err)))
 	}
 
-	return &Request{ctx: ctx, instance: ctx.instance, postData: postData, log: log, validation: validation}
+	return &ContextRequest{ctx: ctx, instance: ctx.instance, postData: postData, log: log, validation: validation}
 }
 
-func (r *Request) AbortWithStatus(code int) {
+func (r *ContextRequest) AbortWithStatus(code int) {
 	r.instance.AbortWithStatus(code)
 }
 
-func (r *Request) AbortWithStatusJson(code int, jsonObj any) {
+func (r *ContextRequest) AbortWithStatusJson(code int, jsonObj any) {
 	r.instance.AbortWithStatusJSON(code, jsonObj)
 }
 
-func (r *Request) All() map[string]any {
+func (r *ContextRequest) All() map[string]any {
 	var (
 		dataMap  = make(map[string]any)
 		queryMap = make(map[string]any)
@@ -72,11 +72,11 @@ func (r *Request) All() map[string]any {
 	return dataMap
 }
 
-func (r *Request) Bind(obj any) error {
+func (r *ContextRequest) Bind(obj any) error {
 	return r.instance.ShouldBind(obj)
 }
 
-func (r *Request) Form(key string, defaultValue ...string) string {
+func (r *ContextRequest) Form(key string, defaultValue ...string) string {
 	if len(defaultValue) == 0 {
 		return r.instance.PostForm(key)
 	}
@@ -84,7 +84,7 @@ func (r *Request) Form(key string, defaultValue ...string) string {
 	return r.instance.DefaultPostForm(key, defaultValue[0])
 }
 
-func (r *Request) File(name string) (filesystemcontract.File, error) {
+func (r *ContextRequest) File(name string) (contractsfilesystem.File, error) {
 	file, err := r.instance.FormFile(name)
 	if err != nil {
 		return nil, err
@@ -93,7 +93,7 @@ func (r *Request) File(name string) (filesystemcontract.File, error) {
 	return filesystem.NewFileFromRequest(file)
 }
 
-func (r *Request) FullUrl() string {
+func (r *ContextRequest) FullUrl() string {
 	prefix := "https://"
 	if r.instance.Request.TLS == nil {
 		prefix = "http://"
@@ -106,7 +106,7 @@ func (r *Request) FullUrl() string {
 	return prefix + r.instance.Request.Host + r.instance.Request.RequestURI
 }
 
-func (r *Request) Header(key string, defaultValue ...string) string {
+func (r *ContextRequest) Header(key string, defaultValue ...string) string {
 	header := r.instance.GetHeader(key)
 	if header != "" {
 		return header
@@ -119,15 +119,15 @@ func (r *Request) Header(key string, defaultValue ...string) string {
 	return defaultValue[0]
 }
 
-func (r *Request) Headers() http.Header {
+func (r *ContextRequest) Headers() http.Header {
 	return r.instance.Request.Header
 }
 
-func (r *Request) Host() string {
+func (r *ContextRequest) Host() string {
 	return r.instance.Request.Host
 }
 
-func (r *Request) Json(key string, defaultValue ...string) string {
+func (r *ContextRequest) Json(key string, defaultValue ...string) string {
 	var data map[string]any
 	if err := r.Bind(&data); err != nil {
 		if len(defaultValue) == 0 {
@@ -148,15 +148,15 @@ func (r *Request) Json(key string, defaultValue ...string) string {
 	return defaultValue[0]
 }
 
-func (r *Request) Method() string {
+func (r *ContextRequest) Method() string {
 	return r.instance.Request.Method
 }
 
-func (r *Request) Next() {
+func (r *ContextRequest) Next() {
 	r.instance.Next()
 }
 
-func (r *Request) Query(key string, defaultValue ...string) string {
+func (r *ContextRequest) Query(key string, defaultValue ...string) string {
 	if len(defaultValue) > 0 {
 		return r.instance.DefaultQuery(key, defaultValue[0])
 	}
@@ -164,7 +164,7 @@ func (r *Request) Query(key string, defaultValue ...string) string {
 	return r.instance.Query(key)
 }
 
-func (r *Request) QueryInt(key string, defaultValue ...int) int {
+func (r *ContextRequest) QueryInt(key string, defaultValue ...int) int {
 	if val, ok := r.instance.GetQuery(key); ok {
 		return cast.ToInt(val)
 	}
@@ -176,7 +176,7 @@ func (r *Request) QueryInt(key string, defaultValue ...int) int {
 	return 0
 }
 
-func (r *Request) QueryInt64(key string, defaultValue ...int64) int64 {
+func (r *ContextRequest) QueryInt64(key string, defaultValue ...int64) int64 {
 	if val, ok := r.instance.GetQuery(key); ok {
 		return cast.ToInt64(val)
 	}
@@ -188,7 +188,7 @@ func (r *Request) QueryInt64(key string, defaultValue ...int64) int64 {
 	return 0
 }
 
-func (r *Request) QueryBool(key string, defaultValue ...bool) bool {
+func (r *ContextRequest) QueryBool(key string, defaultValue ...bool) bool {
 	if value, ok := r.instance.GetQuery(key); ok {
 		return stringToBool(value)
 	}
@@ -200,15 +200,15 @@ func (r *Request) QueryBool(key string, defaultValue ...bool) bool {
 	return false
 }
 
-func (r *Request) QueryArray(key string) []string {
+func (r *ContextRequest) QueryArray(key string) []string {
 	return r.instance.QueryArray(key)
 }
 
-func (r *Request) QueryMap(key string) map[string]string {
+func (r *ContextRequest) QueryMap(key string) map[string]string {
 	return r.instance.QueryMap(key)
 }
 
-func (r *Request) Queries() map[string]string {
+func (r *ContextRequest) Queries() map[string]string {
 	queries := make(map[string]string)
 
 	for key, query := range r.instance.Request.URL.Query() {
@@ -218,15 +218,15 @@ func (r *Request) Queries() map[string]string {
 	return queries
 }
 
-func (r *Request) Origin() *http.Request {
+func (r *ContextRequest) Origin() *http.Request {
 	return r.instance.Request
 }
 
-func (r *Request) Path() string {
+func (r *ContextRequest) Path() string {
 	return r.instance.Request.URL.Path
 }
 
-func (r *Request) Input(key string, defaultValue ...string) string {
+func (r *ContextRequest) Input(key string, defaultValue ...string) string {
 	keys := strings.Split(key, ".")
 	current := r.postData
 	for _, k := range keys {
@@ -252,7 +252,7 @@ func (r *Request) Input(key string, defaultValue ...string) string {
 	return value
 }
 
-func (r *Request) InputArray(key string, defaultValue ...[]string) []string {
+func (r *ContextRequest) InputArray(key string, defaultValue ...[]string) []string {
 	keys := strings.Split(key, ".")
 	current := r.postData
 	for _, k := range keys {
@@ -274,7 +274,7 @@ func (r *Request) InputArray(key string, defaultValue ...[]string) []string {
 	}
 }
 
-func (r *Request) InputMap(key string, defaultValue ...map[string]string) map[string]string {
+func (r *ContextRequest) InputMap(key string, defaultValue ...map[string]string) map[string]string {
 	keys := strings.Split(key, ".")
 	current := r.postData
 	for _, k := range keys {
@@ -296,7 +296,7 @@ func (r *Request) InputMap(key string, defaultValue ...map[string]string) map[st
 	}
 }
 
-func (r *Request) InputInt(key string, defaultValue ...int) int {
+func (r *ContextRequest) InputInt(key string, defaultValue ...int) int {
 	value := r.Input(key)
 	if value == "" && len(defaultValue) > 0 {
 		return defaultValue[0]
@@ -305,7 +305,7 @@ func (r *Request) InputInt(key string, defaultValue ...int) int {
 	return cast.ToInt(value)
 }
 
-func (r *Request) InputInt64(key string, defaultValue ...int64) int64 {
+func (r *ContextRequest) InputInt64(key string, defaultValue ...int64) int64 {
 	value := r.Input(key)
 	if value == "" && len(defaultValue) > 0 {
 		return defaultValue[0]
@@ -314,7 +314,7 @@ func (r *Request) InputInt64(key string, defaultValue ...int64) int64 {
 	return cast.ToInt64(value)
 }
 
-func (r *Request) InputBool(key string, defaultValue ...bool) bool {
+func (r *ContextRequest) InputBool(key string, defaultValue ...bool) bool {
 	value := r.Input(key)
 	if value == "" && len(defaultValue) > 0 {
 		return defaultValue[0]
@@ -323,31 +323,31 @@ func (r *Request) InputBool(key string, defaultValue ...bool) bool {
 	return stringToBool(value)
 }
 
-func (r *Request) Ip() string {
+func (r *ContextRequest) Ip() string {
 	return r.instance.ClientIP()
 }
 
-func (r *Request) Route(key string) string {
+func (r *ContextRequest) Route(key string) string {
 	return r.instance.Param(key)
 }
 
-func (r *Request) RouteInt(key string) int {
+func (r *ContextRequest) RouteInt(key string) int {
 	val := r.instance.Param(key)
 
 	return cast.ToInt(val)
 }
 
-func (r *Request) RouteInt64(key string) int64 {
+func (r *ContextRequest) RouteInt64(key string) int64 {
 	val := r.instance.Param(key)
 
 	return cast.ToInt64(val)
 }
 
-func (r *Request) Url() string {
+func (r *ContextRequest) Url() string {
 	return r.instance.Request.RequestURI
 }
 
-func (r *Request) Validate(rules map[string]string, options ...validatecontract.Option) (validatecontract.Validator, error) {
+func (r *ContextRequest) Validate(rules map[string]string, options ...contractsvalidate.Option) (contractsvalidate.Validator, error) {
 	if len(rules) == 0 {
 		return nil, errors.New("rules can't be empty")
 	}
@@ -364,7 +364,7 @@ func (r *Request) Validate(rules map[string]string, options ...validatecontract.
 		v = validate.NewValidation(dataFace)
 	} else {
 		if generateOptions["prepareForValidation"] != nil {
-			if err := generateOptions["prepareForValidation"].(func(ctx httpcontract.Context, data validatecontract.Data) error)(r.ctx, validation.NewData(dataFace)); err != nil {
+			if err := generateOptions["prepareForValidation"].(func(ctx contractshttp.Context, data contractsvalidate.Data) error)(r.ctx, validation.NewData(dataFace)); err != nil {
 				return nil, err
 			}
 		}
@@ -377,7 +377,7 @@ func (r *Request) Validate(rules map[string]string, options ...validatecontract.
 	return validation.NewValidator(v, dataFace), nil
 }
 
-func (r *Request) ValidateRequest(request httpcontract.FormRequest) (validatecontract.Errors, error) {
+func (r *ContextRequest) ValidateRequest(request contractshttp.FormRequest) (contractsvalidate.Errors, error) {
 	if err := request.Authorize(r.ctx); err != nil {
 		return nil, err
 	}

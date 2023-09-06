@@ -5,50 +5,55 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	configmock "github.com/goravel/framework/contracts/config/mocks"
-	httpcontract "github.com/goravel/framework/contracts/http"
+	configmocks "github.com/goravel/framework/contracts/config/mocks"
+	contractshttp "github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/contracts/route"
 	"github.com/stretchr/testify/assert"
 )
 
 type resourceController struct{}
 
-func (c resourceController) Index(ctx httpcontract.Context) {
+func (c resourceController) Index(ctx contractshttp.Context) contractshttp.Response {
 	action := ctx.Value("action")
-	ctx.Response().Json(http.StatusOK, httpcontract.Json{
+
+	return ctx.Response().Json(http.StatusOK, contractshttp.Json{
 		"action": action,
 	})
 }
 
-func (c resourceController) Show(ctx httpcontract.Context) {
+func (c resourceController) Show(ctx contractshttp.Context) contractshttp.Response {
 	action := ctx.Value("action")
 	id := ctx.Request().Input("id")
-	ctx.Response().Json(http.StatusOK, httpcontract.Json{
+
+	return ctx.Response().Json(http.StatusOK, contractshttp.Json{
 		"action": action,
 		"id":     id,
 	})
 }
 
-func (c resourceController) Store(ctx httpcontract.Context) {
+func (c resourceController) Store(ctx contractshttp.Context) contractshttp.Response {
 	action := ctx.Value("action")
-	ctx.Response().Json(http.StatusOK, httpcontract.Json{
+
+	return ctx.Response().Json(http.StatusOK, contractshttp.Json{
 		"action": action,
 	})
 }
 
-func (c resourceController) Update(ctx httpcontract.Context) {
+func (c resourceController) Update(ctx contractshttp.Context) contractshttp.Response {
 	action := ctx.Value("action")
 	id := ctx.Request().Input("id")
-	ctx.Response().Json(http.StatusOK, httpcontract.Json{
+
+	return ctx.Response().Json(http.StatusOK, contractshttp.Json{
 		"action": action,
 		"id":     id,
 	})
 }
 
-func (c resourceController) Destroy(ctx httpcontract.Context) {
+func (c resourceController) Destroy(ctx contractshttp.Context) contractshttp.Response {
 	action := ctx.Value("action")
 	id := ctx.Request().Input("id")
-	ctx.Response().Json(http.StatusOK, httpcontract.Json{
+
+	return ctx.Response().Json(http.StatusOK, contractshttp.Json{
 		"action": action,
 		"id":     id,
 	})
@@ -57,10 +62,10 @@ func (c resourceController) Destroy(ctx httpcontract.Context) {
 func TestGroup(t *testing.T) {
 	var (
 		gin        *Route
-		mockConfig *configmock.Config
+		mockConfig *configmocks.Config
 	)
 	beforeEach := func() {
-		mockConfig = &configmock.Config{}
+		mockConfig = &configmocks.Config{}
 		mockConfig.On("GetBool", "app.debug").Return(true).Once()
 		ConfigFacade = mockConfig
 	}
@@ -75,8 +80,8 @@ func TestGroup(t *testing.T) {
 		{
 			name: "Get",
 			setup: func(req *http.Request) {
-				gin.Get("/input/{id}", func(ctx httpcontract.Context) {
-					ctx.Response().Json(http.StatusOK, httpcontract.Json{
+				gin.Get("/input/{id}", func(ctx contractshttp.Context) contractshttp.Response {
+					return ctx.Response().Json(http.StatusOK, contractshttp.Json{
 						"id": ctx.Request().Input("id"),
 					})
 				})
@@ -89,8 +94,8 @@ func TestGroup(t *testing.T) {
 		{
 			name: "Post",
 			setup: func(req *http.Request) {
-				gin.Post("/input/{id}", func(ctx httpcontract.Context) {
-					ctx.Response().Success().Json(httpcontract.Json{
+				gin.Post("/input/{id}", func(ctx contractshttp.Context) contractshttp.Response {
+					return ctx.Response().Success().Json(contractshttp.Json{
 						"id": ctx.Request().Input("id"),
 					})
 				})
@@ -103,8 +108,8 @@ func TestGroup(t *testing.T) {
 		{
 			name: "Put",
 			setup: func(req *http.Request) {
-				gin.Put("/input/{id}", func(ctx httpcontract.Context) {
-					ctx.Response().Success().Json(httpcontract.Json{
+				gin.Put("/input/{id}", func(ctx contractshttp.Context) contractshttp.Response {
+					return ctx.Response().Success().Json(contractshttp.Json{
 						"id": ctx.Request().Input("id"),
 					})
 				})
@@ -117,8 +122,8 @@ func TestGroup(t *testing.T) {
 		{
 			name: "Delete",
 			setup: func(req *http.Request) {
-				gin.Delete("/input/{id}", func(ctx httpcontract.Context) {
-					ctx.Response().Success().Json(httpcontract.Json{
+				gin.Delete("/input/{id}", func(ctx contractshttp.Context) contractshttp.Response {
+					return ctx.Response().Success().Json(contractshttp.Json{
 						"id": ctx.Request().Input("id"),
 					})
 				})
@@ -131,8 +136,8 @@ func TestGroup(t *testing.T) {
 		{
 			name: "Options",
 			setup: func(req *http.Request) {
-				gin.Options("/input/{id}", func(ctx httpcontract.Context) {
-					ctx.Response().Success().Json(httpcontract.Json{
+				gin.Options("/input/{id}", func(ctx contractshttp.Context) contractshttp.Response {
+					return ctx.Response().Success().Json(contractshttp.Json{
 						"id": ctx.Request().Input("id"),
 					})
 				})
@@ -144,8 +149,8 @@ func TestGroup(t *testing.T) {
 		{
 			name: "Patch",
 			setup: func(req *http.Request) {
-				gin.Patch("/input/{id}", func(ctx httpcontract.Context) {
-					ctx.Response().Success().Json(httpcontract.Json{
+				gin.Patch("/input/{id}", func(ctx contractshttp.Context) contractshttp.Response {
+					return ctx.Response().Success().Json(contractshttp.Json{
 						"id": ctx.Request().Input("id"),
 					})
 				})
@@ -158,8 +163,8 @@ func TestGroup(t *testing.T) {
 		{
 			name: "Any Get",
 			setup: func(req *http.Request) {
-				gin.Any("/any/{id}", func(ctx httpcontract.Context) {
-					ctx.Response().Success().Json(httpcontract.Json{
+				gin.Any("/any/{id}", func(ctx contractshttp.Context) contractshttp.Response {
+					return ctx.Response().Success().Json(contractshttp.Json{
 						"id": ctx.Request().Input("id"),
 					})
 				})
@@ -172,8 +177,8 @@ func TestGroup(t *testing.T) {
 		{
 			name: "Any Post",
 			setup: func(req *http.Request) {
-				gin.Any("/any/{id}", func(ctx httpcontract.Context) {
-					ctx.Response().Success().Json(httpcontract.Json{
+				gin.Any("/any/{id}", func(ctx contractshttp.Context) contractshttp.Response {
+					return ctx.Response().Success().Json(contractshttp.Json{
 						"id": ctx.Request().Input("id"),
 					})
 				})
@@ -186,8 +191,8 @@ func TestGroup(t *testing.T) {
 		{
 			name: "Any Put",
 			setup: func(req *http.Request) {
-				gin.Any("/any/{id}", func(ctx httpcontract.Context) {
-					ctx.Response().Success().Json(httpcontract.Json{
+				gin.Any("/any/{id}", func(ctx contractshttp.Context) contractshttp.Response {
+					return ctx.Response().Success().Json(contractshttp.Json{
 						"id": ctx.Request().Input("id"),
 					})
 				})
@@ -200,8 +205,8 @@ func TestGroup(t *testing.T) {
 		{
 			name: "Any Delete",
 			setup: func(req *http.Request) {
-				gin.Any("/any/{id}", func(ctx httpcontract.Context) {
-					ctx.Response().Success().Json(httpcontract.Json{
+				gin.Any("/any/{id}", func(ctx contractshttp.Context) contractshttp.Response {
+					return ctx.Response().Success().Json(contractshttp.Json{
 						"id": ctx.Request().Input("id"),
 					})
 				})
@@ -214,8 +219,8 @@ func TestGroup(t *testing.T) {
 		{
 			name: "Any Patch",
 			setup: func(req *http.Request) {
-				gin.Any("/any/{id}", func(ctx httpcontract.Context) {
-					ctx.Response().Success().Json(httpcontract.Json{
+				gin.Any("/any/{id}", func(ctx contractshttp.Context) contractshttp.Response {
+					return ctx.Response().Success().Json(contractshttp.Json{
 						"id": ctx.Request().Input("id"),
 					})
 				})
@@ -235,7 +240,7 @@ func TestGroup(t *testing.T) {
 				mockConfig.On("GetString", "http.tls.ssl.key").Return("").Once()
 
 				resource := resourceController{}
-				gin.GlobalMiddleware(func(ctx httpcontract.Context) {
+				gin.GlobalMiddleware(func(ctx contractshttp.Context) {
 					ctx.WithValue("action", "index")
 					ctx.Request().Next()
 				})
@@ -256,7 +261,7 @@ func TestGroup(t *testing.T) {
 				mockConfig.On("GetString", "http.tls.ssl.key").Return("").Once()
 
 				resource := resourceController{}
-				gin.GlobalMiddleware(func(ctx httpcontract.Context) {
+				gin.GlobalMiddleware(func(ctx contractshttp.Context) {
 					ctx.WithValue("action", "show")
 					ctx.Request().Next()
 				})
@@ -277,7 +282,7 @@ func TestGroup(t *testing.T) {
 				mockConfig.On("GetString", "http.tls.ssl.key").Return("").Once()
 
 				resource := resourceController{}
-				gin.GlobalMiddleware(func(ctx httpcontract.Context) {
+				gin.GlobalMiddleware(func(ctx contractshttp.Context) {
 					ctx.WithValue("action", "store")
 					ctx.Request().Next()
 				})
@@ -298,7 +303,7 @@ func TestGroup(t *testing.T) {
 				mockConfig.On("GetString", "http.tls.ssl.key").Return("").Once()
 
 				resource := resourceController{}
-				gin.GlobalMiddleware(func(ctx httpcontract.Context) {
+				gin.GlobalMiddleware(func(ctx contractshttp.Context) {
 					ctx.WithValue("action", "update")
 					ctx.Request().Next()
 				})
@@ -319,7 +324,7 @@ func TestGroup(t *testing.T) {
 				mockConfig.On("GetString", "http.tls.ssl.key").Return("").Once()
 
 				resource := resourceController{}
-				gin.GlobalMiddleware(func(ctx httpcontract.Context) {
+				gin.GlobalMiddleware(func(ctx contractshttp.Context) {
 					ctx.WithValue("action", "update")
 					ctx.Request().Next()
 				})
@@ -340,7 +345,7 @@ func TestGroup(t *testing.T) {
 				mockConfig.On("GetString", "http.tls.ssl.key").Return("").Once()
 
 				resource := resourceController{}
-				gin.GlobalMiddleware(func(ctx httpcontract.Context) {
+				gin.GlobalMiddleware(func(ctx contractshttp.Context) {
 					ctx.WithValue("action", "destroy")
 					ctx.Request().Next()
 				})
@@ -381,8 +386,8 @@ func TestGroup(t *testing.T) {
 		{
 			name: "Abort Middleware",
 			setup: func(req *http.Request) {
-				gin.Middleware(abortMiddleware()).Get("/middleware/{id}", func(ctx httpcontract.Context) {
-					ctx.Response().Success().Json(httpcontract.Json{
+				gin.Middleware(abortMiddleware()).Get("/middleware/{id}", func(ctx contractshttp.Context) contractshttp.Response {
+					return ctx.Response().Success().Json(contractshttp.Json{
 						"id": ctx.Request().Input("id"),
 					})
 				})
@@ -394,8 +399,8 @@ func TestGroup(t *testing.T) {
 		{
 			name: "Multiple Middleware",
 			setup: func(req *http.Request) {
-				gin.Middleware(contextMiddleware(), contextMiddleware1()).Get("/middlewares/{id}", func(ctx httpcontract.Context) {
-					ctx.Response().Success().Json(httpcontract.Json{
+				gin.Middleware(contextMiddleware(), contextMiddleware1()).Get("/middlewares/{id}", func(ctx contractshttp.Context) contractshttp.Response {
+					return ctx.Response().Success().Json(contractshttp.Json{
 						"id":   ctx.Request().Input("id"),
 						"ctx":  ctx.Value("ctx"),
 						"ctx1": ctx.Value("ctx1"),
@@ -410,8 +415,8 @@ func TestGroup(t *testing.T) {
 		{
 			name: "Multiple Prefix",
 			setup: func(req *http.Request) {
-				gin.Prefix("prefix1").Prefix("prefix2").Get("input/{id}", func(ctx httpcontract.Context) {
-					ctx.Response().Success().Json(httpcontract.Json{
+				gin.Prefix("prefix1").Prefix("prefix2").Get("input/{id}", func(ctx contractshttp.Context) contractshttp.Response {
+					return ctx.Response().Success().Json(contractshttp.Json{
 						"id": ctx.Request().Input("id"),
 					})
 				})
@@ -426,16 +431,16 @@ func TestGroup(t *testing.T) {
 			setup: func(req *http.Request) {
 				gin.Prefix("group1").Middleware(contextMiddleware()).Group(func(route1 route.Router) {
 					route1.Prefix("group2").Middleware(contextMiddleware1()).Group(func(route2 route.Router) {
-						route2.Get("/middleware/{id}", func(ctx httpcontract.Context) {
-							ctx.Response().Success().Json(httpcontract.Json{
+						route2.Get("/middleware/{id}", func(ctx contractshttp.Context) contractshttp.Response {
+							return ctx.Response().Success().Json(contractshttp.Json{
 								"id":   ctx.Request().Input("id"),
 								"ctx":  ctx.Value("ctx").(string),
 								"ctx1": ctx.Value("ctx1").(string),
 							})
 						})
 					})
-					route1.Middleware(contextMiddleware2()).Get("/middleware/{id}", func(ctx httpcontract.Context) {
-						ctx.Response().Success().Json(httpcontract.Json{
+					route1.Middleware(contextMiddleware2()).Get("/middleware/{id}", func(ctx contractshttp.Context) contractshttp.Response {
+						return ctx.Response().Success().Json(contractshttp.Json{
 							"id":   ctx.Request().Input("id"),
 							"ctx":  ctx.Value("ctx").(string),
 							"ctx2": ctx.Value("ctx2").(string),
@@ -453,16 +458,16 @@ func TestGroup(t *testing.T) {
 			setup: func(req *http.Request) {
 				gin.Prefix("group1").Middleware(contextMiddleware()).Group(func(route1 route.Router) {
 					route1.Prefix("group2").Middleware(contextMiddleware1()).Group(func(route2 route.Router) {
-						route2.Get("/middleware/{id}", func(ctx httpcontract.Context) {
-							ctx.Response().Success().Json(httpcontract.Json{
+						route2.Get("/middleware/{id}", func(ctx contractshttp.Context) contractshttp.Response {
+							return ctx.Response().Success().Json(contractshttp.Json{
 								"id":   ctx.Request().Input("id"),
 								"ctx":  ctx.Value("ctx").(string),
 								"ctx1": ctx.Value("ctx1").(string),
 							})
 						})
 					})
-					route1.Middleware(contextMiddleware2()).Get("/middleware/{id}", func(ctx httpcontract.Context) {
-						ctx.Response().Success().Json(httpcontract.Json{
+					route1.Middleware(contextMiddleware2()).Get("/middleware/{id}", func(ctx contractshttp.Context) contractshttp.Response {
+						return ctx.Response().Success().Json(contractshttp.Json{
 							"id":   ctx.Request().Input("id"),
 							"ctx":  ctx.Value("ctx").(string),
 							"ctx2": ctx.Value("ctx2").(string),
@@ -484,12 +489,12 @@ func TestGroup(t *testing.T) {
 				mockConfig.On("GetString", "http.tls.ssl.cert").Return("").Once()
 				mockConfig.On("GetString", "http.tls.ssl.key").Return("").Once()
 
-				gin.GlobalMiddleware(func(ctx httpcontract.Context) {
+				gin.GlobalMiddleware(func(ctx contractshttp.Context) {
 					ctx.WithValue("global", "goravel")
 					ctx.Request().Next()
 				})
-				gin.Get("/global-middleware", func(ctx httpcontract.Context) {
-					ctx.Response().Json(http.StatusOK, httpcontract.Json{
+				gin.Get("/global-middleware", func(ctx contractshttp.Context) contractshttp.Response {
+					return ctx.Response().Json(http.StatusOK, contractshttp.Json{
 						"global": ctx.Value("global"),
 					})
 				})
@@ -503,15 +508,15 @@ func TestGroup(t *testing.T) {
 			name: "Middleware Conflict",
 			setup: func(req *http.Request) {
 				gin.Prefix("conflict").Group(func(route1 route.Router) {
-					route1.Middleware(contextMiddleware()).Get("/middleware1/{id}", func(ctx httpcontract.Context) {
-						ctx.Response().Success().Json(httpcontract.Json{
+					route1.Middleware(contextMiddleware()).Get("/middleware1/{id}", func(ctx contractshttp.Context) contractshttp.Response {
+						return ctx.Response().Success().Json(contractshttp.Json{
 							"id":   ctx.Request().Input("id"),
 							"ctx":  ctx.Value("ctx"),
 							"ctx2": ctx.Value("ctx2"),
 						})
 					})
-					route1.Middleware(contextMiddleware2()).Post("/middleware2/{id}", func(ctx httpcontract.Context) {
-						ctx.Response().Success().Json(httpcontract.Json{
+					route1.Middleware(contextMiddleware2()).Post("/middleware2/{id}", func(ctx contractshttp.Context) contractshttp.Response {
+						return ctx.Response().Success().Json(contractshttp.Json{
 							"id":   ctx.Request().Input("id"),
 							"ctx":  ctx.Value("ctx"),
 							"ctx2": ctx.Value("ctx2"),
@@ -550,30 +555,30 @@ func TestGroup(t *testing.T) {
 	}
 }
 
-func abortMiddleware() httpcontract.Middleware {
-	return func(ctx httpcontract.Context) {
+func abortMiddleware() contractshttp.Middleware {
+	return func(ctx contractshttp.Context) {
 		ctx.Request().AbortWithStatus(http.StatusNonAuthoritativeInfo)
 	}
 }
 
-func contextMiddleware() httpcontract.Middleware {
-	return func(ctx httpcontract.Context) {
+func contextMiddleware() contractshttp.Middleware {
+	return func(ctx contractshttp.Context) {
 		ctx.WithValue("ctx", "Goravel")
 
 		ctx.Request().Next()
 	}
 }
 
-func contextMiddleware1() httpcontract.Middleware {
-	return func(ctx httpcontract.Context) {
+func contextMiddleware1() contractshttp.Middleware {
+	return func(ctx contractshttp.Context) {
 		ctx.WithValue("ctx1", "Hello")
 
 		ctx.Request().Next()
 	}
 }
 
-func contextMiddleware2() httpcontract.Middleware {
-	return func(ctx httpcontract.Context) {
+func contextMiddleware2() contractshttp.Middleware {
+	return func(ctx contractshttp.Context) {
 		ctx.WithValue("ctx2", "World")
 
 		ctx.Request().Next()
