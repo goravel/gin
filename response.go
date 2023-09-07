@@ -13,8 +13,10 @@ type DataResponse struct {
 	instance    *gin.Context
 }
 
-func (r *DataResponse) Render() {
+func (r *DataResponse) Render() error {
 	r.instance.Data(r.code, r.contentType, r.data)
+
+	return nil
 }
 
 type DownloadResponse struct {
@@ -23,8 +25,10 @@ type DownloadResponse struct {
 	instance *gin.Context
 }
 
-func (r *DownloadResponse) Render() {
+func (r *DownloadResponse) Render() error {
 	r.instance.FileAttachment(r.filepath, r.filename)
+
+	return nil
 }
 
 type FileResponse struct {
@@ -32,8 +36,10 @@ type FileResponse struct {
 	instance *gin.Context
 }
 
-func (r *FileResponse) Render() {
+func (r *FileResponse) Render() error {
 	r.instance.File(r.filepath)
+
+	return nil
 }
 
 type JsonResponse struct {
@@ -42,8 +48,10 @@ type JsonResponse struct {
 	instance *gin.Context
 }
 
-func (r *JsonResponse) Render() {
+func (r *JsonResponse) Render() error {
 	r.instance.JSON(r.code, r.obj)
+
+	return nil
 }
 
 type RedirectResponse struct {
@@ -52,8 +60,10 @@ type RedirectResponse struct {
 	instance *gin.Context
 }
 
-func (r *RedirectResponse) Render() {
+func (r *RedirectResponse) Render() error {
 	r.instance.Redirect(r.code, r.location)
+
+	return nil
 }
 
 type StringResponse struct {
@@ -63,8 +73,10 @@ type StringResponse struct {
 	values   []any
 }
 
-func (r *StringResponse) Render() {
+func (r *StringResponse) Render() error {
 	r.instance.String(r.code, r.format, r.values...)
+
+	return nil
 }
 
 type HtmlResponse struct {
@@ -73,6 +85,8 @@ type HtmlResponse struct {
 	view     string
 }
 
-func (r *HtmlResponse) Render() {
+func (r *HtmlResponse) Render() error {
 	r.instance.HTML(http.StatusOK, r.view, r.data)
+
+	return nil
 }
