@@ -3,7 +3,7 @@ module github.com/goravel/gin
 go 1.20
 
 require (
-	github.com/bytedance/sonic v1.10.0
+	github.com/bytedance/sonic v1.10.1
 	github.com/gin-gonic/gin v1.9.1
 	github.com/gookit/color v1.5.4
 	github.com/gookit/validate v1.5.1
