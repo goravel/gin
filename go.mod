@@ -8,7 +8,7 @@ require (
 	github.com/gookit/color v1.5.4
 	github.com/gookit/validate v1.5.1
 	github.com/goravel/framework v1.13.1
-	github.com/rs/cors v1.10.0
+	github.com/rs/cors v1.10.1
 	github.com/spf13/cast v1.5.1
 	github.com/stretchr/testify v1.8.4
 	github.com/unrolled/secure v1.13.0
