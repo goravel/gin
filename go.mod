@@ -3,11 +3,11 @@ module github.com/goravel/gin
 go 1.20
 
 require (
-	github.com/bytedance/sonic v1.10.1
+	github.com/bytedance/sonic v1.10.2
 	github.com/gin-gonic/gin v1.9.1
 	github.com/gookit/color v1.5.4
 	github.com/gookit/validate v1.5.1
-	github.com/goravel/framework v1.13.1
+	github.com/goravel/framework v1.13.2
 	github.com/rs/cors v1.10.1
 	github.com/spf13/cast v1.5.1
 	github.com/stretchr/testify v1.8.4
@@ -61,7 +61,7 @@ require (
 	github.com/golang-jwt/jwt/v4 v4.5.0 // indirect
 	github.com/golang-jwt/jwt/v5 v5.0.0 // indirect
 	github.com/golang-migrate/migrate/v4 v4.16.2 // indirect
-	github.com/golang-module/carbon/v2 v2.2.6 // indirect
+	github.com/golang-module/carbon/v2 v2.2.8 // indirect
 	github.com/golang-sql/civil v0.0.0-20220223132316-b832511892a9 // indirect
 	github.com/golang-sql/sqlexp v0.1.0 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
@@ -144,6 +144,7 @@ require (
 	go.uber.org/atomic v1.11.0 // indirect
 	golang.org/x/arch v0.3.0 // indirect
 	golang.org/x/crypto v0.13.0 // indirect
+	golang.org/x/exp v0.0.0-20230315142452-642cacee5cc0 // indirect
 	golang.org/x/mod v0.10.0 // indirect
 	golang.org/x/net v0.12.0 // indirect
 	golang.org/x/oauth2 v0.10.0 // indirect
@@ -156,7 +157,7 @@ require (
 	google.golang.org/genproto v0.0.0-20230711160842-782d3b101e98 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20230711160842-782d3b101e98 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20230711160842-782d3b101e98 // indirect
-	google.golang.org/grpc v1.58.0 // indirect
+	google.golang.org/grpc v1.58.2 // indirect
 	google.golang.org/protobuf v1.31.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
