@@ -360,18 +360,22 @@ func (r *ContextRequest) Validate(rules map[string]string, options ...contractsv
 	if err != nil {
 		return nil, err
 	}
-	if dataFace == nil {
-		v = validate.NewValidation(dataFace)
-	} else {
-		if generateOptions["prepareForValidation"] != nil {
-			if err := generateOptions["prepareForValidation"].(func(ctx contractshttp.Context, data contractsvalidate.Data) error)(r.ctx, validation.NewData(dataFace)); err != nil {
+
+	for _, param := range r.instance.Params {
+		if _, exist := dataFace.Get(param.Key); !exist {
+			if _, err := dataFace.Set(param.Key, param.Value); err != nil {
 				return nil, err
 			}
 		}
-
-		v = dataFace.Create()
 	}
 
+	if generateOptions["prepareForValidation"] != nil {
+		if err := generateOptions["prepareForValidation"].(func(ctx contractshttp.Context, data contractsvalidate.Data) error)(r.ctx, validation.NewData(dataFace)); err != nil {
+			return nil, err
+		}
+	}
+
+	v = dataFace.Create()
 	validation.AppendOptions(v, generateOptions)
 
 	return validation.NewValidator(v, dataFace), nil
