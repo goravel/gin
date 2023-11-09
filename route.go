@@ -14,6 +14,7 @@ import (
 	httpcontract "github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/contracts/route"
 	"github.com/goravel/framework/support"
+	"github.com/savioxavier/termlink"
 )
 
 type Route struct {
@@ -99,7 +100,7 @@ func (r *Route) Run(host ...string) error {
 	}
 
 	r.outputRoutes()
-	color.Greenln("[HTTP] Listening and serving HTTP on " + host[0])
+	color.Greenln("[HTTP] Listening and serving HTTP on" + termlink.Link("", "http://"+host[0]))
 
 	server := &http.Server{
 		Addr:    host[0],
@@ -145,7 +146,7 @@ func (r *Route) RunTLSWithCert(host, certFile, keyFile string) error {
 	}
 
 	r.outputRoutes()
-	color.Greenln("[HTTPS] Listening and serving HTTPS on " + host)
+	color.Greenln("[HTTPS] Listening and serving HTTPS on" + termlink.Link("", "https://"+host))
 
 	return r.instance.RunTLS(host, certFile, keyFile)
 }
