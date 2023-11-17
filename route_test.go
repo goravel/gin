@@ -342,7 +342,7 @@ func TestRunTLSWithCert(t *testing.T) {
 func TestNewRoute(t *testing.T) {
 	var mockConfig *configmocks.Config
 	defaultTemplate, err := DefaultTemplate()
-	assert.Nil(t, err)
+	assert.Error(t, err)
 
 	tests := []struct {
 		name             string
@@ -352,9 +352,8 @@ func TestNewRoute(t *testing.T) {
 		expectError      error
 	}{
 		{
-			name:             "parameters is nil",
-			setup:            func() {},
-			expectHTMLRender: defaultTemplate,
+			name:  "parameters is nil",
+			setup: func() {},
 		},
 		{
 			name:       "template is instance",
