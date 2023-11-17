@@ -10,9 +10,9 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin/render"
-	configmocks "github.com/goravel/framework/contracts/config/mocks"
 	contractshttp "github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/contracts/validation"
+	configmocks "github.com/goravel/framework/mocks/config"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -403,7 +403,7 @@ func TestNewRoute(t *testing.T) {
 }
 
 type CreateUser struct {
-	Name string `form:"name" json:"name"`
+	Name string `form:"name" json:"name" filter:"trim"`
 }
 
 func (r *CreateUser) Authorize(ctx contractshttp.Context) error {

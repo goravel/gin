@@ -12,14 +12,14 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/bytedance/sonic"
-	configmocks "github.com/goravel/framework/contracts/config/mocks"
-	filesystemmocks "github.com/goravel/framework/contracts/filesystem/mocks"
 	contractshttp "github.com/goravel/framework/contracts/http"
-	logmocks "github.com/goravel/framework/contracts/log/mocks"
 	"github.com/goravel/framework/contracts/validation"
-	validationmocks "github.com/goravel/framework/contracts/validation/mocks"
 	frameworkfilesystem "github.com/goravel/framework/filesystem"
+	configmocks "github.com/goravel/framework/mocks/config"
+	filesystemmocks "github.com/goravel/framework/mocks/filesystem"
+	logmocks "github.com/goravel/framework/mocks/log"
+	validationmocks "github.com/goravel/framework/mocks/validation"
+	"github.com/goravel/framework/support/json"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -350,7 +350,7 @@ func TestRequest(t *testing.T) {
 			url:    "/headers",
 			setup: func(method, url string) error {
 				gin.Get("/headers", func(ctx contractshttp.Context) contractshttp.Response {
-					str, _ := sonic.Marshal(ctx.Request().Headers())
+					str, _ := json.Marshal(ctx.Request().Headers())
 					return ctx.Response().Success().String(string(str))
 				})
 
@@ -1229,6 +1229,41 @@ func TestRequest(t *testing.T) {
 			expectBody: "Validate fail: map[name:map[required:name is required to not be empty]]",
 		},
 		{
+			name:   "GET with validator use filter and validate request pass",
+			method: "GET",
+			url:    "/validator/filter/success?name= Goravel ",
+			setup: func(method, url string) error {
+				gin.Get("/validator/filter/success", func(ctx contractshttp.Context) contractshttp.Response {
+					mockValidation := &validationmocks.Validation{}
+					mockValidation.On("Rules").Return([]validation.Rule{}).Once()
+					ValidationFacade = mockValidation
+
+					var createUser CreateUser
+					validateErrors, err := ctx.Request().ValidateRequest(&createUser)
+					if err != nil {
+						return ctx.Response().String(http.StatusBadRequest, "Validate error: "+err.Error())
+					}
+					if validateErrors != nil {
+						return ctx.Response().String(http.StatusBadRequest, fmt.Sprintf("Validate fail: %+v", validateErrors.All()))
+					}
+
+					return ctx.Response().Success().Json(contractshttp.Json{
+						"name": createUser.Name,
+					})
+				})
+
+				var err error
+				req, err = http.NewRequest(method, url, nil)
+				if err != nil {
+					return err
+				}
+
+				return nil
+			},
+			expectCode: http.StatusOK,
+			expectBody: "{\"name\":\"Goravel 1\"}",
+		},
+		{
 			name:   "POST with validator and validate pass",
 			method: "POST",
 			url:    "/validator/validate/success",
@@ -1392,6 +1427,40 @@ func TestRequest(t *testing.T) {
 			},
 			expectCode: http.StatusBadRequest,
 			expectBody: "Validate fail: map[name:map[required:name is required to not be empty]]",
+		},
+		{name: "POST with validator use filter and validate request pass",
+			method: "POST",
+			url:    "/validator/filter/success",
+			setup: func(method, url string) error {
+				gin.Post("/validator/filter/success", func(ctx contractshttp.Context) contractshttp.Response {
+					mockValidation := &validationmocks.Validation{}
+					mockValidation.On("Rules").Return([]validation.Rule{}).Once()
+					ValidationFacade = mockValidation
+
+					var createUser CreateUser
+					validateErrors, err := ctx.Request().ValidateRequest(&createUser)
+					if err != nil {
+						return ctx.Response().String(http.StatusBadRequest, "Validate error: "+err.Error())
+					}
+					if validateErrors != nil {
+						return ctx.Response().String(http.StatusBadRequest, fmt.Sprintf("Validate fail: %+v", validateErrors.All()))
+					}
+
+					return ctx.Response().Success().Json(contractshttp.Json{
+						"name": createUser.Name,
+					})
+				})
+
+				payload := strings.NewReader(`{
+					"name": " Goravel "
+				}`)
+				req, _ = http.NewRequest(method, url, payload)
+				req.Header.Set("Content-Type", "application/json")
+
+				return nil
+			},
+			expectCode: http.StatusOK,
+			expectBody: "{\"name\":\"Goravel 1\"}",
 		},
 		{
 			name:   "POST with validator and validate request unauthorize",
