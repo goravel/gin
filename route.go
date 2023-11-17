@@ -9,7 +9,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/render"
 	"github.com/gookit/color"
-
 	"github.com/goravel/framework/contracts/config"
 	httpcontract "github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/contracts/route"
@@ -47,12 +46,9 @@ func NewRoute(config config.Config, parameters map[string]any) (*Route, error) {
 		}
 	}
 
-	if engine.HTMLRender == nil {
-		var err error
-		engine.HTMLRender, err = DefaultTemplate()
-		if err != nil {
-			return nil, err
-		}
+	template, err := DefaultTemplate()
+	if engine.HTMLRender == nil && err == nil {
+		engine.HTMLRender = template
 	}
 
 	return &Route{

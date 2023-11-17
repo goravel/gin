@@ -1,12 +1,12 @@
 package gin
 
 import (
+	"errors"
 	"html/template"
 	"os"
 	"path/filepath"
 
 	"github.com/gin-gonic/gin/render"
-
 	"github.com/goravel/framework/support"
 	"github.com/goravel/framework/support/file"
 )
@@ -36,7 +36,7 @@ func NewTemplate(options RenderOptions) (*render.HTMLProduction, error) {
 	}
 
 	if !file.Exists(dir) {
-		return nil, nil
+		return nil, errors.New("resources/views directory not found")
 	}
 
 	var files []string
