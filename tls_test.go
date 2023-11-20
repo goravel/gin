@@ -28,6 +28,7 @@ func TestTls(t *testing.T) {
 			name: "not use tls",
 			setup: func() {
 				mockConfig.On("GetBool", "app.debug").Return(true).Once()
+				mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4).Return(4).Once()
 				mockConfig.On("Get", "cors.paths").Return([]string{}).Once()
 				mockConfig.On("GetString", "http.tls.host").Return("").Once()
 				mockConfig.On("GetString", "http.tls.port").Return("").Once()
@@ -40,6 +41,7 @@ func TestTls(t *testing.T) {
 			name: "use tls",
 			setup: func() {
 				mockConfig.On("GetBool", "app.debug").Return(true).Once()
+				mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4).Return(4).Once()
 				mockConfig.On("Get", "cors.paths").Return([]string{}).Once()
 				mockConfig.On("GetString", "http.tls.host").Return("127.0.0.1").Once()
 				mockConfig.On("GetString", "http.tls.port").Return("3000").Once()
