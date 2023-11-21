@@ -34,7 +34,7 @@ func TestRequest(t *testing.T) {
 	beforeEach := func() {
 		mockConfig = &configmocks.Config{}
 		mockConfig.On("GetBool", "app.debug").Return(true).Once()
-		mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4).Return(4).Once()
+		mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4096).Return(4096).Once()
 	}
 	tests := []struct {
 		name       string

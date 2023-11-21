@@ -19,7 +19,7 @@ import (
 func TestFallback(t *testing.T) {
 	mockConfig := &configmocks.Config{}
 	mockConfig.On("GetBool", "app.debug").Return(true).Once()
-	mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4).Return(4).Once()
+	mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4096).Return(4096).Once()
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/fallback", nil)
@@ -118,7 +118,7 @@ func TestRun(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			mockConfig = &configmocks.Config{}
 			mockConfig.On("GetBool", "app.debug").Return(true).Once()
-			mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4).Return(4).Once()
+			mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4096).Return(4096).Once()
 
 			route, err = NewRoute(mockConfig, nil)
 			assert.Nil(t, err)
@@ -227,7 +227,7 @@ func TestRunTLS(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			mockConfig = &configmocks.Config{}
 			mockConfig.On("GetBool", "app.debug").Return(true).Once()
-			mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4).Return(4).Once()
+			mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4096).Return(4096).Once()
 
 			route, err = NewRoute(mockConfig, nil)
 			assert.Nil(t, err)
@@ -315,7 +315,7 @@ func TestRunTLSWithCert(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			mockConfig = &configmocks.Config{}
 			mockConfig.On("GetBool", "app.debug").Return(true).Once()
-			mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4).Return(4).Once()
+			mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4096).Return(4096).Once()
 
 			route, err = NewRoute(mockConfig, nil)
 			assert.Nil(t, err)
@@ -393,7 +393,7 @@ func TestNewRoute(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			mockConfig = configmocks.NewConfig(t)
 			mockConfig.On("GetBool", "app.debug").Return(true).Once()
-			mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4).Return(4).Once()
+			mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4096).Return(4096).Once()
 			test.setup()
 			route, err := NewRoute(mockConfig, test.parameters)
 			assert.Equal(t, test.expectError, err)

@@ -50,8 +50,8 @@ import (
 
 "drivers": map[string]any{
     "gin": map[string]any{
-        // Optional, default is 4MB
-        "body_limit": 4,
+        // Optional, default is 4096 KB
+        "body_limit": 4096,
         "route": func() (route.Route, error) {
             return ginfacades.Route(), nil
         },

@@ -55,10 +55,6 @@ func (c *Context) Context() context.Context {
 	return ctx
 }
 
-func (c *Context) SetContext(ctx http.Context) {
-	c.instance = ctx.Context().(*gin.Context)
-}
-
 func (c *Context) Deadline() (deadline time.Time, ok bool) {
 	return c.instance.Deadline()
 }
