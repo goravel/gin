@@ -1,7 +1,6 @@
 package gin
 
 import (
-	"errors"
 	"html/template"
 	"os"
 	"path/filepath"
@@ -36,7 +35,7 @@ func NewTemplate(options RenderOptions) (*render.HTMLProduction, error) {
 	}
 
 	if !file.Exists(dir) {
-		return nil, errors.New("resources/views directory not found")
+		return nil, nil
 	}
 
 	var files []string

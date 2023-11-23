@@ -47,9 +47,12 @@ func NewRoute(config config.Config, parameters map[string]any) (*Route, error) {
 		}
 	}
 
-	template, err := DefaultTemplate()
-	if engine.HTMLRender == nil && err == nil {
-		engine.HTMLRender = template
+	if engine.HTMLRender == nil {
+		var err error
+		engine.HTMLRender, err = DefaultTemplate()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &Route{

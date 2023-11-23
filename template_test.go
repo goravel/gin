@@ -1,7 +1,6 @@
 package gin
 
 import (
-	"errors"
 	"os"
 	"testing"
 
@@ -17,9 +16,8 @@ func TestNewTemplate(t *testing.T) {
 		expectRender bool
 	}{
 		{
-			name:        "resources/views directory not found",
-			setup:       func() {},
-			expectError: errors.New("resources/views directory not found"),
+			name:  "resources/views directory not found",
+			setup: func() {},
 		},
 		{
 			name: "resources/views directory is empty",
