@@ -10,15 +10,16 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin/render"
-	configmocks "github.com/goravel/framework/contracts/config/mocks"
 	contractshttp "github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/contracts/validation"
+	configmocks "github.com/goravel/framework/mocks/config"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestFallback(t *testing.T) {
 	mockConfig := &configmocks.Config{}
 	mockConfig.On("GetBool", "app.debug").Return(true).Once()
+	mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4096).Return(4096).Once()
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/fallback", nil)
@@ -117,6 +118,7 @@ func TestRun(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			mockConfig = &configmocks.Config{}
 			mockConfig.On("GetBool", "app.debug").Return(true).Once()
+			mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4096).Return(4096).Once()
 
 			route, err = NewRoute(mockConfig, nil)
 			assert.Nil(t, err)
@@ -225,6 +227,7 @@ func TestRunTLS(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			mockConfig = &configmocks.Config{}
 			mockConfig.On("GetBool", "app.debug").Return(true).Once()
+			mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4096).Return(4096).Once()
 
 			route, err = NewRoute(mockConfig, nil)
 			assert.Nil(t, err)
@@ -312,6 +315,7 @@ func TestRunTLSWithCert(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			mockConfig = &configmocks.Config{}
 			mockConfig.On("GetBool", "app.debug").Return(true).Once()
+			mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4096).Return(4096).Once()
 
 			route, err = NewRoute(mockConfig, nil)
 			assert.Nil(t, err)
@@ -390,6 +394,7 @@ func TestNewRoute(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			mockConfig = configmocks.NewConfig(t)
 			mockConfig.On("GetBool", "app.debug").Return(true).Once()
+			mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4096).Return(4096).Once()
 			test.setup()
 			route, err := NewRoute(mockConfig, test.parameters)
 			assert.Equal(t, test.expectError, err)
@@ -403,7 +408,7 @@ func TestNewRoute(t *testing.T) {
 }
 
 type CreateUser struct {
-	Name string `form:"name" json:"name"`
+	Name string `form:"name" json:"name" filter:"trim"`
 }
 
 func (r *CreateUser) Authorize(ctx contractshttp.Context) error {

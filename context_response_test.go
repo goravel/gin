@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/bytedance/sonic"
-	configmocks "github.com/goravel/framework/contracts/config/mocks"
 	contractshttp "github.com/goravel/framework/contracts/http"
+	configmocks "github.com/goravel/framework/mocks/config"
+	"github.com/goravel/framework/support/json"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -22,6 +22,7 @@ func TestResponse(t *testing.T) {
 	beforeEach := func() {
 		mockConfig = &configmocks.Config{}
 		mockConfig.On("GetBool", "app.debug").Return(true).Once()
+		mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4096).Return(4096).Once()
 	}
 	tests := []struct {
 		name         string
@@ -308,6 +309,7 @@ func TestResponse_Success(t *testing.T) {
 	beforeEach := func() {
 		mockConfig = &configmocks.Config{}
 		mockConfig.On("GetBool", "app.debug").Return(false).Once()
+		mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4096).Return(4096).Once()
 		ConfigFacade = mockConfig
 	}
 	tests := []struct {
@@ -402,9 +404,9 @@ func TestResponse_Success(t *testing.T) {
 				bodyMap := make(map[string]any)
 				exceptBodyMap := make(map[string]any)
 
-				err = sonic.Unmarshal(w.Body.Bytes(), &bodyMap)
+				err = json.Unmarshal(w.Body.Bytes(), &bodyMap)
 				assert.Nil(t, err)
-				err = sonic.UnmarshalString(test.expectBodyJson, &exceptBodyMap)
+				err = json.UnmarshalString(test.expectBodyJson, &exceptBodyMap)
 				assert.Nil(t, err)
 
 				assert.Equal(t, exceptBodyMap, bodyMap)
@@ -427,6 +429,7 @@ func TestResponse_Status(t *testing.T) {
 	beforeEach := func() {
 		mockConfig = &configmocks.Config{}
 		mockConfig.On("GetBool", "app.debug").Return(false).Once()
+		mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4096).Return(4096).Once()
 		ConfigFacade = mockConfig
 	}
 	tests := []struct {
@@ -521,9 +524,9 @@ func TestResponse_Status(t *testing.T) {
 				bodyMap := make(map[string]any)
 				exceptBodyMap := make(map[string]any)
 
-				err = sonic.Unmarshal(w.Body.Bytes(), &bodyMap)
+				err = json.Unmarshal(w.Body.Bytes(), &bodyMap)
 				assert.Nil(t, err)
-				err = sonic.UnmarshalString(test.expectBodyJson, &exceptBodyMap)
+				err = json.UnmarshalString(test.expectBodyJson, &exceptBodyMap)
 				assert.Nil(t, err)
 
 				assert.Equal(t, exceptBodyMap, bodyMap)

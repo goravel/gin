@@ -5,8 +5,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	configmocks "github.com/goravel/framework/contracts/config/mocks"
 	contractshttp "github.com/goravel/framework/contracts/http"
+	configmocks "github.com/goravel/framework/mocks/config"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -29,6 +29,7 @@ func TestCors(t *testing.T) {
 			name: "allow all paths",
 			setup: func() {
 				mockConfig.On("GetBool", "app.debug").Return(true).Once()
+				mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4096).Return(4096).Once()
 				mockConfig.On("Get", "cors.paths").Return([]string{"*"}).Once()
 				mockConfig.On("Get", "cors.allowed_methods").Return([]string{"*"}).Once()
 				mockConfig.On("Get", "cors.allowed_origins").Return([]string{"*"}).Once()
@@ -50,6 +51,7 @@ func TestCors(t *testing.T) {
 			name: "not allow path",
 			setup: func() {
 				mockConfig.On("GetBool", "app.debug").Return(true).Once()
+				mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4096).Return(4096).Once()
 				mockConfig.On("Get", "cors.paths").Return([]string{"api"}).Once()
 				mockConfig.On("GetString", "http.tls.host").Return("").Once()
 				mockConfig.On("GetString", "http.tls.port").Return("").Once()
@@ -69,6 +71,7 @@ func TestCors(t *testing.T) {
 			name: "allow path with *",
 			setup: func() {
 				mockConfig.On("GetBool", "app.debug").Return(true).Once()
+				mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4096).Return(4096).Once()
 				mockConfig.On("Get", "cors.paths").Return([]string{"any/*"}).Once()
 				mockConfig.On("Get", "cors.allowed_methods").Return([]string{"*"}).Once()
 				mockConfig.On("Get", "cors.allowed_origins").Return([]string{"*"}).Once()
@@ -90,6 +93,7 @@ func TestCors(t *testing.T) {
 			name: "only allow POST",
 			setup: func() {
 				mockConfig.On("GetBool", "app.debug").Return(true).Once()
+				mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4096).Return(4096).Once()
 				mockConfig.On("Get", "cors.paths").Return([]string{"*"}).Once()
 				mockConfig.On("Get", "cors.allowed_methods").Return([]string{"POST"}).Once()
 				mockConfig.On("Get", "cors.allowed_origins").Return([]string{"*"}).Once()
@@ -111,6 +115,7 @@ func TestCors(t *testing.T) {
 			name: "not allow POST",
 			setup: func() {
 				mockConfig.On("GetBool", "app.debug").Return(true).Once()
+				mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4096).Return(4096).Once()
 				mockConfig.On("Get", "cors.paths").Return([]string{"*"}).Once()
 				mockConfig.On("Get", "cors.allowed_methods").Return([]string{"GET"}).Once()
 				mockConfig.On("Get", "cors.allowed_origins").Return([]string{"*"}).Once()
@@ -132,6 +137,7 @@ func TestCors(t *testing.T) {
 			name: "not allow origin",
 			setup: func() {
 				mockConfig.On("GetBool", "app.debug").Return(true).Once()
+				mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4096).Return(4096).Once()
 				mockConfig.On("Get", "cors.paths").Return([]string{"*"}).Once()
 				mockConfig.On("Get", "cors.allowed_methods").Return([]string{"*"}).Once()
 				mockConfig.On("Get", "cors.allowed_origins").Return([]string{"https://goravel.com"}).Once()
@@ -153,6 +159,7 @@ func TestCors(t *testing.T) {
 			name: "allow specific origin",
 			setup: func() {
 				mockConfig.On("GetBool", "app.debug").Return(true).Once()
+				mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4096).Return(4096).Once()
 				mockConfig.On("Get", "cors.paths").Return([]string{"*"}).Once()
 				mockConfig.On("Get", "cors.allowed_methods").Return([]string{"*"}).Once()
 				mockConfig.On("Get", "cors.allowed_origins").Return([]string{"https://goravel.dev"}).Once()
@@ -174,6 +181,7 @@ func TestCors(t *testing.T) {
 			name: "not allow exposed headers",
 			setup: func() {
 				mockConfig.On("GetBool", "app.debug").Return(true).Once()
+				mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4096).Return(4096).Once()
 				mockConfig.On("Get", "cors.paths").Return([]string{"*"}).Once()
 				mockConfig.On("Get", "cors.allowed_methods").Return([]string{"*"}).Once()
 				mockConfig.On("Get", "cors.allowed_origins").Return([]string{"*"}).Once()

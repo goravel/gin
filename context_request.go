@@ -6,20 +6,20 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"reflect"
 	"strings"
 	"sync"
 
-	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
 	"github.com/gookit/validate"
-	"github.com/spf13/cast"
-
 	contractsfilesystem "github.com/goravel/framework/contracts/filesystem"
 	contractshttp "github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/contracts/log"
 	contractsvalidate "github.com/goravel/framework/contracts/validation"
 	"github.com/goravel/framework/filesystem"
+	"github.com/goravel/framework/support/json"
 	"github.com/goravel/framework/validation"
+	"github.com/spf13/cast"
 )
 
 type ContextRequest struct {
@@ -58,6 +58,11 @@ func (r *ContextRequest) All() map[string]any {
 	}
 
 	var mu sync.RWMutex
+	for _, param := range r.instance.Params {
+		mu.Lock()
+		dataMap[param.Key] = param.Value
+		mu.Unlock()
+	}
 	for k, v := range queryMap {
 		mu.Lock()
 		dataMap[k] = v
@@ -356,18 +361,7 @@ func (r *ContextRequest) Validate(rules map[string]string, options ...contractsv
 	generateOptions := validation.GenerateOptions(options)
 
 	var v *validate.Validation
-	dataFace, err := validate.FromRequest(r.Origin())
-	if err != nil {
-		return nil, err
-	}
-
-	for _, param := range r.instance.Params {
-		if _, exist := dataFace.Get(param.Key); !exist {
-			if _, err := dataFace.Set(param.Key, param.Value); err != nil {
-				return nil, err
-			}
-		}
-	}
+	dataFace := validate.FromMap(r.ctx.Request().All())
 
 	if generateOptions["prepareForValidation"] != nil {
 		if err := generateOptions["prepareForValidation"].(func(ctx contractshttp.Context, data contractsvalidate.Data) error)(r.ctx, validation.NewData(dataFace)); err != nil {
@@ -376,9 +370,14 @@ func (r *ContextRequest) Validate(rules map[string]string, options ...contractsv
 	}
 
 	v = dataFace.Create()
+
+	if generateOptions["filters"] != nil {
+		v.FilterRules(generateOptions["filters"].(map[string]string))
+	}
+
 	validation.AppendOptions(v, generateOptions)
 
-	return validation.NewValidator(v, dataFace), nil
+	return validation.NewValidator(v), nil
 }
 
 func (r *ContextRequest) ValidateRequest(request contractshttp.FormRequest) (contractsvalidate.Errors, error) {
@@ -386,8 +385,20 @@ func (r *ContextRequest) ValidateRequest(request contractshttp.FormRequest) (con
 		return nil, err
 	}
 
+	filters := make(map[string]string)
+	val := reflect.Indirect(reflect.ValueOf(request))
+	for i := 0; i < val.Type().NumField(); i++ {
+		field := val.Type().Field(i)
+		form := field.Tag.Get("form")
+		filter := field.Tag.Get("filter")
+		if len(form) > 0 && len(filter) > 0 {
+			filters[form] = filter
+		}
+	}
+
 	validator, err := r.Validate(request.Rules(r.ctx), validation.Messages(request.Messages(r.ctx)), validation.Attributes(request.Attributes(r.ctx)), func(options map[string]any) {
 		options["prepareForValidation"] = request.PrepareForValidation
+		options["filters"] = filters
 	})
 	if err != nil {
 		return nil, err
@@ -415,7 +426,7 @@ func getPostData(ctx *Context) (map[string]any, error) {
 			return nil, fmt.Errorf("retrieve json error: %v", err)
 		}
 
-		if err := sonic.Unmarshal(bodyBytes, &data); err != nil {
+		if err := json.Unmarshal(bodyBytes, &data); err != nil {
 			return nil, fmt.Errorf("decode json [%v] error: %v", string(bodyBytes), err)
 		}
 
