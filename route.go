@@ -96,7 +96,7 @@ func (r *Route) Run(host ...string) error {
 	}
 
 	r.outputRoutes()
-	color.Greenln("[HTTP] Listening and serving HTTP on" + termlink.Link("", "http://"+host[0]))
+	color.Greenln(termlink.Link("[HTTP] Listening and serving HTTP on", host[0]))
 
 	server := &http.Server{
 		Addr:    host[0],
@@ -138,7 +138,7 @@ func (r *Route) RunTLSWithCert(host, certFile, keyFile string) error {
 	}
 
 	r.outputRoutes()
-	color.Greenln("[HTTPS] Listening and serving HTTPS on" + termlink.Link("", "https://"+host))
+	color.Greenln(termlink.Link("[HTTPS] Listening and serving HTTPS on", host))
 
 	return r.instance.RunTLS(host, certFile, keyFile)
 }
