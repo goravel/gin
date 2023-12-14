@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"reflect"
 	"strings"
-	"sync"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gookit/validate"
@@ -57,21 +56,14 @@ func (r *ContextRequest) All() map[string]any {
 		queryMap[key] = strings.Join(query, ",")
 	}
 
-	var mu sync.RWMutex
 	for _, param := range r.instance.Params {
-		mu.Lock()
 		dataMap[param.Key] = param.Value
-		mu.Unlock()
 	}
 	for k, v := range queryMap {
-		mu.Lock()
 		dataMap[k] = v
-		mu.Unlock()
 	}
 	for k, v := range r.postData {
-		mu.Lock()
 		dataMap[k] = v
-		mu.Unlock()
 	}
 
 	return dataMap
