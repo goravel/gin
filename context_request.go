@@ -73,6 +73,19 @@ func (r *ContextRequest) Bind(obj any) error {
 	return r.instance.ShouldBind(obj)
 }
 
+func (r *ContextRequest) Cookie(key string, defaultValue ...string) string {
+	cookie, err := r.instance.Cookie(key)
+	if err != nil {
+		if len(defaultValue) > 0 {
+			return defaultValue[0]
+		}
+
+		return ""
+	}
+
+	return cookie
+}
+
 func (r *ContextRequest) Form(key string, defaultValue ...string) string {
 	if len(defaultValue) == 0 {
 		return r.instance.PostForm(key)
