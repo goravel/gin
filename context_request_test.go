@@ -37,12 +37,14 @@ func TestRequest(t *testing.T) {
 		mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4096).Return(4096).Once()
 	}
 	tests := []struct {
-		name       string
-		method     string
-		url        string
-		setup      func(method, url string) error
-		expectCode int
-		expectBody string
+		name              string
+		method            string
+		url               string
+		cookieName        string
+		setup             func(method, url string) error
+		expectCode        int
+		expectBody        string
+		expectCookieValue string
 	}{
 		{
 			name:   "All when Get and query is empty",
@@ -1497,6 +1499,50 @@ func TestRequest(t *testing.T) {
 			expectCode: http.StatusBadRequest,
 			expectBody: "Validate error: error",
 		},
+		{
+			name:       "Cookie",
+			method:     "GET",
+			url:        "/cookie",
+			cookieName: "goravel",
+			setup: func(method, url string) error {
+				gin.Get("/cookie", func(ctx contractshttp.Context) contractshttp.Response {
+					return ctx.Response().Cookie(contractshttp.Cookie{
+						Name:  "goravel",
+						Value: "goravel",
+					}).Success().Json(nil)
+				})
+
+				req, err = http.NewRequest(method, url, nil)
+				if err != nil {
+					return err
+				}
+
+				return nil
+			},
+			expectCode:        http.StatusOK,
+			expectCookieValue: "goravel",
+		},
+		{
+			name:   "Cookie - default value",
+			method: "GET",
+			url:    "/cookie/default",
+			setup: func(method, url string) error {
+				gin.Get("/cookie/default", func(ctx contractshttp.Context) contractshttp.Response {
+					return ctx.Response().Success().Json(contractshttp.Json{
+						"goravel": ctx.Request().Cookie("goravel", "default value"),
+					})
+				})
+
+				req, err = http.NewRequest(method, url, nil)
+				if err != nil {
+					return err
+				}
+
+				return nil
+			},
+			expectCode: http.StatusOK,
+			expectBody: "{\"goravel\":\"default value\"}",
+		},
 	}
 
 	for _, test := range tests {
@@ -1513,6 +1559,15 @@ func TestRequest(t *testing.T) {
 
 			if test.expectBody != "" {
 				assert.Equal(t, test.expectBody, w.Body.String(), test.name)
+			}
+
+			if test.cookieName != "" {
+				cookies := w.Result().Cookies()
+				for _, cookie := range cookies {
+					if cookie.Name == test.cookieName {
+						assert.Equal(t, test.expectCookieValue, cookie.Value)
+					}
+				}
 			}
 			assert.Equal(t, test.expectCode, w.Code)
 
