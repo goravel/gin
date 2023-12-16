@@ -18,6 +18,12 @@ func NewContextResponse(instance *gin.Context, origin contractshttp.ResponseOrig
 	return &ContextResponse{instance, origin}
 }
 
+func (r *ContextResponse) Cookie(cookie contractshttp.Cookie) contractshttp.ContextResponse {
+	r.instance.SetCookie(cookie.Name, cookie.Value, cookie.MaxAge, cookie.Path, cookie.Domain, cookie.Secure, cookie.HttpOnly)
+
+	return r
+}
+
 func (r *ContextResponse) Data(code int, contentType string, data []byte) contractshttp.Response {
 	return &DataResponse{code, contentType, data, r.instance}
 }
@@ -62,6 +68,12 @@ func (r *ContextResponse) Status(code int) contractshttp.ResponseStatus {
 
 func (r *ContextResponse) View() contractshttp.ResponseView {
 	return NewView(r.instance)
+}
+
+func (r *ContextResponse) WithoutCookie(name string) contractshttp.ContextResponse {
+	r.instance.SetCookie(name, "", -1, "", "", false, false)
+
+	return r
 }
 
 func (r *ContextResponse) Writer() http.ResponseWriter {

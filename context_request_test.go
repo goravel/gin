@@ -1497,6 +1497,52 @@ func TestRequest(t *testing.T) {
 			expectCode: http.StatusBadRequest,
 			expectBody: "Validate error: error",
 		},
+		{
+			name:   "Cookie",
+			method: "GET",
+			url:    "/cookie",
+			setup: func(method, url string) error {
+				gin.Get("/cookie", func(ctx contractshttp.Context) contractshttp.Response {
+					return ctx.Response().Success().Json(contractshttp.Json{
+						"goravel": ctx.Request().Cookie("goravel"),
+					})
+				})
+
+				req, err = http.NewRequest(method, url, nil)
+				if err != nil {
+					return err
+				}
+				req.AddCookie(&http.Cookie{
+					Name:  "goravel",
+					Value: "goravel",
+				})
+
+				return nil
+			},
+			expectCode: http.StatusOK,
+			expectBody: "{\"goravel\":\"goravel\"}",
+		},
+		{
+			name:   "Cookie - default value",
+			method: "GET",
+			url:    "/cookie/default",
+			setup: func(method, url string) error {
+				gin.Get("/cookie/default", func(ctx contractshttp.Context) contractshttp.Response {
+					return ctx.Response().Success().Json(contractshttp.Json{
+						"goravel": ctx.Request().Cookie("goravel", "default value"),
+					})
+				})
+
+				req, err = http.NewRequest(method, url, nil)
+				if err != nil {
+					return err
+				}
+
+				return nil
+			},
+			expectCode: http.StatusOK,
+			expectBody: "{\"goravel\":\"default value\"}",
+		},
 	}
 
 	for _, test := range tests {
@@ -1514,6 +1560,7 @@ func TestRequest(t *testing.T) {
 			if test.expectBody != "" {
 				assert.Equal(t, test.expectBody, w.Body.String(), test.name)
 			}
+
 			assert.Equal(t, test.expectCode, w.Code)
 
 			mockConfig.AssertExpectations(t)
