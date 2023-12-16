@@ -37,14 +37,12 @@ func TestRequest(t *testing.T) {
 		mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4096).Return(4096).Once()
 	}
 	tests := []struct {
-		name              string
-		method            string
-		url               string
-		cookieName        string
-		setup             func(method, url string) error
-		expectCode        int
-		expectBody        string
-		expectCookieValue string
+		name       string
+		method     string
+		url        string
+		setup      func(method, url string) error
+		expectCode int
+		expectBody string
 	}{
 		{
 			name:   "All when Get and query is empty",
@@ -1500,27 +1498,29 @@ func TestRequest(t *testing.T) {
 			expectBody: "Validate error: error",
 		},
 		{
-			name:       "Cookie",
-			method:     "GET",
-			url:        "/cookie",
-			cookieName: "goravel",
+			name:   "Cookie",
+			method: "GET",
+			url:    "/cookie",
 			setup: func(method, url string) error {
 				gin.Get("/cookie", func(ctx contractshttp.Context) contractshttp.Response {
-					return ctx.Response().Cookie(contractshttp.Cookie{
-						Name:  "goravel",
-						Value: "goravel",
-					}).Success().Json(nil)
+					return ctx.Response().Success().Json(contractshttp.Json{
+						"goravel": ctx.Request().Cookie("goravel"),
+					})
 				})
 
 				req, err = http.NewRequest(method, url, nil)
 				if err != nil {
 					return err
 				}
+				req.AddCookie(&http.Cookie{
+					Name:  "goravel",
+					Value: "goravel",
+				})
 
 				return nil
 			},
-			expectCode:        http.StatusOK,
-			expectCookieValue: "goravel",
+			expectCode: http.StatusOK,
+			expectBody: "{\"goravel\":\"goravel\"}",
 		},
 		{
 			name:   "Cookie - default value",
@@ -1561,14 +1561,6 @@ func TestRequest(t *testing.T) {
 				assert.Equal(t, test.expectBody, w.Body.String(), test.name)
 			}
 
-			if test.cookieName != "" {
-				cookies := w.Result().Cookies()
-				for _, cookie := range cookies {
-					if cookie.Name == test.cookieName {
-						assert.Equal(t, test.expectCookieValue, cookie.Value)
-					}
-				}
-			}
 			assert.Equal(t, test.expectCode, w.Code)
 
 			mockConfig.AssertExpectations(t)
