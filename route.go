@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/render"
@@ -129,12 +128,6 @@ func (r *Route) RunTLSWithCert(host, certFile, keyFile string) error {
 	}
 	if certFile == "" || keyFile == "" {
 		return errors.New("certificate can't be empty")
-	}
-	if strings.HasPrefix(certFile, "/") {
-		certFile = "." + certFile
-	}
-	if strings.HasPrefix(keyFile, "/") {
-		keyFile = "." + keyFile
 	}
 
 	r.outputRoutes()
