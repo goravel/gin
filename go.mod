@@ -11,7 +11,7 @@ require (
 	github.com/savioxavier/termlink v1.3.0
 	github.com/spf13/cast v1.6.0
 	github.com/stretchr/testify v1.8.4
-	github.com/unrolled/secure v1.13.0
+	github.com/unrolled/secure v1.14.0
 )
 
 require (
