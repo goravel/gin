@@ -23,6 +23,7 @@ type Route struct {
 
 func NewRoute(config config.Config, parameters map[string]any) (*Route, error) {
 	gin.SetMode(gin.ReleaseMode)
+	gin.DisableBindValidation()
 	engine := gin.New()
 	engine.MaxMultipartMemory = int64(config.GetInt("http.drivers.gin.body_limit", 4096)) << 10
 	if debugLog := getDebugLog(config); debugLog != nil {
