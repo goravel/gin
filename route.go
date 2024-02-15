@@ -99,8 +99,9 @@ func (r *Route) Run(host ...string) error {
 	color.Greenln(termlink.Link("[HTTP] Listening and serving HTTP on", host[0]))
 
 	server := &http.Server{
-		Addr:    host[0],
-		Handler: http.AllowQuerySemicolons(r.instance),
+		Addr:           host[0],
+		Handler:        http.AllowQuerySemicolons(r.instance),
+		MaxHeaderBytes: r.config.GetInt("http.drivers.gin.header_limit", 4096) << 10,
 	}
 
 	return server.ListenAndServe()

@@ -74,6 +74,7 @@ func TestRun(t *testing.T) {
 				mockConfig.On("GetBool", "app.debug").Return(true).Once()
 				mockConfig.On("GetString", "http.host").Return(host).Once()
 				mockConfig.On("GetString", "http.port").Return(port).Once()
+				mockConfig.On("GetInt", "http.drivers.gin.header_limit", 4096).Return(4096).Once()
 
 				go func() {
 					assert.Nil(t, route.Run())
@@ -90,6 +91,7 @@ func TestRun(t *testing.T) {
 			name: "use custom host",
 			setup: func(host string, port string) error {
 				mockConfig.On("GetBool", "app.debug").Return(true).Once()
+				mockConfig.On("GetInt", "http.drivers.gin.header_limit", 4096).Return(4096).Once()
 
 				go func() {
 					assert.Nil(t, route.Run(host))
