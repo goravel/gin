@@ -35,7 +35,6 @@ func TestView_Make(t *testing.T) {
 		mockConfig = &configmocks.Config{}
 		mockConfig.On("GetBool", "app.debug").Return(false).Once()
 		mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4096).Return(4096).Once()
-		mockConfig.On("GetInt", "http.drivers.gin.header_limit", 4096).Return(4096).Once()
 		ConfigFacade = mockConfig
 
 		mockView = &httpmocks.View{}
@@ -258,7 +257,6 @@ func TestView_First(t *testing.T) {
 		mockConfig = &configmocks.Config{}
 		mockConfig.On("GetBool", "app.debug").Return(false).Once()
 		mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4096).Return(4096).Once()
-		mockConfig.On("GetInt", "http.drivers.gin.header_limit", 4096).Return(4096).Once()
 		ConfigFacade = mockConfig
 
 		mockView = &httpmocks.View{}

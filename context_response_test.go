@@ -23,7 +23,6 @@ func TestResponse(t *testing.T) {
 		mockConfig = &configmocks.Config{}
 		mockConfig.On("GetBool", "app.debug").Return(true).Once()
 		mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4096).Return(4096).Once()
-		mockConfig.On("GetInt", "http.drivers.gin.header_limit", 4096).Return(4096).Once()
 	}
 	tests := []struct {
 		name              string
@@ -375,7 +374,6 @@ func TestResponse_Success(t *testing.T) {
 		mockConfig = &configmocks.Config{}
 		mockConfig.On("GetBool", "app.debug").Return(false).Once()
 		mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4096).Return(4096).Once()
-		mockConfig.On("GetInt", "http.drivers.gin.header_limit", 4096).Return(4096).Once()
 		ConfigFacade = mockConfig
 	}
 	tests := []struct {
@@ -496,7 +494,6 @@ func TestResponse_Status(t *testing.T) {
 		mockConfig = &configmocks.Config{}
 		mockConfig.On("GetBool", "app.debug").Return(false).Once()
 		mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4096).Return(4096).Once()
-		mockConfig.On("GetInt", "http.drivers.gin.header_limit", 4096).Return(4096).Once()
 		ConfigFacade = mockConfig
 	}
 	tests := []struct {

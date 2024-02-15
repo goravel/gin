@@ -20,7 +20,6 @@ func TestFallback(t *testing.T) {
 	mockConfig := &configmocks.Config{}
 	mockConfig.On("GetBool", "app.debug").Return(true).Once()
 	mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4096).Return(4096).Once()
-	mockConfig.On("GetInt", "http.drivers.gin.header_limit", 4096).Return(4096).Once()
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/fallback", nil)
@@ -75,6 +74,7 @@ func TestRun(t *testing.T) {
 				mockConfig.On("GetBool", "app.debug").Return(true).Once()
 				mockConfig.On("GetString", "http.host").Return(host).Once()
 				mockConfig.On("GetString", "http.port").Return(port).Once()
+				mockConfig.On("GetInt", "http.drivers.gin.header_limit", 4096).Return(4096).Once()
 
 				go func() {
 					assert.Nil(t, route.Run())
@@ -91,6 +91,7 @@ func TestRun(t *testing.T) {
 			name: "use custom host",
 			setup: func(host string, port string) error {
 				mockConfig.On("GetBool", "app.debug").Return(true).Once()
+				mockConfig.On("GetInt", "http.drivers.gin.header_limit", 4096).Return(4096).Once()
 
 				go func() {
 					assert.Nil(t, route.Run(host))
@@ -107,7 +108,6 @@ func TestRun(t *testing.T) {
 			mockConfig = &configmocks.Config{}
 			mockConfig.On("GetBool", "app.debug").Return(true).Once()
 			mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4096).Return(4096).Once()
-			mockConfig.On("GetInt", "http.drivers.gin.header_limit", 4096).Return(4096).Once()
 
 			route, err = NewRoute(mockConfig, nil)
 			assert.Nil(t, err)
@@ -204,7 +204,6 @@ func TestRunTLS(t *testing.T) {
 			mockConfig = &configmocks.Config{}
 			mockConfig.On("GetBool", "app.debug").Return(true).Once()
 			mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4096).Return(4096).Once()
-			mockConfig.On("GetInt", "http.drivers.gin.header_limit", 4096).Return(4096).Once()
 
 			route, err = NewRoute(mockConfig, nil)
 			assert.Nil(t, err)
@@ -293,7 +292,6 @@ func TestRunTLSWithCert(t *testing.T) {
 			mockConfig = &configmocks.Config{}
 			mockConfig.On("GetBool", "app.debug").Return(true).Once()
 			mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4096).Return(4096).Once()
-			mockConfig.On("GetInt", "http.drivers.gin.header_limit", 4096).Return(4096).Once()
 
 			route, err = NewRoute(mockConfig, nil)
 			assert.Nil(t, err)
@@ -373,7 +371,6 @@ func TestNewRoute(t *testing.T) {
 			mockConfig = configmocks.NewConfig(t)
 			mockConfig.On("GetBool", "app.debug").Return(true).Once()
 			mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4096).Return(4096).Once()
-			mockConfig.On("GetInt", "http.drivers.gin.header_limit", 4096).Return(4096).Once()
 			test.setup()
 			route, err := NewRoute(mockConfig, test.parameters)
 			assert.Equal(t, test.expectError, err)
