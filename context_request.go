@@ -391,15 +391,7 @@ func (r *ContextRequest) ValidateRequest(request contractshttp.FormRequest) (con
 	}
 
 	filters := make(map[string]string)
-	val := reflect.Indirect(reflect.ValueOf(request))
-	for i := 0; i < val.Type().NumField(); i++ {
-		field := val.Type().Field(i)
-		form := field.Tag.Get("form")
-		filter := field.Tag.Get("filter")
-		if len(form) > 0 && len(filter) > 0 {
-			filters[form] = filter
-		}
-	}
+	getFilters(reflect.TypeOf(request), reflect.ValueOf(request), filters, "")
 
 	validator, err := r.Validate(request.Rules(r.ctx), validation.Messages(request.Messages(r.ctx)), validation.Attributes(request.Attributes(r.ctx)), func(options map[string]any) {
 		options["prepareForValidation"] = request.PrepareForValidation
@@ -471,4 +463,46 @@ func getPostData(ctx *Context) (map[string]any, error) {
 
 func stringToBool(value string) bool {
 	return value == "1" || value == "true" || value == "on" || value == "yes"
+}
+
+func getFilters(t reflect.Type, v reflect.Value, filters map[string]string, prefix string) {
+	if v.Kind() == reflect.Ptr {
+		v = v.Elem()
+		t = t.Elem()
+	}
+
+	for i := 0; i < t.NumField(); i++ {
+		field := t.Field(i)
+		valField := v.Field(i)
+		form := field.Tag.Get("form")
+		if prefix != "" {
+			form = prefix + "." + form
+		}
+		filter := field.Tag.Get("filter")
+		if len(form) > 0 && len(filter) > 0 {
+			filters[form] = filter
+		}
+
+		switch valField.Kind() {
+		case reflect.Slice, reflect.Array:
+			for j := 0; j < valField.Len(); j++ {
+				sliceElement := valField.Index(j)
+				parseElement(sliceElement, filters, form+".*")
+			}
+		case reflect.Map:
+			for _, key := range valField.MapKeys() {
+				mapValue := valField.MapIndex(key)
+				parseElement(mapValue, filters, form)
+			}
+		default:
+			parseElement(valField, filters, form)
+		}
+	}
+}
+
+func parseElement(element reflect.Value, filters map[string]string, form string) {
+	element = reflect.Indirect(element)
+	if element.Kind() == reflect.Struct {
+		getFilters(element.Type(), element, filters, form)
+	}
 }
