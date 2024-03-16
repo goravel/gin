@@ -30,7 +30,7 @@ type ContextRequest struct {
 }
 
 func NewContextRequest(ctx *Context, log log.Log, validation contractsvalidate.Validation) contractshttp.ContextRequest {
-	postData, err := getPostData(ctx)
+	postData, err := getHttpBody(ctx)
 	if err != nil {
 		LogFacade.Error(fmt.Sprintf("%+v", errors.Unwrap(err)))
 	}
@@ -375,11 +375,6 @@ func (r *ContextRequest) Validate(rules map[string]string, options ...contractsv
 	}
 
 	v = dataFace.Create()
-
-	if generateOptions["filters"] != nil {
-		v.FilterRules(generateOptions["filters"].(map[string]string))
-	}
-
 	validation.AppendOptions(v, generateOptions)
 
 	return validation.NewValidator(v), nil
@@ -408,7 +403,7 @@ func (r *ContextRequest) ValidateRequest(request contractshttp.FormRequest) (con
 	return validator.Errors(), nil
 }
 
-func getPostData(ctx *Context) (map[string]any, error) {
+func getHttpBody(ctx *Context) (map[string]any, error) {
 	request := ctx.instance.Request
 	if request == nil || request.Body == nil || request.ContentLength == 0 {
 		return nil, nil
