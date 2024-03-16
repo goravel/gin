@@ -30,7 +30,7 @@ type ContextRequest struct {
 }
 
 func NewContextRequest(ctx *Context, log log.Log, validation contractsvalidate.Validation) contractshttp.ContextRequest {
-	postData, err := getPostData(ctx)
+	postData, err := getHttpBody(ctx)
 	if err != nil {
 		LogFacade.Error(fmt.Sprintf("%+v", errors.Unwrap(err)))
 	}
@@ -375,11 +375,6 @@ func (r *ContextRequest) Validate(rules map[string]string, options ...contractsv
 	}
 
 	v = dataFace.Create()
-
-	if generateOptions["filters"] != nil {
-		v.FilterRules(generateOptions["filters"].(map[string]string))
-	}
-
 	validation.AppendOptions(v, generateOptions)
 
 	return validation.NewValidator(v), nil
@@ -391,15 +386,7 @@ func (r *ContextRequest) ValidateRequest(request contractshttp.FormRequest) (con
 	}
 
 	filters := make(map[string]string)
-	val := reflect.Indirect(reflect.ValueOf(request))
-	for i := 0; i < val.Type().NumField(); i++ {
-		field := val.Type().Field(i)
-		form := field.Tag.Get("form")
-		filter := field.Tag.Get("filter")
-		if len(form) > 0 && len(filter) > 0 {
-			filters[form] = filter
-		}
-	}
+	getFilters(reflect.Indirect(reflect.ValueOf(request)).Type(), filters, "")
 
 	validator, err := r.Validate(request.Rules(r.ctx), validation.Messages(request.Messages(r.ctx)), validation.Attributes(request.Attributes(r.ctx)), func(options map[string]any) {
 		options["prepareForValidation"] = request.PrepareForValidation
@@ -416,7 +403,7 @@ func (r *ContextRequest) ValidateRequest(request contractshttp.FormRequest) (con
 	return validator.Errors(), nil
 }
 
-func getPostData(ctx *Context) (map[string]any, error) {
+func getHttpBody(ctx *Context) (map[string]any, error) {
 	request := ctx.instance.Request
 	if request == nil || request.Body == nil || request.ContentLength == 0 {
 		return nil, nil
@@ -471,4 +458,44 @@ func getPostData(ctx *Context) (map[string]any, error) {
 
 func stringToBool(value string) bool {
 	return value == "1" || value == "true" || value == "on" || value == "yes"
+}
+
+func getFilters(t reflect.Type, filters map[string]string, prefix string) {
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+	if t.Kind() != reflect.Struct {
+		return
+	}
+
+	for i := 0; i < t.NumField(); i++ {
+		field := t.Field(i)
+		form := field.Tag.Get("form")
+		filter := field.Tag.Get("filter")
+
+		if len(form) > 0 && len(filter) > 0 {
+			fullForm := form
+			if prefix != "" {
+				fullForm = prefix + "." + form
+			}
+			filters[fullForm] = filter
+		}
+
+		var elementType reflect.Type
+		switch field.Type.Kind() {
+		case reflect.Struct:
+			elementType = field.Type
+		case reflect.Slice, reflect.Array:
+			elementType = field.Type.Elem()
+			form += ".*"
+		case reflect.Map:
+			elementType = field.Type.Elem()
+		default:
+			elementType = nil
+		}
+
+		if elementType != nil && elementType.Kind() == reflect.Struct {
+			getFilters(elementType, filters, form)
+		}
+	}
 }
