@@ -2,8 +2,6 @@ module github.com/goravel/gin
 
 go 1.21
 
-toolchain go1.22.0
-
 require (
 	github.com/gin-gonic/gin v1.9.1
 	github.com/gookit/color v1.5.4
