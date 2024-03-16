@@ -391,7 +391,7 @@ func (r *ContextRequest) ValidateRequest(request contractshttp.FormRequest) (con
 	}
 
 	filters := make(map[string]string)
-	getFilters(reflect.TypeOf(request), reflect.ValueOf(request), filters, "")
+	getFilters(reflect.Indirect(reflect.ValueOf(request)).Type(), filters, "")
 
 	validator, err := r.Validate(request.Rules(r.ctx), validation.Messages(request.Messages(r.ctx)), validation.Attributes(request.Attributes(r.ctx)), func(options map[string]any) {
 		options["prepareForValidation"] = request.PrepareForValidation
@@ -465,44 +465,42 @@ func stringToBool(value string) bool {
 	return value == "1" || value == "true" || value == "on" || value == "yes"
 }
 
-func getFilters(t reflect.Type, v reflect.Value, filters map[string]string, prefix string) {
-	if v.Kind() == reflect.Ptr {
-		v = v.Elem()
+func getFilters(t reflect.Type, filters map[string]string, prefix string) {
+	if t.Kind() == reflect.Ptr {
 		t = t.Elem()
+	}
+	if t.Kind() != reflect.Struct {
+		return
 	}
 
 	for i := 0; i < t.NumField(); i++ {
 		field := t.Field(i)
-		valField := v.Field(i)
 		form := field.Tag.Get("form")
-		if prefix != "" {
-			form = prefix + "." + form
-		}
 		filter := field.Tag.Get("filter")
+
 		if len(form) > 0 && len(filter) > 0 {
-			filters[form] = filter
+			fullForm := form
+			if prefix != "" {
+				fullForm = prefix + "." + form
+			}
+			filters[fullForm] = filter
 		}
 
-		switch valField.Kind() {
+		var elementType reflect.Type
+		switch field.Type.Kind() {
+		case reflect.Struct:
+			elementType = field.Type
 		case reflect.Slice, reflect.Array:
-			for j := 0; j < valField.Len(); j++ {
-				sliceElement := valField.Index(j)
-				parseElement(sliceElement, filters, form+".*")
-			}
+			elementType = field.Type.Elem()
+			form += ".*"
 		case reflect.Map:
-			for _, key := range valField.MapKeys() {
-				mapValue := valField.MapIndex(key)
-				parseElement(mapValue, filters, form)
-			}
+			elementType = field.Type.Elem()
 		default:
-			parseElement(valField, filters, form)
+			elementType = nil
 		}
-	}
-}
 
-func parseElement(element reflect.Value, filters map[string]string, form string) {
-	element = reflect.Indirect(element)
-	if element.Kind() == reflect.Struct {
-		getFilters(element.Type(), element, filters, form)
+		if elementType != nil && elementType.Kind() == reflect.Struct {
+			getFilters(elementType, filters, form)
+		}
 	}
 }
