@@ -639,7 +639,7 @@ func TestRequest(t *testing.T) {
 			expectBody: "{\"id\":\"3\"}",
 		},
 		{
-			name:   "InputArray",
+			name:   "InputArray of json",
 			method: "POST",
 			url:    "/input-array/1?id=2",
 			setup: func(method, url string) error {
@@ -663,6 +663,45 @@ func TestRequest(t *testing.T) {
 			},
 			expectCode: http.StatusOK,
 			expectBody: "{\"id\":[\"3\",\"4\"]}",
+		},
+		{
+			name:   "InputArray of form",
+			method: "POST",
+			url:    "/input-array/1?id=2",
+			setup: func(method, url string) error {
+				gin.Post("/input-array/{id}", func(ctx contractshttp.Context) contractshttp.Response {
+					return ctx.Response().Success().Json(contractshttp.Json{
+						"InputArray": ctx.Request().InputArray("arr[]"),
+						"Input":      ctx.Request().Input("arr[]"),
+					})
+				})
+
+				payload := &bytes.Buffer{}
+				writer := multipart.NewWriter(payload)
+				if err := writer.WriteField("arr[]", "arr 1"); err != nil {
+					return err
+				}
+				if err := writer.WriteField("arr[]", "arr 2"); err != nil {
+					return err
+				}
+				if err := writer.WriteField("arr[]", "arr 3"); err != nil {
+					return err
+				}
+				if err := writer.Close(); err != nil {
+					return err
+				}
+
+				req, err = http.NewRequest(method, url, payload)
+				if err != nil {
+					return err
+				}
+
+				req.Header.Set("Content-Type", writer.FormDataContentType())
+
+				return nil
+			},
+			expectCode: http.StatusOK,
+			expectBody: "{\"Input\":\"arr 1,arr 2,arr 3\",\"InputArray\":[\"arr 1\",\"arr 2\",\"arr 3\"]}",
 		},
 		{
 			name:   "InputMap",
