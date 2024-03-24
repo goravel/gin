@@ -402,6 +402,7 @@ func TestRequest(t *testing.T) {
 					return ctx.Response().Success().Json(contractshttp.Json{
 						"id":     ctx.Request().Input("id"),
 						"int":    ctx.Request().Input("int"),
+						"map":    ctx.Request().Input("map"),
 						"string": ctx.Request().Input("string"),
 					})
 				})
@@ -409,7 +410,8 @@ func TestRequest(t *testing.T) {
 				payload := strings.NewReader(`{
 					"id": "3",
 					"string": ["string 1", "string 2"],
-					"int": ["int 1", "int 2"]
+					"int": [1, 2],
+					"map": {"a": "b"}
 				}`)
 				req, err = http.NewRequest(method, url, payload)
 				if err != nil {
@@ -421,7 +423,7 @@ func TestRequest(t *testing.T) {
 				return nil
 			},
 			expectCode: http.StatusOK,
-			expectBody: "{\"id\":\"3\",\"int\":\"int 1,int 2\",\"string\":\"string 1,string 2\"}",
+			expectBody: "{\"id\":\"3\",\"int\":\"1,2\",\"map\":\"{\\\"a\\\":\\\"b\\\"}\",\"string\":\"string 1,string 2\"}",
 		},
 		{
 			name:   "Input - from form",
@@ -431,8 +433,8 @@ func TestRequest(t *testing.T) {
 				gin.Post("/input2/{id}", func(ctx contractshttp.Context) contractshttp.Response {
 					return ctx.Response().Success().Json(contractshttp.Json{
 						"id":     ctx.Request().Input("id"),
+						"map":    ctx.Request().Input("map"),
 						"string": ctx.Request().Input("string[]"),
-						"int":    ctx.Request().Input("int[]"),
 					})
 				})
 
@@ -447,10 +449,7 @@ func TestRequest(t *testing.T) {
 				if err := writer.WriteField("string[]", "string 2"); err != nil {
 					return err
 				}
-				if err := writer.WriteField("int[]", "int 1"); err != nil {
-					return err
-				}
-				if err := writer.WriteField("int[]", "int 2"); err != nil {
+				if err := writer.WriteField("map", "{\"a\":\"b\"}"); err != nil {
 					return err
 				}
 				if err := writer.Close(); err != nil {
@@ -467,7 +466,7 @@ func TestRequest(t *testing.T) {
 				return nil
 			},
 			expectCode: http.StatusOK,
-			expectBody: "{\"id\":\"4\",\"int\":\"int 1,int 2\",\"string\":\"string 1,string 2\"}",
+			expectBody: "{\"id\":\"4\",\"map\":\"{\\\"a\\\":\\\"b\\\"}\",\"string\":\"string 1,string 2\"}",
 		},
 		{
 			name:   "Input - application/x-www-form-urlencoded",
@@ -477,12 +476,14 @@ func TestRequest(t *testing.T) {
 				gin.Post("/input/url/{id}", func(ctx contractshttp.Context) contractshttp.Response {
 					return ctx.Response().Success().Json(contractshttp.Json{
 						"id":     ctx.Request().Input("id"),
+						"map":    ctx.Request().Input("map"),
 						"string": ctx.Request().Input("string"),
 					})
 				})
 
 				form := neturl.Values{
 					"id":     {"4"},
+					"map":    {"{\"a\":\"b\"}"},
 					"string": {"string 1", "string 2"},
 				}
 
@@ -496,7 +497,7 @@ func TestRequest(t *testing.T) {
 				return nil
 			},
 			expectCode: http.StatusOK,
-			expectBody: "{\"id\":\"4\",\"string\":\"string 1,string 2\"}",
+			expectBody: "{\"id\":\"4\",\"map\":\"{\\\"a\\\":\\\"b\\\"}\",\"string\":\"string 1,string 2\"}",
 		},
 		{
 			name:   "Input - from json, then Bind",
