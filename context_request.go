@@ -268,18 +268,8 @@ func (r *ContextRequest) Input(key string, defaultValue ...string) string {
 }
 
 func (r *ContextRequest) InputArray(key string, defaultValue ...[]string) []string {
-	keys := strings.Split(key, ".")
-	current := r.postData
-	for _, k := range keys {
-		value, found := current[k]
-		if !found {
-			return []string{}
-		}
-		if nestedMap, isMap := value.(map[string]any); isMap {
-			current = nestedMap
-		} else {
-			return cast.ToStringSlice(value)
-		}
+	if valueFromPostData := r.getValueFromPostData(key); valueFromPostData != nil {
+		return cast.ToStringSlice(valueFromPostData)
 	}
 
 	if len(defaultValue) > 0 {
@@ -290,18 +280,8 @@ func (r *ContextRequest) InputArray(key string, defaultValue ...[]string) []stri
 }
 
 func (r *ContextRequest) InputMap(key string, defaultValue ...map[string]string) map[string]string {
-	keys := strings.Split(key, ".")
-	current := r.postData
-	for _, k := range keys {
-		value, found := current[k]
-		if !found {
-			return map[string]string{}
-		}
-		if nestedMap, isMap := value.(map[string]string); isMap {
-			current = cast.ToStringMap(nestedMap)
-		} else {
-			return cast.ToStringMapString(value)
-		}
+	if valueFromPostData := r.getValueFromPostData(key); valueFromPostData != nil {
+		return cast.ToStringMapString(valueFromPostData)
 	}
 
 	if len(defaultValue) > 0 {
