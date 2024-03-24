@@ -365,7 +365,6 @@ func (r *ContextRequest) Validate(rules map[string]string, options ...contractsv
 		v.FilterRules(generateOptions["filters"].(map[string]string))
 	}
 
-	v = dataFace.Create()
 	validation.AppendOptions(v, generateOptions)
 
 	return validation.NewValidator(v), nil
