@@ -365,12 +365,6 @@ func (r *ContextRequest) Validate(rules map[string]string, options ...contractsv
 		v.FilterRules(generateOptions["filters"].(map[string]string))
 	}
 
-	if generateOptions["prepareForValidation"] != nil {
-		if err := generateOptions["prepareForValidation"].(func(ctx contractshttp.Context, data contractsvalidate.Data) error)(r.ctx, validation.NewData(dataFace)); err != nil {
-			return nil, err
-		}
-	}
-
 	v = dataFace.Create()
 	validation.AppendOptions(v, generateOptions)
 
