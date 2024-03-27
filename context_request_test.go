@@ -7,6 +7,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	neturl "net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -393,18 +394,24 @@ func TestRequest(t *testing.T) {
 			expectBody: "{\"error\":0,\"int\":2,\"int64\":3,\"string\":\"1\"}",
 		},
 		{
-			name:   "Input - from json",
+			name:   "Input - application/json",
 			method: "POST",
 			url:    "/input1/1?id=2",
 			setup: func(method, url string) error {
 				gin.Post("/input1/{id}", func(ctx contractshttp.Context) contractshttp.Response {
 					return ctx.Response().Success().Json(contractshttp.Json{
-						"id": ctx.Request().Input("id"),
+						"id":     ctx.Request().Input("id"),
+						"int":    ctx.Request().Input("int"),
+						"map":    ctx.Request().Input("map"),
+						"string": ctx.Request().Input("string"),
 					})
 				})
 
 				payload := strings.NewReader(`{
-					"id": "3"
+					"id": "3",
+					"string": ["string 1", "string 2"],
+					"int": [1, 2],
+					"map": {"a": "b"}
 				}`)
 				req, err = http.NewRequest(method, url, payload)
 				if err != nil {
@@ -416,22 +423,33 @@ func TestRequest(t *testing.T) {
 				return nil
 			},
 			expectCode: http.StatusOK,
-			expectBody: "{\"id\":\"3\"}",
+			expectBody: "{\"id\":\"3\",\"int\":\"1,2\",\"map\":\"{\\\"a\\\":\\\"b\\\"}\",\"string\":\"string 1,string 2\"}",
 		},
 		{
-			name:   "Input - from form",
+			name:   "Input - multipart/form-data",
 			method: "POST",
 			url:    "/input2/1?id=2",
 			setup: func(method, url string) error {
 				gin.Post("/input2/{id}", func(ctx contractshttp.Context) contractshttp.Response {
 					return ctx.Response().Success().Json(contractshttp.Json{
-						"id": ctx.Request().Input("id"),
+						"id":     ctx.Request().Input("id"),
+						"map":    ctx.Request().Input("map"),
+						"string": ctx.Request().Input("string[]"),
 					})
 				})
 
 				payload := &bytes.Buffer{}
 				writer := multipart.NewWriter(payload)
 				if err := writer.WriteField("id", "4"); err != nil {
+					return err
+				}
+				if err := writer.WriteField("string[]", "string 1"); err != nil {
+					return err
+				}
+				if err := writer.WriteField("string[]", "string 2"); err != nil {
+					return err
+				}
+				if err := writer.WriteField("map", "{\"a\":\"b\"}"); err != nil {
 					return err
 				}
 				if err := writer.Close(); err != nil {
@@ -448,7 +466,38 @@ func TestRequest(t *testing.T) {
 				return nil
 			},
 			expectCode: http.StatusOK,
-			expectBody: "{\"id\":\"4\"}",
+			expectBody: "{\"id\":\"4\",\"map\":\"{\\\"a\\\":\\\"b\\\"}\",\"string\":\"string 1,string 2\"}",
+		},
+		{
+			name:   "Input - application/x-www-form-urlencoded",
+			method: "POST",
+			url:    "/input/url/1?id=2",
+			setup: func(method, url string) error {
+				gin.Post("/input/url/{id}", func(ctx contractshttp.Context) contractshttp.Response {
+					return ctx.Response().Success().Json(contractshttp.Json{
+						"id":     ctx.Request().Input("id"),
+						"map":    ctx.Request().Input("map"),
+						"string": ctx.Request().Input("string"),
+					})
+				})
+
+				form := neturl.Values{
+					"id":     {"4"},
+					"map":    {"{\"a\":\"b\"}"},
+					"string": {"string 1", "string 2"},
+				}
+
+				req, err = http.NewRequest(method, url, strings.NewReader(form.Encode()))
+				if err != nil {
+					return err
+				}
+
+				req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+				return nil
+			},
+			expectCode: http.StatusOK,
+			expectBody: "{\"id\":\"4\",\"map\":\"{\\\"a\\\":\\\"b\\\"}\",\"string\":\"string 1,string 2\"}",
 		},
 		{
 			name:   "Input - from json, then Bind",
@@ -613,18 +662,21 @@ func TestRequest(t *testing.T) {
 			expectBody: "{\"id1\":\"2\"}",
 		},
 		{
-			name:   "Input - with point",
+			name:   "Input with point - application/json",
 			method: "POST",
-			url:    "/input7/1?id=2",
+			url:    "/input/json/point/1?id=2",
 			setup: func(method, url string) error {
-				gin.Post("/input7/{id}", func(ctx contractshttp.Context) contractshttp.Response {
+				gin.Post("/input/json/point/{id}", func(ctx contractshttp.Context) contractshttp.Response {
 					return ctx.Response().Success().Json(contractshttp.Json{
-						"id": ctx.Request().Input("id.a"),
+						"id":      ctx.Request().Input("id.a"),
+						"string0": ctx.Request().Input("string.0"),
+						"string":  ctx.Request().Input("string"),
 					})
 				})
 
 				payload := strings.NewReader(`{
-					"id": {"a": "3"}
+					"id": {"a": {"b": "c"}},
+					"string": ["string 0", "string 1"]
 				}`)
 				req, err = http.NewRequest(method, url, payload)
 				if err != nil {
@@ -636,21 +688,141 @@ func TestRequest(t *testing.T) {
 				return nil
 			},
 			expectCode: http.StatusOK,
-			expectBody: "{\"id\":\"3\"}",
+			expectBody: "{\"id\":\"{\\\"b\\\":\\\"c\\\"}\",\"string\":\"string 0,string 1\",\"string0\":\"string 0\"}",
 		},
 		{
-			name:   "InputArray",
+			name:   "Input with point - multipart/form-data",
 			method: "POST",
-			url:    "/input-array/1?id=2",
+			url:    "/input/form/point/1?id=2",
 			setup: func(method, url string) error {
-				gin.Post("/input-array/{id}", func(ctx contractshttp.Context) contractshttp.Response {
+				gin.Post("/input/form/point/{id}", func(ctx contractshttp.Context) contractshttp.Response {
+					return ctx.Response().Success().Json(contractshttp.Json{
+						"name":    ctx.Request().Input("name"),
+						"string0": ctx.Request().Input("string.0"),
+						"string":  ctx.Request().Input("string"),
+					})
+				})
+
+				payload := &bytes.Buffer{}
+				writer := multipart.NewWriter(payload)
+				if err := writer.WriteField("name", "goravel"); err != nil {
+					return err
+				}
+				if err := writer.WriteField("string[]", "string 0"); err != nil {
+					return err
+				}
+				if err := writer.WriteField("string[]", "string 1"); err != nil {
+					return err
+				}
+				if err := writer.Close(); err != nil {
+					return err
+				}
+
+				req, err = http.NewRequest(method, url, payload)
+				if err != nil {
+					return err
+				}
+
+				req.Header.Set("Content-Type", writer.FormDataContentType())
+
+				return nil
+			},
+			expectCode: http.StatusOK,
+			expectBody: "{\"name\":\"goravel\",\"string\":\"string 0,string 1\",\"string0\":\"string 0\"}",
+		},
+		{
+			name:   "Input with point - application/x-www-form-urlencoded",
+			method: "POST",
+			url:    "/input/url/point/1?id=2",
+			setup: func(method, url string) error {
+				gin.Post("/input/url/point/{id}", func(ctx contractshttp.Context) contractshttp.Response {
+					return ctx.Response().Success().Json(contractshttp.Json{
+						"id":      ctx.Request().Input("id"),
+						"string0": ctx.Request().Input("string.0"),
+						"string":  ctx.Request().Input("string"),
+					})
+				})
+
+				form := neturl.Values{
+					"id":     {"4"},
+					"string": {"string 0", "string 1"},
+				}
+
+				req, err = http.NewRequest(method, url, strings.NewReader(form.Encode()))
+				if err != nil {
+					return err
+				}
+
+				req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+				return nil
+			},
+			expectCode: http.StatusOK,
+			expectBody: "{\"id\":\"4\",\"string\":\"string 0,string 1\",\"string0\":\"string 0\"}",
+		},
+		{
+			name:   "InputArray - default",
+			method: "POST",
+			url:    "/input-array/default/1?id=2",
+			setup: func(method, url string) error {
+				gin.Post("/input-array/default/{id}", func(ctx contractshttp.Context) contractshttp.Response {
+					return ctx.Response().Success().Json(contractshttp.Json{
+						"name": ctx.Request().InputArray("name", []string{"a", "b"}),
+					})
+				})
+
+				payload := strings.NewReader(`{
+					"id": ["id 0", "id 1"]
+				}`)
+				req, err = http.NewRequest(method, url, payload)
+				if err != nil {
+					return err
+				}
+				req.Header.Set("Content-Type", "application/json")
+				return nil
+			},
+			expectCode: http.StatusOK,
+			expectBody: "{\"name\":[\"a\",\"b\"]}",
+		},
+		{
+			name:   "InputArray - empty",
+			method: "POST",
+			url:    "/input-array/default/1?id=2",
+			setup: func(method, url string) error {
+				gin.Post("/input-array/default/{id}", func(ctx contractshttp.Context) contractshttp.Response {
+					return ctx.Response().Success().Json(contractshttp.Json{
+						"name": ctx.Request().InputArray("name"),
+					})
+				})
+
+				payload := strings.NewReader(`{
+					"id": ["id 0", "id 1"]
+				}`)
+				req, err = http.NewRequest(method, url, payload)
+				if err != nil {
+					return err
+				}
+
+				req.Header.Set("Content-Type", "application/json")
+
+				return nil
+			},
+			expectCode: http.StatusOK,
+			expectBody: "{\"name\":[]}",
+		},
+		{
+			name:   "InputArray of application/json",
+			method: "POST",
+			url:    "/input-array/json/1?id=2",
+			setup: func(method, url string) error {
+				gin.Post("/input-array/json/{id}", func(ctx contractshttp.Context) contractshttp.Response {
 					return ctx.Response().Success().Json(contractshttp.Json{
 						"id": ctx.Request().InputArray("id"),
 					})
 				})
 
 				payload := strings.NewReader(`{
-					"id": ["3", "4"]
+					"id": ["id 0", "id 1"]
 				}`)
 				req, err = http.NewRequest(method, url, payload)
 				if err != nil {
@@ -662,16 +834,104 @@ func TestRequest(t *testing.T) {
 				return nil
 			},
 			expectCode: http.StatusOK,
-			expectBody: "{\"id\":[\"3\",\"4\"]}",
+			expectBody: "{\"id\":[\"id 0\",\"id 1\"]}",
 		},
 		{
-			name:   "InputMap",
+			name:   "InputArray of multipart/form-data",
 			method: "POST",
-			url:    "/input-map/1?id=2",
+			url:    "/input-array/form/1?id=2",
 			setup: func(method, url string) error {
-				gin.Post("/input-map/{id}", func(ctx contractshttp.Context) contractshttp.Response {
+				gin.Post("/input-array/form/{id}", func(ctx contractshttp.Context) contractshttp.Response {
 					return ctx.Response().Success().Json(contractshttp.Json{
-						"id": ctx.Request().InputMap("id"),
+						"InputArray":  ctx.Request().InputArray("arr[]"),
+						"InputArray1": ctx.Request().InputArray("arr"),
+					})
+				})
+
+				payload := &bytes.Buffer{}
+				writer := multipart.NewWriter(payload)
+				if err := writer.WriteField("arr[]", "arr 1"); err != nil {
+					return err
+				}
+				if err := writer.WriteField("arr[]", "arr 2"); err != nil {
+					return err
+				}
+				if err := writer.Close(); err != nil {
+					return err
+				}
+
+				req, err = http.NewRequest(method, url, payload)
+				if err != nil {
+					return err
+				}
+
+				req.Header.Set("Content-Type", writer.FormDataContentType())
+
+				return nil
+			},
+			expectCode: http.StatusOK,
+			expectBody: "{\"InputArray\":[\"arr 1\",\"arr 2\"],\"InputArray1\":[\"arr 1\",\"arr 2\"]}",
+		},
+		{
+			name:   "InputArray of application/x-www-form-urlencoded",
+			method: "POST",
+			url:    "/input-array/url/1?id=2",
+			setup: func(method, url string) error {
+				gin.Post("/input-array/url/{id}", func(ctx contractshttp.Context) contractshttp.Response {
+					return ctx.Response().Success().Json(contractshttp.Json{
+						"string":  ctx.Request().InputArray("string[]"),
+						"string1": ctx.Request().InputArray("string"),
+					})
+				})
+
+				form := neturl.Values{
+					"string[]": {"string 0", "string 1"},
+				}
+
+				req, err = http.NewRequest(method, url, strings.NewReader(form.Encode()))
+				if err != nil {
+					return err
+				}
+
+				req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+				return nil
+			},
+			expectCode: http.StatusOK,
+			expectBody: "{\"string\":[\"string 0\",\"string 1\"],\"string1\":[\"string 0\",\"string 1\"]}",
+		},
+		{
+			name:   "InputMap - default",
+			method: "POST",
+			url:    "/input-map/default/1?id=2",
+			setup: func(method, url string) error {
+				gin.Post("/input-map/default/{id}", func(ctx contractshttp.Context) contractshttp.Response {
+					return ctx.Response().Success().Json(contractshttp.Json{
+						"name": ctx.Request().InputMap("name", map[string]string{"a": "b"}),
+					})
+				})
+
+				payload := strings.NewReader(`{
+					"id": {"a": "3", "b": "4"}
+				}`)
+				req, err = http.NewRequest(method, url, payload)
+				if err != nil {
+					return err
+				}
+				req.Header.Set("Content-Type", "application/json")
+				return nil
+			},
+			expectCode: http.StatusOK,
+			expectBody: "{\"name\":{\"a\":\"b\"}}",
+		},
+		{
+			name:   "InputMap - empty",
+			method: "POST",
+			url:    "/input-map/default/1?id=2",
+			setup: func(method, url string) error {
+				gin.Post("/input-map/default/{id}", func(ctx contractshttp.Context) contractshttp.Response {
+					return ctx.Response().Success().Json(contractshttp.Json{
+						"name": ctx.Request().InputMap("name"),
 					})
 				})
 
@@ -684,6 +944,88 @@ func TestRequest(t *testing.T) {
 				}
 
 				req.Header.Set("Content-Type", "application/json")
+
+				return nil
+			},
+			expectCode: http.StatusOK,
+			expectBody: "{\"name\":{}}",
+		},
+		{
+			name:   "InputMap - application/json",
+			method: "POST",
+			url:    "/input-map/json/1?id=2",
+			setup: func(method, url string) error {
+				gin.Post("/input-map/json/{id}", func(ctx contractshttp.Context) contractshttp.Response {
+					return ctx.Response().Success().Json(contractshttp.Json{
+						"id": ctx.Request().InputMap("id"),
+					})
+				})
+				payload := strings.NewReader(`{
+					"id": {"a": "3", "b": "4"}
+				}`)
+				req, err = http.NewRequest(method, url, payload)
+				if err != nil {
+					return err
+				}
+				req.Header.Set("Content-Type", "application/json")
+				return nil
+			},
+			expectCode: http.StatusOK,
+			expectBody: "{\"id\":{\"a\":\"3\",\"b\":\"4\"}}",
+		},
+		{
+			name:   "InputMap - multipart/form-data",
+			method: "POST",
+			url:    "/input-map/form/1?id=2",
+			setup: func(method, url string) error {
+				gin.Post("/input-map/form/{id}", func(ctx contractshttp.Context) contractshttp.Response {
+					return ctx.Response().Success().Json(contractshttp.Json{
+						"id": ctx.Request().InputMap("id"),
+					})
+				})
+
+				payload := &bytes.Buffer{}
+				writer := multipart.NewWriter(payload)
+				if err := writer.WriteField("id", "{\"a\":\"3\",\"b\":\"4\"}"); err != nil {
+					return err
+				}
+				if err := writer.Close(); err != nil {
+					return err
+				}
+
+				req, err = http.NewRequest(method, url, payload)
+				if err != nil {
+					return err
+				}
+
+				req.Header.Set("Content-Type", writer.FormDataContentType())
+
+				return nil
+			},
+			expectCode: http.StatusOK,
+			expectBody: "{\"id\":{\"a\":\"3\",\"b\":\"4\"}}",
+		},
+		{
+			name:   "InputMap - application/x-www-form-urlencoded",
+			method: "POST",
+			url:    "/input-map/url/1?id=2",
+			setup: func(method, url string) error {
+				gin.Post("/input-map/url/{id}", func(ctx contractshttp.Context) contractshttp.Response {
+					return ctx.Response().Success().Json(contractshttp.Json{
+						"id": ctx.Request().InputMap("id"),
+					})
+				})
+
+				form := neturl.Values{
+					"id": {"{\"a\":\"3\",\"b\":\"4\"}"},
+				}
+
+				req, err = http.NewRequest(method, url, strings.NewReader(form.Encode()))
+				if err != nil {
+					return err
+				}
+
+				req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 				return nil
 			},
@@ -1564,6 +1906,90 @@ func TestRequest(t *testing.T) {
 			assert.Equal(t, test.expectCode, w.Code)
 
 			mockConfig.AssertExpectations(t)
+		})
+	}
+}
+
+func TestGetValueFromPostData(t *testing.T) {
+	tests := []struct {
+		name        string
+		postData    map[string]any
+		key         string
+		expectValue any
+	}{
+		{
+			name: "Return nil when postData is nil",
+		},
+		{
+			name:        "Return string when postData is map[string]string",
+			postData:    map[string]any{"name": "goravel"},
+			key:         "name",
+			expectValue: "goravel",
+		},
+		{
+			name:        "Return map when postData is map[string]map[string]string",
+			postData:    map[string]any{"name": map[string]string{"sub": "goravel"}},
+			key:         "name",
+			expectValue: map[string]string{"sub": "goravel"},
+		},
+		{
+			name:        "Return slice when postData is map[string][]string",
+			postData:    map[string]any{"name[]": []string{"a", "b"}},
+			key:         "name[]",
+			expectValue: []string{"a", "b"},
+		},
+		{
+			name:        "Return slice when postData is map[string][]string, but key doesn't contain []",
+			postData:    map[string]any{"name": []string{"a", "b"}},
+			key:         "name",
+			expectValue: []string{"a", "b"},
+		},
+		{
+			name:        "Return string when postData is map[string]map[string]string and key with point",
+			postData:    map[string]any{"name": map[string]string{"sub": "goravel"}},
+			key:         "name.sub",
+			expectValue: "goravel",
+		},
+		{
+			name:        "Return int when postData is map[string]map[string]int and key with point",
+			postData:    map[string]any{"name": map[string]int{"sub": 1}},
+			key:         "name.sub",
+			expectValue: 1,
+		},
+		{
+			name:        "Return string when postData is map[string][]string and key with point",
+			postData:    map[string]any{"name[]": []string{"a", "b"}},
+			key:         "name[].0",
+			expectValue: "a",
+		},
+		{
+			name:        "Return string when postData is map[string][]string and key with point and index is 1",
+			postData:    map[string]any{"name[]": []string{"a", "b"}},
+			key:         "name[].1",
+			expectValue: "b",
+		},
+		{
+			name:        "Return string when postData is map[string][]string and key with point, but key doesn't contain []",
+			postData:    map[string]any{"name[]": []string{"a", "b"}},
+			key:         "name.0",
+			expectValue: "a",
+		},
+		{
+			name:        "Return string when postData is map[string][]string and key with point and index is 1, but key doesn't contain []",
+			postData:    map[string]any{"name[]": []string{"a", "b"}},
+			key:         "name.1",
+			expectValue: "b",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			contextRequest := &ContextRequest{
+				postData: test.postData,
+			}
+
+			value := contextRequest.getValueFromPostData(test.key)
+			assert.Equal(t, test.expectValue, value)
 		})
 	}
 }
