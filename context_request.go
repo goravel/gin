@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"reflect"
+	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -243,16 +244,20 @@ func (r *ContextRequest) Path() string {
 }
 
 func (r *ContextRequest) Input(key string, defaultValue ...string) string {
-	keys := strings.Split(key, ".")
-	current := r.postData
-	for _, k := range keys {
-		value, found := current[k]
-		if found {
-			if nestedMap, isMap := value.(map[string]any); isMap {
-				current = nestedMap
-			} else {
-				return cast.ToString(value)
+	valueFromPostData := r.getValueFromPostData(key)
+	if valueFromPostData != nil {
+		switch reflect.ValueOf(valueFromPostData).Kind() {
+		case reflect.Map:
+			valueFromPostDataObByte, err := json.Marshal(valueFromPostData)
+			if err != nil {
+				return ""
 			}
+
+			return string(valueFromPostDataObByte)
+		case reflect.Slice:
+			return strings.Join(cast.ToStringSlice(valueFromPostData), ",")
+		default:
+			return cast.ToString(valueFromPostData)
 		}
 	}
 
@@ -269,18 +274,8 @@ func (r *ContextRequest) Input(key string, defaultValue ...string) string {
 }
 
 func (r *ContextRequest) InputArray(key string, defaultValue ...[]string) []string {
-	keys := strings.Split(key, ".")
-	current := r.postData
-	for _, k := range keys {
-		value, found := current[k]
-		if !found {
-			return []string{}
-		}
-		if nestedMap, isMap := value.(map[string]any); isMap {
-			current = nestedMap
-		} else {
-			return cast.ToStringSlice(value)
-		}
+	if valueFromPostData := r.getValueFromPostData(key); valueFromPostData != nil {
+		return cast.ToStringSlice(valueFromPostData)
 	}
 
 	if len(defaultValue) > 0 {
@@ -291,18 +286,8 @@ func (r *ContextRequest) InputArray(key string, defaultValue ...[]string) []stri
 }
 
 func (r *ContextRequest) InputMap(key string, defaultValue ...map[string]string) map[string]string {
-	keys := strings.Split(key, ".")
-	current := r.postData
-	for _, k := range keys {
-		value, found := current[k]
-		if !found {
-			return map[string]string{}
-		}
-		if nestedMap, isMap := value.(map[string]string); isMap {
-			current = cast.ToStringMap(nestedMap)
-		} else {
-			return cast.ToStringMapString(value)
-		}
+	if valueFromPostData := r.getValueFromPostData(key); valueFromPostData != nil {
+		return cast.ToStringMapString(valueFromPostData)
 	}
 
 	if len(defaultValue) > 0 {
@@ -436,6 +421,39 @@ func (r *ContextRequest) ValidateRequest(request contractshttp.FormRequest) (con
 	return validator.Errors(), nil
 }
 
+func (r *ContextRequest) getValueFromPostData(key string) any {
+	if r.postData == nil {
+		return nil
+	}
+
+	var current any
+	current = r.postData
+	keys := strings.Split(key, ".")
+	for _, k := range keys {
+		currentValue := reflect.ValueOf(current)
+		switch currentValue.Kind() {
+		case reflect.Map:
+			if value := currentValue.MapIndex(reflect.ValueOf(k)); value.IsValid() {
+				current = value.Interface()
+			} else {
+				if value := currentValue.MapIndex(reflect.ValueOf(k + "[]")); value.IsValid() {
+					current = value.Interface()
+				} else {
+					return nil
+				}
+			}
+		case reflect.Slice:
+			if number, err := strconv.Atoi(k); err == nil {
+				return cast.ToStringSlice(current)[number]
+			} else {
+				return nil
+			}
+		}
+	}
+
+	return current
+}
+
 func getPostData(ctx *Context) (map[string]any, error) {
 	request := ctx.instance.Request
 	if request == nil || request.Body == nil || request.ContentLength == 0 {
@@ -466,10 +484,16 @@ func getPostData(ctx *Context) (map[string]any, error) {
 			}
 		}
 		for k, v := range request.PostForm {
-			data[k] = strings.Join(v, ",")
+			if len(v) > 1 {
+				data[k] = v
+			} else if len(v) == 1 {
+				data[k] = v[0]
+			}
 		}
 		for k, v := range request.MultipartForm.File {
-			if len(v) > 0 {
+			if len(v) > 1 {
+				data[k] = v
+			} else if len(v) == 1 {
 				data[k] = v[0]
 			}
 		}
@@ -482,7 +506,11 @@ func getPostData(ctx *Context) (map[string]any, error) {
 			}
 		}
 		for k, v := range request.PostForm {
-			data[k] = strings.Join(v, ",")
+			if len(v) > 1 {
+				data[k] = v
+			} else if len(v) == 1 {
+				data[k] = v[0]
+			}
 		}
 	}
 
