@@ -363,9 +363,9 @@ func (r *ContextRequest) Url() string {
 }
 
 func (r *ContextRequest) Validate(rules map[string]string, options ...contractsvalidate.Option) (contractsvalidate.Validator, error) {
-	if len(rules) == 0 {
-		return nil, errors.New("rules can't be empty")
-	}
+	//if len(rules) == 0 {
+	//	return nil, errors.New("rules can't be empty")
+	//}
 
 	options = append(options, validation.Rules(rules), validation.CustomRules(r.validation.Rules()))
 	generateOptions := validation.GenerateOptions(options)
