@@ -84,10 +84,6 @@ func (r *ContextResponse) Flush() {
 	r.instance.Writer.Flush()
 }
 
-type Success struct {
-	instance *gin.Context
-}
-
 type Status struct {
 	instance *gin.Context
 	status   int
