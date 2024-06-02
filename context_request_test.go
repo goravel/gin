@@ -16,6 +16,7 @@ import (
 	contractshttp "github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/contracts/validation"
 	frameworkfilesystem "github.com/goravel/framework/filesystem"
+	foundationjson "github.com/goravel/framework/foundation/json"
 	configmocks "github.com/goravel/framework/mocks/config"
 	filesystemmocks "github.com/goravel/framework/mocks/filesystem"
 	logmocks "github.com/goravel/framework/mocks/log"
@@ -1892,7 +1893,7 @@ func TestRequest(t *testing.T) {
 			url:    "/session",
 			setup: func(method, url string) error {
 				gin.Get("/session", func(ctx contractshttp.Context) contractshttp.Response {
-					ctx.Request().SetSession(session.NewSession("goravel_session", nil))
+					ctx.Request().SetSession(session.NewSession("goravel_session", nil, foundationjson.NewJson()))
 
 					return ctx.Response().Success().Json(contractshttp.Json{
 						"message": ctx.Request().Session().GetName(),

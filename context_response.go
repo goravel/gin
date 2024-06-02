@@ -58,8 +58,8 @@ func (r *ContextResponse) String(code int, format string, values ...any) contrac
 	return &StringResponse{code, format, r.instance, values}
 }
 
-func (r *ContextResponse) Success() contractshttp.ResponseSuccess {
-	return NewGinSuccess(r.instance)
+func (r *ContextResponse) Success() contractshttp.ResponseStatus {
+	return NewStatus(r.instance, http.StatusOK)
 }
 
 func (r *ContextResponse) Status(code int) contractshttp.ResponseStatus {
@@ -84,32 +84,12 @@ func (r *ContextResponse) Flush() {
 	r.instance.Writer.Flush()
 }
 
-type Success struct {
-	instance *gin.Context
-}
-
-func NewGinSuccess(instance *gin.Context) contractshttp.ResponseSuccess {
-	return &Success{instance}
-}
-
-func (r *Success) Data(contentType string, data []byte) contractshttp.Response {
-	return &DataResponse{http.StatusOK, contentType, data, r.instance}
-}
-
-func (r *Success) Json(obj any) contractshttp.Response {
-	return &JsonResponse{http.StatusOK, obj, r.instance}
-}
-
-func (r *Success) String(format string, values ...any) contractshttp.Response {
-	return &StringResponse{http.StatusOK, format, r.instance, values}
-}
-
 type Status struct {
 	instance *gin.Context
 	status   int
 }
 
-func NewStatus(instance *gin.Context, code int) contractshttp.ResponseSuccess {
+func NewStatus(instance *gin.Context, code int) *Status {
 	return &Status{instance, code}
 }
 
