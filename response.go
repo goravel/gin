@@ -54,6 +54,17 @@ func (r *JsonResponse) Render() error {
 	return nil
 }
 
+type NoContentResponse struct {
+	code     int
+	instance *gin.Context
+}
+
+func (r *NoContentResponse) Render() error {
+	r.instance.Status(r.code)
+
+	return nil
+}
+
 type RedirectResponse struct {
 	code     int
 	location string

@@ -4,9 +4,8 @@ go 1.21
 
 require (
 	github.com/gin-gonic/gin v1.10.0
-	github.com/gookit/color v1.5.4
 	github.com/gookit/validate v1.5.2
-	github.com/goravel/framework v1.13.1-0.20240602025035-84b54a821232
+	github.com/goravel/framework v1.13.1-0.20240604080703-58fde234c3ef
 	github.com/rs/cors v1.11.0
 	github.com/savioxavier/termlink v1.3.0
 	github.com/spf13/cast v1.6.0
@@ -86,6 +85,7 @@ require (
 	github.com/google/wire v0.6.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.2 // indirect
 	github.com/googleapis/gax-go/v2 v2.12.2 // indirect
+	github.com/gookit/color v1.5.4 // indirect
 	github.com/gookit/filter v1.2.1 // indirect
 	github.com/gookit/goutil v0.6.15 // indirect
 	github.com/goravel/file-rotatelogs/v2 v2.4.2 // indirect
