@@ -46,6 +46,14 @@ func (r *ContextResponse) Json(code int, obj any) contractshttp.Response {
 	return &JsonResponse{code, obj, r.instance}
 }
 
+func (r *ContextResponse) NoContent(code ...int) contractshttp.Response {
+	if len(code) > 0 {
+		return &NoContentResponse{code[0], r.instance}
+	}
+
+	return &NoContentResponse{http.StatusNoContent, r.instance}
+}
+
 func (r *ContextResponse) Origin() contractshttp.ResponseOrigin {
 	return r.origin
 }
