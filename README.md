@@ -14,6 +14,7 @@ Gin http driver for Goravel.
 
 | goravel/gin | goravel/framework |
 |-------------|-------------------|
+| v1.2.x      | v1.14.x           |
 | v1.1.x      | v1.13.x           |
 
 ## Install
