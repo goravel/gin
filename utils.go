@@ -13,7 +13,7 @@ import (
 )
 
 func pathToGinPath(relativePath string) string {
-	return bracketToColon(mergeSlashForPath(relativePath))
+	return bracketToColon(relativePath)
 }
 
 func middlewaresToGinHandlers(middlewares []httpcontract.Middleware) []gin.HandlerFunc {
@@ -92,10 +92,4 @@ func bracketToColon(relativePath string) string {
 	}
 
 	return relativePath
-}
-
-func mergeSlashForPath(path string) string {
-	path = strings.ReplaceAll(path, "//", "/")
-
-	return strings.ReplaceAll(path, "//", "/")
 }
