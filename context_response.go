@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/goravel/framework/support/carbon"
 
 	contractshttp "github.com/goravel/framework/contracts/http"
 )
@@ -19,6 +20,11 @@ func NewContextResponse(instance *gin.Context, origin contractshttp.ResponseOrig
 }
 
 func (r *ContextResponse) Cookie(cookie contractshttp.Cookie) contractshttp.ContextResponse {
+	if cookie.MaxAge == 0 {
+		if !cookie.Expires.IsZero() {
+			cookie.MaxAge = int(cookie.Expires.Sub(carbon.Now().StdTime()).Seconds())
+		}
+	}
 	r.instance.SetCookie(cookie.Name, cookie.Value, cookie.MaxAge, cookie.Path, cookie.Domain, cookie.Secure, cookie.HttpOnly)
 
 	return r
