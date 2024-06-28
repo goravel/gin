@@ -1,704 +1,289 @@
 package gin
 
 import (
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
-	contractshttp "github.com/goravel/framework/contracts/http"
-	configmocks "github.com/goravel/framework/mocks/config"
-	"github.com/goravel/framework/support/json"
-	"github.com/stretchr/testify/assert"
+	httpcontract "github.com/goravel/framework/contracts/http"
+	configmock "github.com/goravel/framework/mocks/config"
 	"github.com/stretchr/testify/suite"
 )
 
-type ResponseSuite struct {
+type ContextResponseSuite struct {
 	suite.Suite
+	route      *Route
+	mockConfig *configmock.Config
 }
 
-func TestContextTestSuite(t *testing.T) {
-	suite.Run(t, new(ResponseSuite))
+func TestContextResponseSuite(t *testing.T) {
+	suite.Run(t, new(ContextResponseSuite))
 }
 
-func (s *ResponseSuite) SetupTest() {
+func (s *ContextResponseSuite) SetupTest() {
+	s.mockConfig = &configmock.Config{}
+	s.mockConfig.On("GetBool", "app.debug").Return(true).Once()
+	s.mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4096).Return(4096).Once()
+
+	var err error
+	s.route, err = NewRoute(s.mockConfig, nil)
+	s.Require().Nil(err)
 }
 
-func (s *ResponseSuite) TestContext() {
-
+func (s *ContextResponseSuite) TearDownTest() {
+	s.mockConfig.AssertExpectations(s.T())
 }
 
-func TestResponse(t *testing.T) {
-	var (
-		err        error
-		gin        *Route
-		req        *http.Request
-		mockConfig *configmocks.Config
-	)
-	beforeEach := func() {
-		mockConfig = &configmocks.Config{}
-		mockConfig.On("GetBool", "app.debug").Return(true).Once()
-		mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4096).Return(4096).Once()
+func (s *ContextResponseSuite) TestCookie() {
+	cookieName := "goravel"
+	s.route.Get("/cookie", func(ctx httpcontract.Context) httpcontract.Response {
+		return ctx.Response().Cookie(httpcontract.Cookie{
+			Name:  cookieName,
+			Value: "Goravel",
+		}).String(http.StatusOK, "Goravel")
+	})
+
+	code, body, _, cookies := s.request("GET", "/cookie", nil)
+
+	s.Equal("Goravel", body)
+	s.Equal(http.StatusOK, code)
+	exist := false
+	for _, cookie := range cookies {
+		if cookie.Name == cookieName {
+			exist = true
+			s.Equal("Goravel", cookie.Value)
+		}
 	}
-	tests := []struct {
-		name         string
-		method       string
-		url          string
-		cookieName   string
-		setup        func(method, url string) error
-		expectCode   int
-		expectBody   string
-		expectHeader string
-	}{
-		{
-			name:   "Data",
-			method: "GET",
-			url:    "/data",
-			setup: func(method, url string) error {
-				gin.Get("/data", func(ctx contractshttp.Context) contractshttp.Response {
-					return ctx.Response().Data(http.StatusOK, "text/html; charset=utf-8", []byte("<b>Goravel</b>"))
-				})
+	s.True(exist)
+}
 
-				var err error
-				req, err = http.NewRequest(method, url, nil)
-				if err != nil {
-					return err
-				}
+func (s *ContextResponseSuite) TestData() {
+	s.route.Get("/data", func(ctx httpcontract.Context) httpcontract.Response {
+		return ctx.Response().Data(http.StatusOK, "text/html; charset=utf-8", []byte("<b>Goravel</b>"))
+	})
 
-				return nil
-			},
-			expectCode: http.StatusOK,
-			expectBody: "<b>Goravel</b>",
-		},
-		{
-			name:   "Success Data",
-			method: "GET",
-			url:    "/success/data",
-			setup: func(method, url string) error {
-				gin.Get("/success/data", func(ctx contractshttp.Context) contractshttp.Response {
-					return ctx.Response().Success().Data("text/html; charset=utf-8", []byte("<b>Goravel</b>"))
-				})
+	code, body, _, _ := s.request("GET", "/data", nil)
 
-				var err error
-				req, err = http.NewRequest(method, url, nil)
-				if err != nil {
-					return err
-				}
+	s.Equal("<b>Goravel</b>", body)
+	s.Equal(http.StatusOK, code)
+}
 
-				return nil
-			},
-			expectCode: http.StatusOK,
-			expectBody: "<b>Goravel</b>",
-		},
-		{
-			name:   "Json",
-			method: "GET",
-			url:    "/json",
-			setup: func(method, url string) error {
-				gin.Get("/json", func(ctx contractshttp.Context) contractshttp.Response {
-					return ctx.Response().Json(http.StatusOK, contractshttp.Json{
-						"id": "1",
-					})
-				})
+func (s *ContextResponseSuite) TestDownload() {
+	s.route.Get("/download", func(ctx httpcontract.Context) httpcontract.Response {
+		return ctx.Response().Download("./test.txt", "README.md")
+	})
 
-				var err error
-				req, err = http.NewRequest(method, url, nil)
-				if err != nil {
-					return err
-				}
+	code, body, _, _ := s.request("GET", "/download", nil)
 
-				return nil
-			},
-			expectCode: http.StatusOK,
-			expectBody: "{\"id\":\"1\"}",
-		},
-		{
-			name:   "String",
-			method: "GET",
-			url:    "/string",
-			setup: func(method, url string) error {
-				gin.Get("/string", func(ctx contractshttp.Context) contractshttp.Response {
-					return ctx.Response().String(http.StatusCreated, "Goravel")
-				})
+	s.Equal("Goravel", body)
+	s.Equal(http.StatusOK, code)
+}
 
-				var err error
-				req, err = http.NewRequest(method, url, nil)
-				if err != nil {
-					return err
-				}
+func (s *ContextResponseSuite) TestFile() {
+	s.route.Get("/file", func(ctx httpcontract.Context) httpcontract.Response {
+		return ctx.Response().File("./test.txt")
+	})
 
-				return nil
-			},
-			expectCode: http.StatusCreated,
-			expectBody: "Goravel",
-		},
-		{
-			name:   "Success Json",
-			method: "GET",
-			url:    "/success/json",
-			setup: func(method, url string) error {
-				gin.Get("/success/json", func(ctx contractshttp.Context) contractshttp.Response {
-					return ctx.Response().Success().Json(contractshttp.Json{
-						"id": "1",
-					})
-				})
+	code, body, _, _ := s.request("GET", "/file", nil)
 
-				var err error
-				req, err = http.NewRequest(method, url, nil)
-				if err != nil {
-					return err
-				}
+	s.Equal("Goravel", body)
+	s.Equal(http.StatusOK, code)
+}
 
-				return nil
-			},
-			expectCode: http.StatusOK,
-			expectBody: "{\"id\":\"1\"}",
-		},
-		{
-			name:   "Success String",
-			method: "GET",
-			url:    "/success/string",
-			setup: func(method, url string) error {
-				gin.Get("/success/string", func(ctx contractshttp.Context) contractshttp.Response {
-					return ctx.Response().Success().String("Goravel")
-				})
+func (s *ContextResponseSuite) TestHeader() {
+	s.route.Get("/header", func(ctx httpcontract.Context) httpcontract.Response {
+		return ctx.Response().Header("Hello", "Goravel").String(http.StatusOK, "Goravel")
+	})
 
-				var err error
-				req, err = http.NewRequest(method, url, nil)
-				if err != nil {
-					return err
-				}
+	code, body, header, _ := s.request("GET", "/header", nil)
 
-				return nil
-			},
-			expectCode: http.StatusOK,
-			expectBody: "Goravel",
-		},
-		{
-			name:   "File",
-			method: "GET",
-			url:    "/file",
-			setup: func(method, url string) error {
-				gin.Get("/file", func(ctx contractshttp.Context) contractshttp.Response {
-					return ctx.Response().File("./README.md")
-				})
+	s.Equal("Goravel", body)
+	s.Equal(http.StatusOK, code)
+	s.Equal("Goravel", strings.Join(header.Values("Hello"), ""))
+}
 
-				var err error
-				req, err = http.NewRequest(method, url, nil)
-				if err != nil {
-					return err
-				}
-
-				return nil
-			},
-			expectCode: http.StatusOK,
-		},
-		{
-			name:   "Download",
-			method: "GET",
-			url:    "/download",
-			setup: func(method, url string) error {
-				gin.Get("/download", func(ctx contractshttp.Context) contractshttp.Response {
-					return ctx.Response().Download("./README.md", "README.md")
-				})
-
-				var err error
-				req, err = http.NewRequest(method, url, nil)
-				if err != nil {
-					return err
-				}
-
-				return nil
-			},
-			expectCode: http.StatusOK,
-		},
-		{
-			name:   "Header",
-			method: "GET",
-			url:    "/header",
-			setup: func(method, url string) error {
-				gin.Get("/header", func(ctx contractshttp.Context) contractshttp.Response {
-					return ctx.Response().Header("Hello", "goravel").String(http.StatusOK, "Goravel")
-				})
-
-				var err error
-				req, err = http.NewRequest(method, url, nil)
-				if err != nil {
-					return err
-				}
-
-				return nil
-			},
-			expectCode:   http.StatusOK,
-			expectBody:   "Goravel",
-			expectHeader: "goravel",
-		},
-		{
-			name:   "NoContent",
-			method: "GET",
-			url:    "/no/content",
-			setup: func(method, url string) error {
-				gin.Get("/no/content", func(ctx contractshttp.Context) contractshttp.Response {
-					return ctx.Response().NoContent()
-				})
-
-				var err error
-				req, err = http.NewRequest(method, url, nil)
-				if err != nil {
-					return err
-				}
-
-				return nil
-			},
-			expectCode: http.StatusNoContent,
-		},
-		{
-			name:   "NoContentWithCode",
-			method: "GET",
-			url:    "/no/content/with/code",
-			setup: func(method, url string) error {
-				gin.Get("/no/content/with/code", func(ctx contractshttp.Context) contractshttp.Response {
-					return ctx.Response().NoContent(http.StatusAccepted)
-				})
-
-				var err error
-				req, err = http.NewRequest(method, url, nil)
-				if err != nil {
-					return err
-				}
-
-				return nil
-			},
-			expectCode: http.StatusAccepted,
-		},
-		{
-			name:   "Origin",
-			method: "GET",
-			url:    "/origin",
-			setup: func(method, url string) error {
-				mockConfig.On("Get", "cors.paths").Return([]string{}).Once()
-				mockConfig.On("GetString", "http.tls.host").Return("").Once()
-				mockConfig.On("GetString", "http.tls.port").Return("").Once()
-				mockConfig.On("GetString", "http.tls.ssl.cert").Return("").Once()
-				mockConfig.On("GetString", "http.tls.ssl.key").Return("").Once()
-				ConfigFacade = mockConfig
-
-				gin.GlobalMiddleware(func(ctx contractshttp.Context) {
-					ctx.Response().Header("global", "goravel")
-					ctx.Request().Next()
-
-					assert.Equal(t, "Goravel", ctx.Response().Origin().Body().String())
-					assert.Equal(t, "goravel", ctx.Response().Origin().Header().Get("global"))
-					assert.Equal(t, 7, ctx.Response().Origin().Size())
-					assert.Equal(t, 200, ctx.Response().Origin().Status())
-				})
-				gin.Get("/origin", func(ctx contractshttp.Context) contractshttp.Response {
-					return ctx.Response().String(http.StatusOK, "Goravel")
-				})
-
-				var err error
-				req, err = http.NewRequest(method, url, nil)
-				if err != nil {
-					return err
-				}
-
-				return nil
-			},
-			expectCode: http.StatusOK,
-			expectBody: "Goravel",
-		},
-		{
-			name:   "Redirect",
-			method: "GET",
-			url:    "/redirect",
-			setup: func(method, url string) error {
-				gin.Get("/redirect", func(ctx contractshttp.Context) contractshttp.Response {
-					return ctx.Response().Redirect(http.StatusMovedPermanently, "https://goravel.dev")
-				})
-
-				var err error
-				req, err = http.NewRequest(method, url, nil)
-				if err != nil {
-					return err
-				}
-
-				return nil
-			},
-			expectCode: http.StatusMovedPermanently,
-			expectBody: "<a href=\"https://goravel.dev\">Moved Permanently</a>.\n\n",
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			beforeEach()
-			gin, err = NewRoute(mockConfig, nil)
-			assert.Nil(t, err)
-
-			assert.Nil(t, test.setup(test.method, test.url))
-
-			w := httptest.NewRecorder()
-
-			gin.ServeHTTP(w, req)
-
-			if test.expectBody != "" {
-				assert.Equal(t, test.expectBody, w.Body.String(), test.name)
-			}
-			if test.expectHeader != "" {
-				assert.Equal(t, test.expectHeader, strings.Join(w.Header().Values("Hello"), ""), test.name)
-			}
-			assert.Equal(t, test.expectCode, w.Code, test.name)
-
-			mockConfig.AssertExpectations(t)
+func (s *ContextResponseSuite) TestJson() {
+	s.route.Get("/json", func(ctx httpcontract.Context) httpcontract.Response {
+		return ctx.Response().Json(http.StatusOK, httpcontract.Json{
+			"id": "1",
 		})
-	}
+	})
+
+	code, body, _, _ := s.request("GET", "/json", nil)
+
+	s.Equal("{\"id\":\"1\"}", body)
+	s.Equal(http.StatusOK, code)
 }
 
-func TestResponse_Success(t *testing.T) {
-	var (
-		err        error
-		route      *Route
-		req        *http.Request
-		mockConfig *configmocks.Config
-	)
-	beforeEach := func() {
-		mockConfig = &configmocks.Config{}
-		mockConfig.On("GetBool", "app.debug").Return(false).Once()
-		mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4096).Return(4096).Once()
-		ConfigFacade = mockConfig
-	}
-	tests := []struct {
-		name           string
-		method         string
-		url            string
-		setup          func(method, url string) error
-		expectCode     int
-		expectBody     string
-		expectBodyJson string
-	}{
-		{
-			name:   "Data",
-			method: "GET",
-			url:    "/data",
-			setup: func(method, url string) error {
-				route.Get("/data", func(ctx contractshttp.Context) contractshttp.Response {
-					return ctx.Response().Success().Data("text/html; charset=utf-8", []byte("<b>Goravel</b>"))
-				})
+func (s *ContextResponseSuite) TestNoContent() {
+	s.route.Get("/no-content", func(ctx httpcontract.Context) httpcontract.Response {
+		return ctx.Response().NoContent()
+	})
 
-				var err error
-				req, err = http.NewRequest(method, url, nil)
-				if err != nil {
-					return err
-				}
+	code, body, _, _ := s.request("GET", "/no-content", nil)
 
-				return nil
-			},
-			expectCode: http.StatusOK,
-			expectBody: "<b>Goravel</b>",
-		},
-		{
-			name:   "Json",
-			method: "GET",
-			url:    "/json",
-			setup: func(method, url string) error {
-				route.Get("/json", func(ctx contractshttp.Context) contractshttp.Response {
-					return ctx.Response().Success().Json(contractshttp.Json{
-						"id": "1",
-					})
-				})
-
-				var err error
-				req, err = http.NewRequest(method, url, nil)
-				if err != nil {
-					return err
-				}
-
-				return nil
-			},
-			expectCode:     http.StatusOK,
-			expectBodyJson: "{\"id\":\"1\"}",
-		},
-		{
-			name:   "String",
-			method: "GET",
-			url:    "/string",
-			setup: func(method, url string) error {
-				route.Get("/string", func(ctx contractshttp.Context) contractshttp.Response {
-					return ctx.Response().Success().String("Goravel")
-				})
-
-				var err error
-				req, err = http.NewRequest(method, url, nil)
-				if err != nil {
-					return err
-				}
-
-				return nil
-			},
-			expectCode: http.StatusOK,
-			expectBody: "Goravel",
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			beforeEach()
-			route, err = NewRoute(mockConfig, nil)
-			assert.Nil(t, err)
-
-			err := test.setup(test.method, test.url)
-			assert.Nil(t, err)
-
-			w := httptest.NewRecorder()
-			route.ServeHTTP(w, req)
-
-			if test.expectBody != "" {
-				assert.Equal(t, test.expectBody, w.Body.String())
-			}
-			if test.expectBodyJson != "" {
-				bodyMap := make(map[string]any)
-				exceptBodyMap := make(map[string]any)
-
-				err = json.Unmarshal(w.Body.Bytes(), &bodyMap)
-				assert.Nil(t, err)
-				err = json.UnmarshalString(test.expectBodyJson, &exceptBodyMap)
-				assert.Nil(t, err)
-
-				assert.Equal(t, exceptBodyMap, bodyMap)
-			}
-
-			assert.Equal(t, test.expectCode, w.Code)
-
-			mockConfig.AssertExpectations(t)
-		})
-	}
+	s.Empty(body)
+	s.Equal(http.StatusNoContent, code)
 }
 
-func TestResponse_Status(t *testing.T) {
-	var (
-		err        error
-		route      *Route
-		req        *http.Request
-		mockConfig *configmocks.Config
-	)
-	beforeEach := func() {
-		mockConfig = &configmocks.Config{}
-		mockConfig.On("GetBool", "app.debug").Return(false).Once()
-		mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4096).Return(4096).Once()
-		ConfigFacade = mockConfig
-	}
-	tests := []struct {
-		name           string
-		method         string
-		url            string
-		setup          func(method, url string) error
-		expectCode     int
-		expectBody     string
-		expectBodyJson string
-	}{
-		{
-			name:   "Data",
-			method: "GET",
-			url:    "/data",
-			setup: func(method, url string) error {
-				route.Get("/data", func(ctx contractshttp.Context) contractshttp.Response {
-					return ctx.Response().Status(http.StatusCreated).Data("text/html; charset=utf-8", []byte("<b>Goravel</b>"))
-				})
+func (s *ContextResponseSuite) TestNoContent_WithCode() {
+	s.route.Get("/no-content-with-code", func(ctx httpcontract.Context) httpcontract.Response {
+		return ctx.Response().NoContent(http.StatusAccepted)
+	})
 
-				var err error
-				req, err = http.NewRequest(method, url, nil)
-				if err != nil {
-					return err
-				}
+	code, body, _, _ := s.request("GET", "/no-content-with-code", nil)
 
-				return nil
-			},
-			expectCode: http.StatusCreated,
-			expectBody: "<b>Goravel</b>",
-		},
-		{
-			name:   "Json",
-			method: "GET",
-			url:    "/json",
-			setup: func(method, url string) error {
-				route.Get("/json", func(ctx contractshttp.Context) contractshttp.Response {
-					return ctx.Response().Status(http.StatusCreated).Json(contractshttp.Json{
-						"id": "1",
-					})
-				})
-
-				var err error
-				req, err = http.NewRequest(method, url, nil)
-				if err != nil {
-					return err
-				}
-
-				return nil
-			},
-			expectCode:     http.StatusCreated,
-			expectBodyJson: "{\"id\":\"1\"}",
-		},
-		{
-			name:   "String",
-			method: "GET",
-			url:    "/string",
-			setup: func(method, url string) error {
-				route.Get("/string", func(ctx contractshttp.Context) contractshttp.Response {
-					return ctx.Response().Status(http.StatusCreated).String("Goravel")
-				})
-
-				var err error
-				req, err = http.NewRequest(method, url, nil)
-				if err != nil {
-					return err
-				}
-
-				return nil
-			},
-			expectCode: http.StatusCreated,
-			expectBody: "Goravel",
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			beforeEach()
-			route, err = NewRoute(mockConfig, nil)
-			assert.Nil(t, err)
-
-			err := test.setup(test.method, test.url)
-			assert.Nil(t, err)
-
-			w := httptest.NewRecorder()
-			route.ServeHTTP(w, req)
-
-			if test.expectBody != "" {
-				assert.Equal(t, test.expectBody, w.Body.String())
-			}
-			if test.expectBodyJson != "" {
-				bodyMap := make(map[string]any)
-				exceptBodyMap := make(map[string]any)
-
-				err = json.Unmarshal(w.Body.Bytes(), &bodyMap)
-				assert.Nil(t, err)
-				err = json.UnmarshalString(test.expectBodyJson, &exceptBodyMap)
-				assert.Nil(t, err)
-
-				assert.Equal(t, exceptBodyMap, bodyMap)
-			}
-
-			assert.Equal(t, test.expectCode, w.Code)
-
-			mockConfig.AssertExpectations(t)
-		})
-	}
+	s.Empty(body)
+	s.Equal(http.StatusAccepted, code)
 }
 
-func TestResponse_Cookie(t *testing.T) {
-	var (
-		err        error
-		gin        *Route
-		req        *http.Request
-		mockConfig *configmocks.Config
-	)
-	beforeEach := func() {
-		mockConfig = &configmocks.Config{}
-		mockConfig.On("GetBool", "app.debug").Return(true).Once()
-		mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4096).Return(4096).Once()
-	}
-	tests := []struct {
-		name              string
-		method            string
-		url               string
-		cookieName        string
-		setup             func(method, url string) error
-		expectBody        string
-		expectHeader      string
-		expectCookieValue string
-	}{
-		{
-			name:       "WithoutCookie",
-			method:     "GET",
-			url:        "/without/cookie",
-			cookieName: "goravel",
-			setup: func(method, url string) error {
-				gin.Get("/without/cookie", func(ctx contractshttp.Context) contractshttp.Response {
-					return ctx.Response().WithoutCookie("goravel").String(http.StatusOK, "Goravel")
-				})
+func (s *ContextResponseSuite) TestOrigin() {
+	s.mockConfig.On("Get", "cors.paths").Return([]string{}).Once()
+	s.mockConfig.On("GetString", "http.tls.host").Return("").Once()
+	s.mockConfig.On("GetString", "http.tls.port").Return("").Once()
+	s.mockConfig.On("GetString", "http.tls.ssl.cert").Return("").Once()
+	s.mockConfig.On("GetString", "http.tls.ssl.key").Return("").Once()
+	ConfigFacade = s.mockConfig
 
-				var err error
-				req, err = http.NewRequest(method, url, nil)
-				if err != nil {
-					return err
-				}
-				req.AddCookie(&http.Cookie{
-					Name:  "goravel",
-					Value: "goravel",
-				})
+	s.route.GlobalMiddleware(func(ctx httpcontract.Context) {
+		ctx.Response().Header("global", "goravel")
+		ctx.Request().Next()
 
-				return nil
-			},
-			expectBody:        "Goravel",
-			expectCookieValue: "",
-		},
-		{
-			name:       "Cookie",
-			method:     "GET",
-			url:        "/cookie",
-			cookieName: "goravel",
-			setup: func(method, url string) error {
-				gin.Get("/cookie", func(ctx contractshttp.Context) contractshttp.Response {
-					return ctx.Response().Cookie(contractshttp.Cookie{
-						Name:  "goravel",
-						Value: "goravel",
-					}).String(http.StatusOK, "Goravel")
-				})
+		s.Equal("Goravel", ctx.Response().Origin().Body().String())
+		s.Equal("goravel", ctx.Response().Origin().Header().Get("global"))
+		s.Equal(7, ctx.Response().Origin().Size())
+		s.Equal(http.StatusOK, ctx.Response().Origin().Status())
+	})
+	s.route.Get("/origin", func(ctx httpcontract.Context) httpcontract.Response {
+		return ctx.Response().String(http.StatusOK, "Goravel")
+	})
 
-				var err error
-				req, err = http.NewRequest(method, url, nil)
-				if err != nil {
-					return err
-				}
+	code, body, _, _ := s.request("GET", "/origin", nil)
 
-				return nil
-			},
-			expectBody:        "Goravel",
-			expectCookieValue: "goravel",
-		},
-	}
+	s.Equal("Goravel", body)
+	s.Equal(http.StatusOK, code)
+}
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			beforeEach()
-			gin, err = NewRoute(mockConfig, nil)
-			assert.Nil(t, err)
+func (s *ContextResponseSuite) TestRedirect() {
+	s.route.Get("/redirect", func(ctx httpcontract.Context) httpcontract.Response {
+		return ctx.Response().Redirect(http.StatusMovedPermanently, "https://goravel.dev")
+	})
 
-			assert.Nil(t, test.setup(test.method, test.url))
+	code, body, _, _ := s.request("GET", "/redirect", nil)
 
-			w := httptest.NewRecorder()
+	s.Equal("<a href=\"https://goravel.dev\">Moved Permanently</a>.\n\n", body)
+	s.Equal(http.StatusMovedPermanently, code)
+}
 
-			gin.ServeHTTP(w, req)
+func (s *ContextResponseSuite) TestString() {
+	s.route.Get("/string", func(ctx httpcontract.Context) httpcontract.Response {
+		return ctx.Response().String(http.StatusCreated, "Goravel")
+	})
 
-			if test.expectBody != "" {
-				assert.Equal(t, test.expectBody, w.Body.String(), test.name)
-			}
-			if test.expectHeader != "" {
-				assert.Equal(t, test.expectHeader, strings.Join(w.Header().Values("Hello"), ""), test.name)
-			}
-			if test.cookieName != "" {
-				cookies := w.Result().Cookies()
-				exist := false
-				for _, cookie := range cookies {
-					if cookie.Name == test.cookieName {
-						exist = true
-						assert.Equal(t, test.expectCookieValue, cookie.Value)
-					}
-				}
-				assert.True(t, exist)
-			}
-			//assert.Equal(t, test.expectCode, w.Code, test.name)
+	code, body, _, _ := s.request("GET", "/string", nil)
 
-			mockConfig.AssertExpectations(t)
+	s.Equal("Goravel", body)
+	s.Equal(http.StatusCreated, code)
+}
+
+func (s *ContextResponseSuite) TestSuccess_Data() {
+	s.route.Get("/data", func(ctx httpcontract.Context) httpcontract.Response {
+		return ctx.Response().Success().Data("text/html; charset=utf-8", []byte("<b>Goravel</b>"))
+	})
+
+	code, body, _, _ := s.request("GET", "/data", nil)
+
+	s.Equal("<b>Goravel</b>", body)
+	s.Equal(http.StatusOK, code)
+}
+
+func (s *ContextResponseSuite) TestSuccess_Json() {
+	s.route.Get("/json", func(ctx httpcontract.Context) httpcontract.Response {
+		return ctx.Response().Success().Json(httpcontract.Json{
+			"id": "1",
 		})
+	})
+
+	code, body, _, _ := s.request("GET", "/json", nil)
+
+	s.Equal("{\"id\":\"1\"}", body)
+	s.Equal(http.StatusOK, code)
+}
+
+func (s *ContextResponseSuite) TestSuccess_String() {
+	s.route.Get("/string", func(ctx httpcontract.Context) httpcontract.Response {
+		return ctx.Response().Success().String("Goravel")
+	})
+
+	code, body, _, _ := s.request("GET", "/string", nil)
+
+	s.Equal("Goravel", body)
+	s.Equal(http.StatusOK, code)
+}
+
+func (s *ContextResponseSuite) TestStatus_Data() {
+	s.route.Get("/data", func(ctx httpcontract.Context) httpcontract.Response {
+		return ctx.Response().Status(http.StatusCreated).Data("text/html; charset=utf-8", []byte("<b>Goravel</b>"))
+	})
+
+	code, body, _, _ := s.request("GET", "/data", nil)
+
+	s.Equal("<b>Goravel</b>", body)
+	s.Equal(http.StatusCreated, code)
+}
+
+func (s *ContextResponseSuite) TestStatus_Json() {
+	s.route.Get("/json", func(ctx httpcontract.Context) httpcontract.Response {
+		return ctx.Response().Status(http.StatusCreated).Json(httpcontract.Json{
+			"id": "1",
+		})
+	})
+
+	code, body, _, _ := s.request("GET", "/json", nil)
+
+	s.Equal("{\"id\":\"1\"}", body)
+	s.Equal(http.StatusCreated, code)
+}
+
+func (s *ContextResponseSuite) TestStatus_String() {
+	s.route.Get("/string", func(ctx httpcontract.Context) httpcontract.Response {
+		return ctx.Response().Status(http.StatusCreated).String("Goravel")
+	})
+
+	code, body, _, _ := s.request("GET", "/string", nil)
+
+	s.Equal("Goravel", body)
+	s.Equal(http.StatusCreated, code)
+}
+
+func (s *ContextResponseSuite) TestWithoutCookie() {
+	cookieName := "goravel"
+	s.route.Get("/without-cookie", func(ctx httpcontract.Context) httpcontract.Response {
+		return ctx.Response().WithoutCookie(cookieName).String(http.StatusOK, "Goravel")
+	})
+
+	code, body, _, cookies := s.request("GET", "/without-cookie", nil)
+
+	s.Equal("Goravel", body)
+	s.Equal(http.StatusOK, code)
+	exist := false
+	for _, cookie := range cookies {
+		if cookie.Name == cookieName {
+			exist = true
+			s.Empty(cookie.Value)
+		}
 	}
+	s.True(exist)
+}
+
+func (s *ContextResponseSuite) request(method, url string, body io.Reader) (int, string, http.Header, []*http.Cookie) {
+	req, err := http.NewRequest(method, url, body)
+	s.Require().Nil(err)
+
+	w := httptest.NewRecorder()
+	s.route.ServeHTTP(w, req)
+
+	return w.Code, w.Body.String(), w.Header(), w.Result().Cookies()
 }
