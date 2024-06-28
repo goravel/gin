@@ -5,21 +5,20 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	httpcontract "github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/support/carbon"
-
-	contractshttp "github.com/goravel/framework/contracts/http"
 )
 
 type ContextResponse struct {
 	instance *gin.Context
-	origin   contractshttp.ResponseOrigin
+	origin   httpcontract.ResponseOrigin
 }
 
-func NewContextResponse(instance *gin.Context, origin contractshttp.ResponseOrigin) *ContextResponse {
+func NewContextResponse(instance *gin.Context, origin httpcontract.ResponseOrigin) *ContextResponse {
 	return &ContextResponse{instance, origin}
 }
 
-func (r *ContextResponse) Cookie(cookie contractshttp.Cookie) contractshttp.ContextResponse {
+func (r *ContextResponse) Cookie(cookie httpcontract.Cookie) httpcontract.ContextResponse {
 	if cookie.MaxAge == 0 {
 		if !cookie.Expires.IsZero() {
 			cookie.MaxAge = int(cookie.Expires.Sub(carbon.Now().StdTime()).Seconds())
@@ -30,29 +29,29 @@ func (r *ContextResponse) Cookie(cookie contractshttp.Cookie) contractshttp.Cont
 	return r
 }
 
-func (r *ContextResponse) Data(code int, contentType string, data []byte) contractshttp.Response {
+func (r *ContextResponse) Data(code int, contentType string, data []byte) httpcontract.Response {
 	return &DataResponse{code, contentType, data, r.instance}
 }
 
-func (r *ContextResponse) Download(filepath, filename string) contractshttp.Response {
+func (r *ContextResponse) Download(filepath, filename string) httpcontract.Response {
 	return &DownloadResponse{filename, filepath, r.instance}
 }
 
-func (r *ContextResponse) File(filepath string) contractshttp.Response {
+func (r *ContextResponse) File(filepath string) httpcontract.Response {
 	return &FileResponse{filepath, r.instance}
 }
 
-func (r *ContextResponse) Header(key, value string) contractshttp.ContextResponse {
+func (r *ContextResponse) Header(key, value string) httpcontract.ContextResponse {
 	r.instance.Header(key, value)
 
 	return r
 }
 
-func (r *ContextResponse) Json(code int, obj any) contractshttp.Response {
+func (r *ContextResponse) Json(code int, obj any) httpcontract.Response {
 	return &JsonResponse{code, obj, r.instance}
 }
 
-func (r *ContextResponse) NoContent(code ...int) contractshttp.Response {
+func (r *ContextResponse) NoContent(code ...int) httpcontract.Response {
 	if len(code) > 0 {
 		return &NoContentResponse{code[0], r.instance}
 	}
@@ -60,31 +59,31 @@ func (r *ContextResponse) NoContent(code ...int) contractshttp.Response {
 	return &NoContentResponse{http.StatusNoContent, r.instance}
 }
 
-func (r *ContextResponse) Origin() contractshttp.ResponseOrigin {
+func (r *ContextResponse) Origin() httpcontract.ResponseOrigin {
 	return r.origin
 }
 
-func (r *ContextResponse) Redirect(code int, location string) contractshttp.Response {
+func (r *ContextResponse) Redirect(code int, location string) httpcontract.Response {
 	return &RedirectResponse{code, location, r.instance}
 }
 
-func (r *ContextResponse) String(code int, format string, values ...any) contractshttp.Response {
+func (r *ContextResponse) String(code int, format string, values ...any) httpcontract.Response {
 	return &StringResponse{code, format, r.instance, values}
 }
 
-func (r *ContextResponse) Success() contractshttp.ResponseStatus {
+func (r *ContextResponse) Success() httpcontract.ResponseStatus {
 	return NewStatus(r.instance, http.StatusOK)
 }
 
-func (r *ContextResponse) Status(code int) contractshttp.ResponseStatus {
+func (r *ContextResponse) Status(code int) httpcontract.ResponseStatus {
 	return NewStatus(r.instance, code)
 }
 
-func (r *ContextResponse) View() contractshttp.ResponseView {
+func (r *ContextResponse) View() httpcontract.ResponseView {
 	return NewView(r.instance)
 }
 
-func (r *ContextResponse) WithoutCookie(name string) contractshttp.ContextResponse {
+func (r *ContextResponse) WithoutCookie(name string) httpcontract.ContextResponse {
 	r.instance.SetCookie(name, "", -1, "", "", false, false)
 
 	return r
@@ -107,20 +106,20 @@ func NewStatus(instance *gin.Context, code int) *Status {
 	return &Status{instance, code}
 }
 
-func (r *Status) Data(contentType string, data []byte) contractshttp.Response {
+func (r *Status) Data(contentType string, data []byte) httpcontract.Response {
 	return &DataResponse{r.status, contentType, data, r.instance}
 }
 
-func (r *Status) Json(obj any) contractshttp.Response {
+func (r *Status) Json(obj any) httpcontract.Response {
 	return &JsonResponse{r.status, obj, r.instance}
 }
 
-func (r *Status) String(format string, values ...any) contractshttp.Response {
+func (r *Status) String(format string, values ...any) httpcontract.Response {
 	return &StringResponse{r.status, format, r.instance, values}
 }
 
-func ResponseMiddleware() contractshttp.Middleware {
-	return func(ctx contractshttp.Context) {
+func ResponseMiddleware() httpcontract.Middleware {
+	return func(ctx httpcontract.Context) {
 		blw := &BodyWriter{body: bytes.NewBufferString("")}
 		switch ctx := ctx.(type) {
 		case *Context:
