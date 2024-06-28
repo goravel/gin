@@ -24,8 +24,8 @@ func TestContextResponseSuite(t *testing.T) {
 
 func (s *ContextResponseSuite) SetupTest() {
 	s.mockConfig = &configmock.Config{}
-	s.mockConfig.On("GetBool", "app.debug").Return(true).Once()
-	s.mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4096).Return(4096).Once()
+	s.mockConfig.EXPECT().GetBool("app.debug").Return(true).Once()
+	s.mockConfig.EXPECT().GetInt("http.drivers.gin.body_limit", 4096).Return(4096).Once()
 
 	var err error
 	s.route, err = NewRoute(s.mockConfig, nil)
@@ -140,11 +140,11 @@ func (s *ContextResponseSuite) TestNoContent_WithCode() {
 }
 
 func (s *ContextResponseSuite) TestOrigin() {
-	s.mockConfig.On("Get", "cors.paths").Return([]string{}).Once()
-	s.mockConfig.On("GetString", "http.tls.host").Return("").Once()
-	s.mockConfig.On("GetString", "http.tls.port").Return("").Once()
-	s.mockConfig.On("GetString", "http.tls.ssl.cert").Return("").Once()
-	s.mockConfig.On("GetString", "http.tls.ssl.key").Return("").Once()
+	s.mockConfig.EXPECT().Get("cors.paths").Return([]string{}).Once()
+	s.mockConfig.EXPECT().GetString("http.tls.host").Return("").Once()
+	s.mockConfig.EXPECT().GetString("http.tls.port").Return("").Once()
+	s.mockConfig.EXPECT().GetString("http.tls.ssl.cert").Return("").Once()
+	s.mockConfig.EXPECT().GetString("http.tls.ssl.key").Return("").Once()
 	ConfigFacade = s.mockConfig
 
 	s.route.GlobalMiddleware(func(ctx httpcontract.Context) {
