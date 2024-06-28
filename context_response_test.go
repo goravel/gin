@@ -7,15 +7,15 @@ import (
 	"strings"
 	"testing"
 
-	httpcontract "github.com/goravel/framework/contracts/http"
-	configmock "github.com/goravel/framework/mocks/config"
+	contractshttp "github.com/goravel/framework/contracts/http"
+	mocksconfig "github.com/goravel/framework/mocks/config"
 	"github.com/stretchr/testify/suite"
 )
 
 type ContextResponseSuite struct {
 	suite.Suite
 	route      *Route
-	mockConfig *configmock.Config
+	mockConfig *mocksconfig.Config
 }
 
 func TestContextResponseSuite(t *testing.T) {
@@ -23,7 +23,7 @@ func TestContextResponseSuite(t *testing.T) {
 }
 
 func (s *ContextResponseSuite) SetupTest() {
-	s.mockConfig = &configmock.Config{}
+	s.mockConfig = &mocksconfig.Config{}
 	s.mockConfig.EXPECT().GetBool("app.debug").Return(true).Once()
 	s.mockConfig.EXPECT().GetInt("http.drivers.gin.body_limit", 4096).Return(4096).Once()
 
@@ -38,8 +38,8 @@ func (s *ContextResponseSuite) TearDownTest() {
 
 func (s *ContextResponseSuite) TestCookie() {
 	cookieName := "goravel"
-	s.route.Get("/cookie", func(ctx httpcontract.Context) httpcontract.Response {
-		return ctx.Response().Cookie(httpcontract.Cookie{
+	s.route.Get("/cookie", func(ctx contractshttp.Context) contractshttp.Response {
+		return ctx.Response().Cookie(contractshttp.Cookie{
 			Name:  cookieName,
 			Value: "Goravel",
 		}).String(http.StatusOK, "Goravel")
@@ -60,7 +60,7 @@ func (s *ContextResponseSuite) TestCookie() {
 }
 
 func (s *ContextResponseSuite) TestData() {
-	s.route.Get("/data", func(ctx httpcontract.Context) httpcontract.Response {
+	s.route.Get("/data", func(ctx contractshttp.Context) contractshttp.Response {
 		return ctx.Response().Data(http.StatusOK, "text/html; charset=utf-8", []byte("<b>Goravel</b>"))
 	})
 
@@ -71,7 +71,7 @@ func (s *ContextResponseSuite) TestData() {
 }
 
 func (s *ContextResponseSuite) TestDownload() {
-	s.route.Get("/download", func(ctx httpcontract.Context) httpcontract.Response {
+	s.route.Get("/download", func(ctx contractshttp.Context) contractshttp.Response {
 		return ctx.Response().Download("./test.txt", "README.md")
 	})
 
@@ -82,7 +82,7 @@ func (s *ContextResponseSuite) TestDownload() {
 }
 
 func (s *ContextResponseSuite) TestFile() {
-	s.route.Get("/file", func(ctx httpcontract.Context) httpcontract.Response {
+	s.route.Get("/file", func(ctx contractshttp.Context) contractshttp.Response {
 		return ctx.Response().File("./test.txt")
 	})
 
@@ -93,7 +93,7 @@ func (s *ContextResponseSuite) TestFile() {
 }
 
 func (s *ContextResponseSuite) TestHeader() {
-	s.route.Get("/header", func(ctx httpcontract.Context) httpcontract.Response {
+	s.route.Get("/header", func(ctx contractshttp.Context) contractshttp.Response {
 		return ctx.Response().Header("Hello", "Goravel").String(http.StatusOK, "Goravel")
 	})
 
@@ -105,8 +105,8 @@ func (s *ContextResponseSuite) TestHeader() {
 }
 
 func (s *ContextResponseSuite) TestJson() {
-	s.route.Get("/json", func(ctx httpcontract.Context) httpcontract.Response {
-		return ctx.Response().Json(http.StatusOK, httpcontract.Json{
+	s.route.Get("/json", func(ctx contractshttp.Context) contractshttp.Response {
+		return ctx.Response().Json(http.StatusOK, contractshttp.Json{
 			"id": "1",
 		})
 	})
@@ -118,7 +118,7 @@ func (s *ContextResponseSuite) TestJson() {
 }
 
 func (s *ContextResponseSuite) TestNoContent() {
-	s.route.Get("/no-content", func(ctx httpcontract.Context) httpcontract.Response {
+	s.route.Get("/no-content", func(ctx contractshttp.Context) contractshttp.Response {
 		return ctx.Response().NoContent()
 	})
 
@@ -129,7 +129,7 @@ func (s *ContextResponseSuite) TestNoContent() {
 }
 
 func (s *ContextResponseSuite) TestNoContent_WithCode() {
-	s.route.Get("/no-content-with-code", func(ctx httpcontract.Context) httpcontract.Response {
+	s.route.Get("/no-content-with-code", func(ctx contractshttp.Context) contractshttp.Response {
 		return ctx.Response().NoContent(http.StatusAccepted)
 	})
 
@@ -147,7 +147,7 @@ func (s *ContextResponseSuite) TestOrigin() {
 	s.mockConfig.EXPECT().GetString("http.tls.ssl.key").Return("").Once()
 	ConfigFacade = s.mockConfig
 
-	s.route.GlobalMiddleware(func(ctx httpcontract.Context) {
+	s.route.GlobalMiddleware(func(ctx contractshttp.Context) {
 		ctx.Response().Header("global", "goravel")
 		ctx.Request().Next()
 
@@ -156,7 +156,7 @@ func (s *ContextResponseSuite) TestOrigin() {
 		s.Equal(7, ctx.Response().Origin().Size())
 		s.Equal(http.StatusOK, ctx.Response().Origin().Status())
 	})
-	s.route.Get("/origin", func(ctx httpcontract.Context) httpcontract.Response {
+	s.route.Get("/origin", func(ctx contractshttp.Context) contractshttp.Response {
 		return ctx.Response().String(http.StatusOK, "Goravel")
 	})
 
@@ -167,7 +167,7 @@ func (s *ContextResponseSuite) TestOrigin() {
 }
 
 func (s *ContextResponseSuite) TestRedirect() {
-	s.route.Get("/redirect", func(ctx httpcontract.Context) httpcontract.Response {
+	s.route.Get("/redirect", func(ctx contractshttp.Context) contractshttp.Response {
 		return ctx.Response().Redirect(http.StatusMovedPermanently, "https://goravel.dev")
 	})
 
@@ -178,7 +178,7 @@ func (s *ContextResponseSuite) TestRedirect() {
 }
 
 func (s *ContextResponseSuite) TestString() {
-	s.route.Get("/string", func(ctx httpcontract.Context) httpcontract.Response {
+	s.route.Get("/string", func(ctx contractshttp.Context) contractshttp.Response {
 		return ctx.Response().String(http.StatusCreated, "Goravel")
 	})
 
@@ -189,7 +189,7 @@ func (s *ContextResponseSuite) TestString() {
 }
 
 func (s *ContextResponseSuite) TestSuccess_Data() {
-	s.route.Get("/data", func(ctx httpcontract.Context) httpcontract.Response {
+	s.route.Get("/data", func(ctx contractshttp.Context) contractshttp.Response {
 		return ctx.Response().Success().Data("text/html; charset=utf-8", []byte("<b>Goravel</b>"))
 	})
 
@@ -200,8 +200,8 @@ func (s *ContextResponseSuite) TestSuccess_Data() {
 }
 
 func (s *ContextResponseSuite) TestSuccess_Json() {
-	s.route.Get("/json", func(ctx httpcontract.Context) httpcontract.Response {
-		return ctx.Response().Success().Json(httpcontract.Json{
+	s.route.Get("/json", func(ctx contractshttp.Context) contractshttp.Response {
+		return ctx.Response().Success().Json(contractshttp.Json{
 			"id": "1",
 		})
 	})
@@ -213,7 +213,7 @@ func (s *ContextResponseSuite) TestSuccess_Json() {
 }
 
 func (s *ContextResponseSuite) TestSuccess_String() {
-	s.route.Get("/string", func(ctx httpcontract.Context) httpcontract.Response {
+	s.route.Get("/string", func(ctx contractshttp.Context) contractshttp.Response {
 		return ctx.Response().Success().String("Goravel")
 	})
 
@@ -224,7 +224,7 @@ func (s *ContextResponseSuite) TestSuccess_String() {
 }
 
 func (s *ContextResponseSuite) TestStatus_Data() {
-	s.route.Get("/data", func(ctx httpcontract.Context) httpcontract.Response {
+	s.route.Get("/data", func(ctx contractshttp.Context) contractshttp.Response {
 		return ctx.Response().Status(http.StatusCreated).Data("text/html; charset=utf-8", []byte("<b>Goravel</b>"))
 	})
 
@@ -235,8 +235,8 @@ func (s *ContextResponseSuite) TestStatus_Data() {
 }
 
 func (s *ContextResponseSuite) TestStatus_Json() {
-	s.route.Get("/json", func(ctx httpcontract.Context) httpcontract.Response {
-		return ctx.Response().Status(http.StatusCreated).Json(httpcontract.Json{
+	s.route.Get("/json", func(ctx contractshttp.Context) contractshttp.Response {
+		return ctx.Response().Status(http.StatusCreated).Json(contractshttp.Json{
 			"id": "1",
 		})
 	})
@@ -248,7 +248,7 @@ func (s *ContextResponseSuite) TestStatus_Json() {
 }
 
 func (s *ContextResponseSuite) TestStatus_String() {
-	s.route.Get("/string", func(ctx httpcontract.Context) httpcontract.Response {
+	s.route.Get("/string", func(ctx contractshttp.Context) contractshttp.Response {
 		return ctx.Response().Status(http.StatusCreated).String("Goravel")
 	})
 
@@ -260,7 +260,7 @@ func (s *ContextResponseSuite) TestStatus_String() {
 
 func (s *ContextResponseSuite) TestWithoutCookie() {
 	cookieName := "goravel"
-	s.route.Get("/without-cookie", func(ctx httpcontract.Context) httpcontract.Response {
+	s.route.Get("/without-cookie", func(ctx contractshttp.Context) contractshttp.Response {
 		return ctx.Response().WithoutCookie(cookieName).String(http.StatusOK, "Goravel")
 	})
 
