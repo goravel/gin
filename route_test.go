@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -384,6 +385,7 @@ func TestNewRoute(t *testing.T) {
 }
 
 type CreateUser struct {
+	// TODO Remove the filter tag in https://github.com/goravel/goravel/issues/416
 	Name string `form:"name" json:"name" filter:"trim"`
 }
 
@@ -436,5 +438,37 @@ func (r *Unauthorize) Attributes(ctx contractshttp.Context) map[string]string {
 }
 
 func (r *Unauthorize) PrepareForValidation(ctx contractshttp.Context, data validation.Data) error {
+	return nil
+}
+
+type FileImageJson struct {
+	Name  string                `form:"name" json:"name"`
+	File  *multipart.FileHeader `form:"file" json:"file"`
+	Image *multipart.FileHeader `form:"image" json:"image"`
+	Json  string                `form:"json" json:"json"`
+}
+
+func (r *FileImageJson) Authorize(ctx contractshttp.Context) error {
+	return nil
+}
+
+func (r *FileImageJson) Rules(ctx contractshttp.Context) map[string]string {
+	return map[string]string{
+		"name":  "required",
+		"file":  "file",
+		"image": "image",
+		"json":  "json",
+	}
+}
+
+func (r *FileImageJson) Messages(ctx contractshttp.Context) map[string]string {
+	return map[string]string{}
+}
+
+func (r *FileImageJson) Attributes(ctx contractshttp.Context) map[string]string {
+	return map[string]string{}
+}
+
+func (r *FileImageJson) PrepareForValidation(ctx contractshttp.Context, data validation.Data) error {
 	return nil
 }
