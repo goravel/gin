@@ -368,26 +368,29 @@ func (r *ContextRequest) Validate(rules map[string]string, options ...contractsv
 	}
 
 	options = append(options, validation.Rules(rules), validation.CustomRules(r.validation.Rules()))
-	generateOptions := validation.GenerateOptions(options)
 
-	var v *validate.Validation
-	dataFace := validate.FromMap(r.ctx.Request().All())
+	dataFace, err := validate.FromRequest(r.ctx.Request().Origin())
+	if err != nil {
+		return nil, err
+	}
 
-	if generateOptions["prepareForValidation"] != nil {
-		if err := generateOptions["prepareForValidation"].(func(ctx contractshttp.Context, data contractsvalidate.Data) error)(r.ctx, validation.NewData(dataFace)); err != nil {
-			return nil, err
+	for key, query := range r.instance.Request.URL.Query() {
+		if _, exist := dataFace.Get(key); !exist {
+			if _, err := dataFace.Set(key, strings.Join(query, ",")); err != nil {
+				return nil, err
+			}
 		}
 	}
 
-	v = dataFace.Create()
-
-	if generateOptions["filters"] != nil {
-		v.FilterRules(generateOptions["filters"].(map[string]string))
+	for _, param := range r.instance.Params {
+		if _, exist := dataFace.Get(param.Key); !exist {
+			if _, err := dataFace.Set(param.Key, param.Value); err != nil {
+				return nil, err
+			}
+		}
 	}
 
-	validation.AppendOptions(v, generateOptions)
-
-	return validation.NewValidator(v), nil
+	return r.validation.Make(dataFace, rules, options...)
 }
 
 func (r *ContextRequest) ValidateRequest(request contractshttp.FormRequest) (contractsvalidate.Errors, error) {
