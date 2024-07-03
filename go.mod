@@ -5,7 +5,7 @@ go 1.21
 require (
 	github.com/gin-gonic/gin v1.10.0
 	github.com/gookit/validate v1.5.2
-	github.com/goravel/framework v1.14.1
+	github.com/goravel/framework v1.14.2
 	github.com/rs/cors v1.11.0
 	github.com/savioxavier/termlink v1.3.0
 	github.com/spf13/cast v1.6.0
@@ -190,5 +190,3 @@ require (
 	modernc.org/memory v1.7.2 // indirect
 	modernc.org/sqlite v1.28.0 // indirect
 )
-
-replace github.com/goravel/framework => ../goravel/framework
