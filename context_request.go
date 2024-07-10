@@ -362,12 +362,12 @@ func (r *ContextRequest) Url() string {
 	return r.instance.Request.RequestURI
 }
 
-func (r *ContextRequest) Validate(rules map[string]string, options ...contractsvalidate.Option) (contractsvalidate.Validator, error) {
+func (r *ContextRequest) Validate(rules, filters map[string]string, options ...contractsvalidate.Option) (contractsvalidate.Validator, error) {
 	if len(rules) == 0 {
 		return nil, errors.New("rules can't be empty")
 	}
 
-	options = append(options, validation.Rules(rules), validation.CustomRules(r.validation.Rules()))
+	options = append(options, validation.Rules(rules), validation.CustomRules(r.validation.Rules()), validation.CustomFilters(r.validation.Filters()))
 
 	dataFace, err := validate.FromRequest(r.ctx.Request().Origin())
 	if err != nil {
@@ -390,7 +390,7 @@ func (r *ContextRequest) Validate(rules map[string]string, options ...contractsv
 		}
 	}
 
-	return r.validation.Make(dataFace, rules, options...)
+	return r.validation.Make(dataFace, rules, filters, options...)
 }
 
 func (r *ContextRequest) ValidateRequest(request contractshttp.FormRequest) (contractsvalidate.Errors, error) {
@@ -398,20 +398,8 @@ func (r *ContextRequest) ValidateRequest(request contractshttp.FormRequest) (con
 		return nil, err
 	}
 
-	filters := make(map[string]string)
-	val := reflect.Indirect(reflect.ValueOf(request))
-	for i := 0; i < val.Type().NumField(); i++ {
-		field := val.Type().Field(i)
-		form := field.Tag.Get("form")
-		filter := field.Tag.Get("filter")
-		if len(form) > 0 && len(filter) > 0 {
-			filters[form] = filter
-		}
-	}
-
-	validator, err := r.Validate(request.Rules(r.ctx), validation.Messages(request.Messages(r.ctx)), validation.Attributes(request.Attributes(r.ctx)), func(options map[string]any) {
+	validator, err := r.Validate(request.Rules(r.ctx), request.Filters(r.ctx), validation.Messages(request.Messages(r.ctx)), validation.Attributes(request.Attributes(r.ctx)), func(options map[string]any) {
 		options["prepareForValidation"] = request.PrepareForValidation
-		options["filters"] = filters
 	})
 	if err != nil {
 		return nil, err

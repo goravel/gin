@@ -1128,6 +1128,9 @@ func (s *ContextRequestSuite) TestValidate_GetSuccess() {
 		validator, err := ctx.Request().Validate(map[string]string{
 			"uuid": "min_len:2",
 			"name": "required",
+		}, map[string]string{
+			"uuid": "trim",
+			"name": "trim",
 		})
 		if err != nil {
 			return ctx.Response().String(400, "Validate error: "+err.Error())
@@ -1151,7 +1154,7 @@ func (s *ContextRequestSuite) TestValidate_GetSuccess() {
 		})
 	})
 
-	req, err := http.NewRequest("GET", "/validate/get-success/abc?name=Goravel", nil)
+	req, err := http.NewRequest("GET", "/validate/get-success/abc?name= Goravel ", nil)
 	s.Require().Nil(err)
 
 	code, body, _, _ := s.request(req)
@@ -1165,6 +1168,9 @@ func (s *ContextRequestSuite) TestValidate_GetFail() {
 		validator, err := ctx.Request().Validate(map[string]string{
 			"uuid": "min_len:4",
 			"name": "required",
+		}, map[string]string{
+			"uuid": "trim",
+			"name": "trim",
 		})
 		if err != nil {
 			return ctx.Response().String(400, "Validate error: "+err.Error())
@@ -1176,7 +1182,7 @@ func (s *ContextRequestSuite) TestValidate_GetFail() {
 		return nil
 	})
 
-	req, err := http.NewRequest("GET", "/validate/get-fail/abc?name=Goravel", nil)
+	req, err := http.NewRequest("GET", "/validate/get-fail/abc?name= Goravel ", nil)
 	s.Require().Nil(err)
 
 	code, body, _, _ := s.request(req)
@@ -1192,6 +1198,11 @@ func (s *ContextRequestSuite) TestValidate_PostSuccess() {
 			"uuid": "required",
 			"age":  "required",
 			"name": "required",
+		}, map[string]string{
+			"id":   "trim",
+			"uuid": "trim",
+			"age":  "trim",
+			"name": "trim",
 		})
 		if err != nil {
 			return ctx.Response().String(400, "Validate error: "+err.Error())
@@ -1220,8 +1231,8 @@ func (s *ContextRequestSuite) TestValidate_PostSuccess() {
 	})
 
 	payload := strings.NewReader(`{
-		"name": "Goravel",
-		"uuid": "3"
+		"name": " Goravel ",
+		"uuid": " 3 "
 	}`)
 	req, err := http.NewRequest("POST", "/validate/post-success/1/2?age=2", payload)
 	s.Require().Nil(err)
@@ -1237,6 +1248,8 @@ func (s *ContextRequestSuite) TestValidate_PostFail() {
 	s.route.Post("/validate/post-fail", func(ctx contractshttp.Context) contractshttp.Response {
 		validator, err := ctx.Request().Validate(map[string]string{
 			"name1": "required",
+		}, map[string]string{
+			"name1": "trim",
 		})
 		if err != nil {
 			return ctx.Response().String(400, "Validate error: "+err.Error())
@@ -1514,8 +1527,7 @@ func (s *ContextRequestSuite) TestValidateRequest_GetSuccessWithFilter() {
 
 	code, body, _, _ := s.request(req)
 
-	// TODO Optimize the assertation in https://github.com/goravel/goravel/issues/416
-	s.Equal("{\"name\":\" Goravel 1\"}", body)
+	s.Equal("{\"name\":\"Goravel 1\"}", body)
 	s.Equal(http.StatusOK, code)
 }
 
@@ -1544,8 +1556,7 @@ func (s *ContextRequestSuite) TestValidateRequest_PostSuccessWithFilter() {
 	req.Header.Set("Content-Type", "application/json")
 	code, body, _, _ := s.request(req)
 
-	// TODO Optimize the assertation in https://github.com/goravel/goravel/issues/416
-	s.Equal("{\"name\":\" Goravel 1\"}", body)
+	s.Equal("{\"name\":\"Goravel 1\"}", body)
 	s.Equal(http.StatusOK, code)
 }
 
