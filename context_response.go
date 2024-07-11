@@ -24,6 +24,16 @@ func (r *ContextResponse) Cookie(cookie contractshttp.Cookie) contractshttp.Cont
 			cookie.MaxAge = int(cookie.Expires.Sub(carbon.Now().StdTime()).Seconds())
 		}
 	}
+
+	sameSiteOptions := map[string]http.SameSite{
+		"strict": http.SameSiteStrictMode,
+		"lax":    http.SameSiteLaxMode,
+		"none":   http.SameSiteNoneMode,
+	}
+	if sameSite, ok := sameSiteOptions[cookie.SameSite]; ok {
+		r.instance.SetSameSite(sameSite)
+	}
+
 	r.instance.SetCookie(cookie.Name, cookie.Value, cookie.MaxAge, cookie.Path, cookie.Domain, cookie.Secure, cookie.HttpOnly)
 
 	return r
