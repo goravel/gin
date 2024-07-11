@@ -30,9 +30,8 @@ func (r *ContextResponse) Cookie(cookie contractshttp.Cookie) contractshttp.Cont
 		"lax":    http.SameSiteLaxMode,
 		"none":   http.SameSiteNoneMode,
 	}
-
-	if cookie.SameSite != "" {
-		r.instance.SetSameSite(sameSiteOptions[cookie.SameSite])
+	if sameSite, ok := sameSiteOptions[cookie.SameSite]; ok {
+		r.instance.SetSameSite(sameSite)
 	}
 
 	r.instance.SetCookie(cookie.Name, cookie.Value, cookie.MaxAge, cookie.Path, cookie.Domain, cookie.Secure, cookie.HttpOnly)
