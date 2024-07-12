@@ -1596,73 +1596,73 @@ func (s *ContextRequestSuite) request(req *http.Request) (int, string, http.Head
 	return w.Code, w.Body.String(), w.Header(), w.Result().Cookies()
 }
 
-func TestGetValueFromPostData(t *testing.T) {
+func TestGetValueFromHttpBody(t *testing.T) {
 	tests := []struct {
 		name        string
-		postData    map[string]any
+		httpBody    map[string]any
 		key         string
 		expectValue any
 	}{
 		{
-			name: "Return nil when postData is nil",
+			name: "Return nil when httpBody is nil",
 		},
 		{
-			name:        "Return string when postData is map[string]string",
-			postData:    map[string]any{"name": "goravel"},
+			name:        "Return string when httpBody is map[string]string",
+			httpBody:    map[string]any{"name": "goravel"},
 			key:         "name",
 			expectValue: "goravel",
 		},
 		{
-			name:        "Return map when postData is map[string]map[string]string",
-			postData:    map[string]any{"name": map[string]string{"sub": "goravel"}},
+			name:        "Return map when httpBody is map[string]map[string]string",
+			httpBody:    map[string]any{"name": map[string]string{"sub": "goravel"}},
 			key:         "name",
 			expectValue: map[string]string{"sub": "goravel"},
 		},
 		{
-			name:        "Return slice when postData is map[string][]string",
-			postData:    map[string]any{"name[]": []string{"a", "b"}},
+			name:        "Return slice when httpBody is map[string][]string",
+			httpBody:    map[string]any{"name[]": []string{"a", "b"}},
 			key:         "name[]",
 			expectValue: []string{"a", "b"},
 		},
 		{
-			name:        "Return slice when postData is map[string][]string, but key doesn't contain []",
-			postData:    map[string]any{"name": []string{"a", "b"}},
+			name:        "Return slice when httpBody is map[string][]string, but key doesn't contain []",
+			httpBody:    map[string]any{"name": []string{"a", "b"}},
 			key:         "name",
 			expectValue: []string{"a", "b"},
 		},
 		{
-			name:        "Return string when postData is map[string]map[string]string and key with point",
-			postData:    map[string]any{"name": map[string]string{"sub": "goravel"}},
+			name:        "Return string when httpBody is map[string]map[string]string and key with point",
+			httpBody:    map[string]any{"name": map[string]string{"sub": "goravel"}},
 			key:         "name.sub",
 			expectValue: "goravel",
 		},
 		{
-			name:        "Return int when postData is map[string]map[string]int and key with point",
-			postData:    map[string]any{"name": map[string]int{"sub": 1}},
+			name:        "Return int when httpBody is map[string]map[string]int and key with point",
+			httpBody:    map[string]any{"name": map[string]int{"sub": 1}},
 			key:         "name.sub",
 			expectValue: 1,
 		},
 		{
-			name:        "Return string when postData is map[string][]string and key with point",
-			postData:    map[string]any{"name[]": []string{"a", "b"}},
+			name:        "Return string when httpBody is map[string][]string and key with point",
+			httpBody:    map[string]any{"name[]": []string{"a", "b"}},
 			key:         "name[].0",
 			expectValue: "a",
 		},
 		{
-			name:        "Return string when postData is map[string][]string and key with point and index is 1",
-			postData:    map[string]any{"name[]": []string{"a", "b"}},
+			name:        "Return string when httpBody is map[string][]string and key with point and index is 1",
+			httpBody:    map[string]any{"name[]": []string{"a", "b"}},
 			key:         "name[].1",
 			expectValue: "b",
 		},
 		{
-			name:        "Return string when postData is map[string][]string and key with point, but key doesn't contain []",
-			postData:    map[string]any{"name[]": []string{"a", "b"}},
+			name:        "Return string when httpBody is map[string][]string and key with point, but key doesn't contain []",
+			httpBody:    map[string]any{"name[]": []string{"a", "b"}},
 			key:         "name.0",
 			expectValue: "a",
 		},
 		{
-			name:        "Return string when postData is map[string][]string and key with point and index is 1, but key doesn't contain []",
-			postData:    map[string]any{"name[]": []string{"a", "b"}},
+			name:        "Return string when httpBody is map[string][]string and key with point and index is 1, but key doesn't contain []",
+			httpBody:    map[string]any{"name[]": []string{"a", "b"}},
 			key:         "name.1",
 			expectValue: "b",
 		},
@@ -1671,10 +1671,10 @@ func TestGetValueFromPostData(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			contextRequest := &ContextRequest{
-				postData: test.postData,
+				httpBody: test.httpBody,
 			}
 
-			value := contextRequest.getValueFromPostData(test.key)
+			value := contextRequest.getValueFromHttpBody(test.key)
 			assert.Equal(t, test.expectValue, value)
 		})
 	}
