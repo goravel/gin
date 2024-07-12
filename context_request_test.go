@@ -1128,10 +1128,10 @@ func (s *ContextRequestSuite) TestValidate_GetSuccess() {
 		validator, err := ctx.Request().Validate(map[string]string{
 			"uuid": "min_len:2",
 			"name": "required",
-		}, map[string]string{
+		}, validation.Filters(map[string]string{
 			"uuid": "trim",
 			"name": "trim",
-		})
+		}))
 		if err != nil {
 			return ctx.Response().String(400, "Validate error: "+err.Error())
 		}
@@ -1168,10 +1168,10 @@ func (s *ContextRequestSuite) TestValidate_GetFail() {
 		validator, err := ctx.Request().Validate(map[string]string{
 			"uuid": "min_len:4",
 			"name": "required",
-		}, map[string]string{
+		}, validation.Filters(map[string]string{
 			"uuid": "trim",
 			"name": "trim",
-		})
+		}))
 		if err != nil {
 			return ctx.Response().String(400, "Validate error: "+err.Error())
 		}
@@ -1198,12 +1198,12 @@ func (s *ContextRequestSuite) TestValidate_PostSuccess() {
 			"uuid": "required",
 			"age":  "required",
 			"name": "required",
-		}, map[string]string{
+		}, validation.Filters(map[string]string{
 			"id":   "trim",
 			"uuid": "trim",
 			"age":  "trim",
 			"name": "trim",
-		})
+		}))
 		if err != nil {
 			return ctx.Response().String(400, "Validate error: "+err.Error())
 		}
@@ -1248,9 +1248,9 @@ func (s *ContextRequestSuite) TestValidate_PostFail() {
 	s.route.Post("/validate/post-fail", func(ctx contractshttp.Context) contractshttp.Response {
 		validator, err := ctx.Request().Validate(map[string]string{
 			"name1": "required",
-		}, map[string]string{
+		}, validation.Filters(map[string]string{
 			"name1": "trim",
-		})
+		}))
 		if err != nil {
 			return ctx.Response().String(400, "Validate error: "+err.Error())
 		}

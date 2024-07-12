@@ -362,7 +362,7 @@ func (r *ContextRequest) Url() string {
 	return r.instance.Request.RequestURI
 }
 
-func (r *ContextRequest) Validate(rules, filters map[string]string, options ...contractsvalidate.Option) (contractsvalidate.Validator, error) {
+func (r *ContextRequest) Validate(rules map[string]string, options ...contractsvalidate.Option) (contractsvalidate.Validator, error) {
 	if len(rules) == 0 {
 		return nil, errors.New("rules can't be empty")
 	}
@@ -390,7 +390,7 @@ func (r *ContextRequest) Validate(rules, filters map[string]string, options ...c
 		}
 	}
 
-	return r.validation.Make(dataFace, rules, filters, options...)
+	return r.validation.Make(dataFace, rules, options...)
 }
 
 func (r *ContextRequest) ValidateRequest(request contractshttp.FormRequest) (contractsvalidate.Errors, error) {
@@ -398,7 +398,7 @@ func (r *ContextRequest) ValidateRequest(request contractshttp.FormRequest) (con
 		return nil, err
 	}
 
-	validator, err := r.Validate(request.Rules(r.ctx), request.Filters(r.ctx), validation.Messages(request.Messages(r.ctx)), validation.Attributes(request.Attributes(r.ctx)), func(options map[string]any) {
+	validator, err := r.Validate(request.Rules(r.ctx), validation.Filters(request.Filters(r.ctx)), validation.Messages(request.Messages(r.ctx)), validation.Attributes(request.Attributes(r.ctx)), func(options map[string]any) {
 		options["prepareForValidation"] = request.PrepareForValidation
 	})
 	if err != nil {
