@@ -1,11 +1,11 @@
 module github.com/goravel/gin
 
-go 1.22
+go 1.21
 
 require (
 	github.com/gin-gonic/gin v1.10.0
 	github.com/gookit/validate v1.5.2
-	github.com/goravel/framework v1.14.1-0.20240710200656-77b6e6f701ab
+	github.com/goravel/framework v1.14.1-0.20240712021404-0ba88953a817
 	github.com/rs/cors v1.11.0
 	github.com/savioxavier/termlink v1.3.0
 	github.com/spf13/cast v1.6.0
@@ -39,8 +39,8 @@ require (
 	github.com/charmbracelet/bubbles v0.18.0 // indirect
 	github.com/charmbracelet/bubbletea v0.26.4 // indirect
 	github.com/charmbracelet/huh v0.5.1 // indirect
-	github.com/charmbracelet/huh/spinner v0.0.0-20240709222038-80fcf53648bd // indirect
-	github.com/charmbracelet/lipgloss v0.11.1 // indirect
+	github.com/charmbracelet/huh/spinner v0.0.0-20240711191530-dbf5a5ac0510 // indirect
+	github.com/charmbracelet/lipgloss v0.12.0 // indirect
 	github.com/charmbracelet/x/ansi v0.1.3 // indirect
 	github.com/charmbracelet/x/exp/strings v0.0.0-20240617190524-788ec55faed1 // indirect
 	github.com/charmbracelet/x/input v0.1.2 // indirect
@@ -180,7 +180,7 @@ require (
 	gorm.io/driver/mysql v1.5.7 // indirect
 	gorm.io/driver/postgres v1.5.9 // indirect
 	gorm.io/driver/sqlserver v1.5.3 // indirect
-	gorm.io/gorm v1.25.10 // indirect
+	gorm.io/gorm v1.25.11 // indirect
 	gorm.io/plugin/dbresolver v1.5.2 // indirect
 	modernc.org/libc v1.37.6 // indirect
 	modernc.org/mathutil v1.6.0 // indirect
