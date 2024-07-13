@@ -235,6 +235,10 @@ func (r *ContextRequest) Queries() map[string]string {
 	return queries
 }
 
+func (r *ContextRequest) BindQuery(obj any) error {
+	return r.instance.ShouldBindQuery(obj)
+}
+
 func (r *ContextRequest) Origin() *http.Request {
 	return r.instance.Request
 }
