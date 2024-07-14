@@ -75,6 +75,10 @@ func (r *ContextRequest) Bind(obj any) error {
 	return r.instance.ShouldBind(obj)
 }
 
+func (r *ContextRequest) BindQuery(obj any) error {
+	return r.instance.ShouldBindQuery(obj)
+}
+
 func (r *ContextRequest) Cookie(key string, defaultValue ...string) string {
 	cookie, err := r.instance.Cookie(key)
 	if err != nil {
@@ -233,10 +237,6 @@ func (r *ContextRequest) Queries() map[string]string {
 	}
 
 	return queries
-}
-
-func (r *ContextRequest) BindQuery(obj any) error {
-	return r.instance.ShouldBindQuery(obj)
 }
 
 func (r *ContextRequest) Origin() *http.Request {
