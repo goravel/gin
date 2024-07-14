@@ -333,10 +333,7 @@ func (s *ContextRequestSuite) TestBindQueryToStruct() {
 			ID string `form:"id"`
 		}
 		var test Test
-		err := ctx.Request().BindQuery(&test)
-		if err != nil {
-			fmt.Println(err)
-		}
+		_ = ctx.Request().BindQuery(&test)
 		return ctx.Response().Success().Json(contractshttp.Json{
 			"id": test.ID,
 		})
@@ -362,7 +359,7 @@ func (s *ContextRequestSuite) TestBindQueryToStruct() {
 			Persons []Person `form:"persons"`
 		}
 		var test Test
-		err = ctx.Request().BindQuery(&test)
+		_ = ctx.Request().BindQuery(&test)
 		return ctx.Response().Success().Json(contractshttp.Json{
 			"id":      test.ID,
 			"persons": test.Persons,
