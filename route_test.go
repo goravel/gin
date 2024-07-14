@@ -385,8 +385,7 @@ func TestNewRoute(t *testing.T) {
 }
 
 type CreateUser struct {
-	// TODO Remove the filter tag in https://github.com/goravel/goravel/issues/416
-	Name string `form:"name" json:"name" filter:"trim"`
+	Name string `form:"name" json:"name"`
 }
 
 func (r *CreateUser) Authorize(ctx contractshttp.Context) error {
@@ -396,6 +395,12 @@ func (r *CreateUser) Authorize(ctx contractshttp.Context) error {
 func (r *CreateUser) Rules(ctx contractshttp.Context) map[string]string {
 	return map[string]string{
 		"name": "required",
+	}
+}
+
+func (r *CreateUser) Filters(ctx contractshttp.Context) map[string]string {
+	return map[string]string{
+		"name": "trim",
 	}
 }
 
@@ -429,6 +434,12 @@ func (r *Unauthorize) Rules(ctx contractshttp.Context) map[string]string {
 	}
 }
 
+func (r *Unauthorize) Filters(ctx contractshttp.Context) map[string]string {
+	return map[string]string{
+		"name": "trim",
+	}
+}
+
 func (r *Unauthorize) Messages(ctx contractshttp.Context) map[string]string {
 	return map[string]string{}
 }
@@ -458,6 +469,12 @@ func (r *FileImageJson) Rules(ctx contractshttp.Context) map[string]string {
 		"file":  "file",
 		"image": "image",
 		"json":  "json",
+	}
+}
+
+func (r *FileImageJson) Filters(ctx contractshttp.Context) map[string]string {
+	return map[string]string{
+		"name": "trim",
 	}
 }
 

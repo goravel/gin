@@ -26,18 +26,18 @@ import (
 type ContextRequest struct {
 	ctx        *Context
 	instance   *gin.Context
-	postData   map[string]any
+	httpBody   map[string]any
 	log        log.Log
 	validation contractsvalidate.Validation
 }
 
 func NewContextRequest(ctx *Context, log log.Log, validation contractsvalidate.Validation) contractshttp.ContextRequest {
-	postData, err := getPostData(ctx)
+	httpBody, err := getHttpBody(ctx)
 	if err != nil {
 		LogFacade.Error(fmt.Sprintf("%+v", errors.Unwrap(err)))
 	}
 
-	return &ContextRequest{ctx: ctx, instance: ctx.instance, postData: postData, log: log, validation: validation}
+	return &ContextRequest{ctx: ctx, instance: ctx.instance, httpBody: httpBody, log: log, validation: validation}
 }
 
 func (r *ContextRequest) AbortWithStatus(code int) {
@@ -64,7 +64,7 @@ func (r *ContextRequest) All() map[string]any {
 	for k, v := range queryMap {
 		dataMap[k] = v
 	}
-	for k, v := range r.postData {
+	for k, v := range r.httpBody {
 		dataMap[k] = v
 	}
 
@@ -73,6 +73,10 @@ func (r *ContextRequest) All() map[string]any {
 
 func (r *ContextRequest) Bind(obj any) error {
 	return r.instance.ShouldBind(obj)
+}
+
+func (r *ContextRequest) BindQuery(obj any) error {
+	return r.instance.ShouldBindQuery(obj)
 }
 
 func (r *ContextRequest) Cookie(key string, defaultValue ...string) string {
@@ -244,20 +248,20 @@ func (r *ContextRequest) Path() string {
 }
 
 func (r *ContextRequest) Input(key string, defaultValue ...string) string {
-	valueFromPostData := r.getValueFromPostData(key)
-	if valueFromPostData != nil {
-		switch reflect.ValueOf(valueFromPostData).Kind() {
+	valueFromHttpBody := r.getValueFromHttpBody(key)
+	if valueFromHttpBody != nil {
+		switch reflect.ValueOf(valueFromHttpBody).Kind() {
 		case reflect.Map:
-			valueFromPostDataObByte, err := json.Marshal(valueFromPostData)
+			valueFromHttpBodyObByte, err := json.Marshal(valueFromHttpBody)
 			if err != nil {
 				return ""
 			}
 
-			return string(valueFromPostDataObByte)
+			return string(valueFromHttpBodyObByte)
 		case reflect.Slice:
-			return strings.Join(cast.ToStringSlice(valueFromPostData), ",")
+			return strings.Join(cast.ToStringSlice(valueFromHttpBody), ",")
 		default:
-			return cast.ToString(valueFromPostData)
+			return cast.ToString(valueFromHttpBody)
 		}
 	}
 
@@ -274,8 +278,8 @@ func (r *ContextRequest) Input(key string, defaultValue ...string) string {
 }
 
 func (r *ContextRequest) InputArray(key string, defaultValue ...[]string) []string {
-	if valueFromPostData := r.getValueFromPostData(key); valueFromPostData != nil {
-		return cast.ToStringSlice(valueFromPostData)
+	if valueFromHttpBody := r.getValueFromHttpBody(key); valueFromHttpBody != nil {
+		return cast.ToStringSlice(valueFromHttpBody)
 	}
 
 	if len(defaultValue) > 0 {
@@ -286,8 +290,8 @@ func (r *ContextRequest) InputArray(key string, defaultValue ...[]string) []stri
 }
 
 func (r *ContextRequest) InputMap(key string, defaultValue ...map[string]string) map[string]string {
-	if valueFromPostData := r.getValueFromPostData(key); valueFromPostData != nil {
-		return cast.ToStringMapString(valueFromPostData)
+	if valueFromHttpBody := r.getValueFromHttpBody(key); valueFromHttpBody != nil {
+		return cast.ToStringMapString(valueFromHttpBody)
 	}
 
 	if len(defaultValue) > 0 {
@@ -367,7 +371,7 @@ func (r *ContextRequest) Validate(rules map[string]string, options ...contractsv
 		return nil, errors.New("rules can't be empty")
 	}
 
-	options = append(options, validation.Rules(rules), validation.CustomRules(r.validation.Rules()))
+	options = append(options, validation.Rules(rules), validation.CustomRules(r.validation.Rules()), validation.CustomFilters(r.validation.Filters()))
 
 	dataFace, err := validate.FromRequest(r.ctx.Request().Origin())
 	if err != nil {
@@ -398,20 +402,8 @@ func (r *ContextRequest) ValidateRequest(request contractshttp.FormRequest) (con
 		return nil, err
 	}
 
-	filters := make(map[string]string)
-	val := reflect.Indirect(reflect.ValueOf(request))
-	for i := 0; i < val.Type().NumField(); i++ {
-		field := val.Type().Field(i)
-		form := field.Tag.Get("form")
-		filter := field.Tag.Get("filter")
-		if len(form) > 0 && len(filter) > 0 {
-			filters[form] = filter
-		}
-	}
-
-	validator, err := r.Validate(request.Rules(r.ctx), validation.Messages(request.Messages(r.ctx)), validation.Attributes(request.Attributes(r.ctx)), func(options map[string]any) {
+	validator, err := r.Validate(request.Rules(r.ctx), validation.Filters(request.Filters(r.ctx)), validation.Messages(request.Messages(r.ctx)), validation.Attributes(request.Attributes(r.ctx)), func(options map[string]any) {
 		options["prepareForValidation"] = request.PrepareForValidation
-		options["filters"] = filters
 	})
 	if err != nil {
 		return nil, err
@@ -424,13 +416,13 @@ func (r *ContextRequest) ValidateRequest(request contractshttp.FormRequest) (con
 	return validator.Errors(), nil
 }
 
-func (r *ContextRequest) getValueFromPostData(key string) any {
-	if r.postData == nil {
+func (r *ContextRequest) getValueFromHttpBody(key string) any {
+	if r.httpBody == nil {
 		return nil
 	}
 
 	var current any
-	current = r.postData
+	current = r.httpBody
 	keys := strings.Split(key, ".")
 	for _, k := range keys {
 		currentValue := reflect.ValueOf(current)
@@ -457,7 +449,7 @@ func (r *ContextRequest) getValueFromPostData(key string) any {
 	return current
 }
 
-func getPostData(ctx *Context) (map[string]any, error) {
+func getHttpBody(ctx *Context) (map[string]any, error) {
 	request := ctx.instance.Request
 	if request == nil || request.Body == nil || request.ContentLength == 0 {
 		return nil, nil
