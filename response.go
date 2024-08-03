@@ -105,15 +105,13 @@ func (r *HtmlResponse) Render() error {
 }
 
 type StreamResponse struct {
-	code        int
-	contentType string
-	instance    *gin.Context
-	writer      func(w contractshttp.StreamWriter) error
+	code     int
+	instance *gin.Context
+	writer   func(w contractshttp.StreamWriter) error
 }
 
 func (r *StreamResponse) Render() error {
 	r.instance.Status(r.code)
-	r.instance.Header("Content-Type", r.contentType)
 
 	w := NewStreamWriter(r.instance)
 
