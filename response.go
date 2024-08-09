@@ -4,6 +4,8 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+
+	contractshttp "github.com/goravel/framework/contracts/http"
 )
 
 type DataResponse struct {
@@ -100,4 +102,26 @@ func (r *HtmlResponse) Render() error {
 	r.instance.HTML(http.StatusOK, r.view, r.data)
 
 	return nil
+}
+
+type StreamResponse struct {
+	code     int
+	instance *gin.Context
+	writer   func(w contractshttp.StreamWriter) error
+}
+
+func (r *StreamResponse) Render() error {
+	r.instance.Status(r.code)
+
+	w := NewStreamWriter(r.instance)
+
+	ctx := r.instance.Request.Context()
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		default:
+			return r.writer(w)
+		}
+	}
 }

@@ -1,6 +1,7 @@
 package gin
 
 import (
+	"bufio"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -175,6 +176,36 @@ func (s *ContextResponseSuite) TestRedirect() {
 
 	s.Equal("<a href=\"https://goravel.dev\">Moved Permanently</a>.\n\n", body)
 	s.Equal(http.StatusMovedPermanently, code)
+}
+
+func (s *ContextResponseSuite) TestStream() {
+	s.route.Get("/stream", func(ctx contractshttp.Context) contractshttp.Response {
+		return ctx.Response().Stream(http.StatusCreated, func(w contractshttp.StreamWriter) error {
+			b := []string{"a", "b", "c"}
+			for _, a := range b {
+				if _, err := w.Write([]byte(a + "\n")); err != nil {
+					return err
+				}
+
+				if err := w.Flush(); err != nil {
+					return err
+				}
+			}
+
+			return nil
+		})
+	})
+
+	code, body, _, _ := s.request("GET", "/stream", nil)
+
+	scanner := bufio.NewScanner(strings.NewReader(body))
+	var output []string
+	for scanner.Scan() {
+		output = append(output, scanner.Text())
+	}
+
+	s.Equal([]string{"a", "b", "c"}, output)
+	s.Equal(http.StatusCreated, code)
 }
 
 func (s *ContextResponseSuite) TestString() {
