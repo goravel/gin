@@ -115,10 +115,10 @@ func (r *StreamResponse) Render() error {
 
 	w := NewStreamWriter(r.instance)
 
-	clientGone := r.instance.Writer.CloseNotify()
+	ctx := r.instance.Request.Context()
 	for {
 		select {
-		case <-clientGone:
+		case <-ctx.Done():
 			return nil
 		default:
 			return r.writer(w)
