@@ -313,25 +313,8 @@ func (s *ContextResponseSuite) request(method, url string, body io.Reader) (int,
 	req, err := http.NewRequest(method, url, body)
 	s.Require().Nil(err)
 
-	w := CreateTestResponseRecorder()
+	w := httptest.NewRecorder()
 	s.route.ServeHTTP(w, req)
 
 	return w.Code, w.Body.String(), w.Header(), w.Result().Cookies()
-}
-
-// Custom response recorder for testing stream responses
-type TestResponseRecorder struct {
-	*httptest.ResponseRecorder
-	closeChannel chan bool
-}
-
-func CreateTestResponseRecorder() *TestResponseRecorder {
-	return &TestResponseRecorder{
-		httptest.NewRecorder(),
-		make(chan bool, 1),
-	}
-}
-
-func (r *TestResponseRecorder) CloseNotify() <-chan bool {
-	return r.closeChannel
 }
