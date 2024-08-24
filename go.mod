@@ -7,7 +7,7 @@ require (
 	github.com/gookit/validate v1.5.2
 	github.com/goravel/framework v1.14.1-0.20240804133715-98a226e9dfb8
 	github.com/rs/cors v1.11.0
-	github.com/savioxavier/termlink v1.4.0
+	github.com/savioxavier/termlink v1.4.1
 	github.com/spf13/cast v1.7.0
 	github.com/stretchr/testify v1.9.0
 	github.com/unrolled/secure v1.15.0
