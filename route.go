@@ -18,9 +18,10 @@ import (
 
 type Route struct {
 	route.Router
-	config   config.Config
-	instance *gin.Engine
-	server   *http.Server
+	config    config.Config
+	instance  *gin.Engine
+	server    *http.Server
+	tlsServer *http.Server
 }
 
 func NewRoute(config config.Config, parameters map[string]any) (*Route, error) {
@@ -137,13 +138,13 @@ func (r *Route) RunTLSWithCert(host, certFile, keyFile string) error {
 	r.outputRoutes()
 	color.Green().Println(termlink.Link("[HTTPS] Listening and serving HTTPS on", "https://"+host))
 
-	r.server = &http.Server{
+	r.tlsServer = &http.Server{
 		Addr:           host,
 		Handler:        http.AllowQuerySemicolons(r.instance),
 		MaxHeaderBytes: r.config.GetInt("http.drivers.gin.header_limit", 4096) << 10,
 	}
 
-	return r.server.ListenAndServeTLS(certFile, keyFile)
+	return r.tlsServer.ListenAndServeTLS(certFile, keyFile)
 }
 
 func (r *Route) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
@@ -151,7 +152,13 @@ func (r *Route) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 }
 
 func (r *Route) Shutdown(ctx context.Context) error {
-	return r.server.Shutdown(ctx)
+	if r.server != nil {
+		return r.server.Shutdown(ctx)
+	}
+	if r.tlsServer != nil {
+		return r.server.Shutdown(ctx)
+	}
+	return nil
 }
 
 func (r *Route) outputRoutes() {
