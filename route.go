@@ -156,7 +156,7 @@ func (r *Route) Shutdown(ctx context.Context) error {
 		return r.server.Shutdown(ctx)
 	}
 	if r.tlsServer != nil {
-		return r.server.Shutdown(ctx)
+		return r.tlsServer.Shutdown(ctx)
 	}
 	return nil
 }
