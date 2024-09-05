@@ -23,8 +23,8 @@ import (
 
 func TestFallback(t *testing.T) {
 	mockConfig := &configmocks.Config{}
-	mockConfig.On("GetBool", "app.debug").Return(true).Once()
-	mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4096).Return(4096).Once()
+	mockConfig.EXPECT().GetBool("app.debug").Return(true).Once()
+	mockConfig.EXPECT().GetInt("http.drivers.gin.body_limit", 4096).Return(4096).Once()
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/fallback", nil)
@@ -61,8 +61,8 @@ func TestRun(t *testing.T) {
 		{
 			name: "error when default port is empty",
 			setup: func(host string, port string) error {
-				mockConfig.On("GetString", "http.host").Return(host).Once()
-				mockConfig.On("GetString", "http.port").Return(port).Once()
+				mockConfig.EXPECT().GetString("http.host").Return(host).Once()
+				mockConfig.EXPECT().GetString("http.port").Return(port).Once()
 
 				go func() {
 					assert.EqualError(t, route.Run(), "port can't be empty")
@@ -76,10 +76,10 @@ func TestRun(t *testing.T) {
 		{
 			name: "use default host",
 			setup: func(host string, port string) error {
-				mockConfig.On("GetBool", "app.debug").Return(true).Once()
-				mockConfig.On("GetString", "http.host").Return(host).Once()
-				mockConfig.On("GetString", "http.port").Return(port).Once()
-				mockConfig.On("GetInt", "http.drivers.gin.header_limit", 4096).Return(4096).Once()
+				mockConfig.EXPECT().GetBool("app.debug").Return(true).Once()
+				mockConfig.EXPECT().GetString("http.host").Return(host).Once()
+				mockConfig.EXPECT().GetString("http.port").Return(port).Once()
+				mockConfig.EXPECT().GetInt("http.drivers.gin.header_limit", 4096).Return(4096).Once()
 
 				go func() {
 					assert.Nil(t, route.Run())
@@ -95,8 +95,8 @@ func TestRun(t *testing.T) {
 		{
 			name: "use custom host",
 			setup: func(host string, port string) error {
-				mockConfig.On("GetBool", "app.debug").Return(true).Once()
-				mockConfig.On("GetInt", "http.drivers.gin.header_limit", 4096).Return(4096).Once()
+				mockConfig.EXPECT().GetBool("app.debug").Return(true).Once()
+				mockConfig.EXPECT().GetInt("http.drivers.gin.header_limit", 4096).Return(4096).Once()
 
 				go func() {
 					assert.Nil(t, route.Run(host))
@@ -111,8 +111,8 @@ func TestRun(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			mockConfig = &configmocks.Config{}
-			mockConfig.On("GetBool", "app.debug").Return(true).Once()
-			mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4096).Return(4096).Once()
+			mockConfig.EXPECT().GetBool("app.debug").Return(true).Once()
+			mockConfig.EXPECT().GetInt("http.drivers.gin.body_limit", 4096).Return(4096).Once()
 
 			route, err = NewRoute(mockConfig, nil)
 			assert.Nil(t, err)
@@ -157,8 +157,8 @@ func TestRunTLS(t *testing.T) {
 		{
 			name: "error when default port is empty",
 			setup: func(host string, port string) error {
-				mockConfig.On("GetString", "http.tls.host").Return(host).Once()
-				mockConfig.On("GetString", "http.tls.port").Return(port).Once()
+				mockConfig.EXPECT().GetString("http.tls.host").Return(host).Once()
+				mockConfig.EXPECT().GetString("http.tls.port").Return(port).Once()
 
 				go func() {
 					assert.EqualError(t, route.RunTLS(), "port can't be empty")
@@ -172,11 +172,12 @@ func TestRunTLS(t *testing.T) {
 		{
 			name: "use default host",
 			setup: func(host string, port string) error {
-				mockConfig.On("GetBool", "app.debug").Return(true).Once()
-				mockConfig.On("GetString", "http.tls.host").Return(host).Once()
-				mockConfig.On("GetString", "http.tls.port").Return(port).Once()
-				mockConfig.On("GetString", "http.tls.ssl.cert").Return("test_ca.crt").Once()
-				mockConfig.On("GetString", "http.tls.ssl.key").Return("test_ca.key").Once()
+				mockConfig.EXPECT().GetBool("app.debug").Return(true).Once()
+				mockConfig.EXPECT().GetInt("http.drivers.gin.header_limit", 4096).Return(4096).Once()
+				mockConfig.EXPECT().GetString("http.tls.host").Return(host).Once()
+				mockConfig.EXPECT().GetString("http.tls.port").Return(port).Once()
+				mockConfig.EXPECT().GetString("http.tls.ssl.cert").Return("test_ca.crt").Once()
+				mockConfig.EXPECT().GetString("http.tls.ssl.key").Return("test_ca.key").Once()
 
 				go func() {
 					assert.Nil(t, route.RunTLS())
@@ -190,9 +191,10 @@ func TestRunTLS(t *testing.T) {
 		{
 			name: "use custom host",
 			setup: func(host string, port string) error {
-				mockConfig.On("GetBool", "app.debug").Return(true).Once()
-				mockConfig.On("GetString", "http.tls.ssl.cert").Return("test_ca.crt").Once()
-				mockConfig.On("GetString", "http.tls.ssl.key").Return("test_ca.key").Once()
+				mockConfig.EXPECT().GetInt("http.drivers.gin.header_limit", 4096).Return(4096).Once()
+				mockConfig.EXPECT().GetBool("app.debug").Return(true).Once()
+				mockConfig.EXPECT().GetString("http.tls.ssl.cert").Return("test_ca.crt").Once()
+				mockConfig.EXPECT().GetString("http.tls.ssl.key").Return("test_ca.key").Once()
 
 				go func() {
 					assert.Nil(t, route.RunTLS(host))
@@ -206,9 +208,9 @@ func TestRunTLS(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			mockConfig = &configmocks.Config{}
-			mockConfig.On("GetBool", "app.debug").Return(true).Once()
-			mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4096).Return(4096).Once()
+			mockConfig = configmocks.NewConfig(t)
+			mockConfig.EXPECT().GetBool("app.debug").Return(true).Once()
+			mockConfig.EXPECT().GetInt("http.drivers.gin.body_limit", 4096).Return(4096).Once()
 
 			route, err = NewRoute(mockConfig, nil)
 			assert.Nil(t, err)
@@ -235,7 +237,6 @@ func TestRunTLS(t *testing.T) {
 				assert.Nil(t, err)
 				assert.Equal(t, "{\"Hello\":\"Goravel\"}", string(body))
 			}
-			mockConfig.AssertExpectations(t)
 		})
 	}
 }
@@ -267,7 +268,8 @@ func TestRunTLSWithCert(t *testing.T) {
 		{
 			name: "use default host",
 			setup: func(host string) error {
-				mockConfig.On("GetBool", "app.debug").Return(true).Once()
+				mockConfig.EXPECT().GetInt("http.drivers.gin.header_limit", 4096).Return(4096).Once()
+				mockConfig.EXPECT().GetBool("app.debug").Return(true).Once()
 
 				go func() {
 					assert.Nil(t, route.RunTLSWithCert(host, "test_ca.crt", "test_ca.key"))
@@ -280,7 +282,8 @@ func TestRunTLSWithCert(t *testing.T) {
 		{
 			name: "use custom host",
 			setup: func(host string) error {
-				mockConfig.On("GetBool", "app.debug").Return(true).Once()
+				mockConfig.EXPECT().GetBool("app.debug").Return(true).Once()
+				mockConfig.EXPECT().GetInt("http.drivers.gin.header_limit", 4096).Return(4096).Once()
 
 				go func() {
 					assert.Nil(t, route.RunTLSWithCert(host, "test_ca.crt", "test_ca.key"))
@@ -294,9 +297,9 @@ func TestRunTLSWithCert(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			mockConfig = &configmocks.Config{}
-			mockConfig.On("GetBool", "app.debug").Return(true).Once()
-			mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4096).Return(4096).Once()
+			mockConfig = configmocks.NewConfig(t)
+			mockConfig.EXPECT().GetBool("app.debug").Return(true).Once()
+			mockConfig.EXPECT().GetInt("http.drivers.gin.body_limit", 4096).Return(4096).Once()
 
 			route, err = NewRoute(mockConfig, nil)
 			assert.Nil(t, err)
@@ -319,7 +322,6 @@ func TestRunTLSWithCert(t *testing.T) {
 				assert.Nil(t, err)
 				assert.Equal(t, "{\"Hello\":\"Goravel\"}", string(body))
 			}
-			mockConfig.AssertExpectations(t)
 		})
 	}
 }
@@ -345,7 +347,7 @@ func TestNewRoute(t *testing.T) {
 			name:       "template is instance",
 			parameters: map[string]any{"driver": "gin"},
 			setup: func() {
-				mockConfig.On("Get", "http.drivers.gin.template").Return(defaultTemplate).Once()
+				mockConfig.EXPECT().Get("http.drivers.gin.template").Return(defaultTemplate).Once()
 			},
 			expectHTMLRender: defaultTemplate,
 		},
@@ -353,7 +355,7 @@ func TestNewRoute(t *testing.T) {
 			name:       "template is callback and returns success",
 			parameters: map[string]any{"driver": "gin"},
 			setup: func() {
-				mockConfig.On("Get", "http.drivers.gin.template").Return(func() (render.HTMLRender, error) {
+				mockConfig.EXPECT().Get("http.drivers.gin.template").Return(func() (render.HTMLRender, error) {
 					return defaultTemplate, nil
 				}).Twice()
 			},
@@ -363,7 +365,7 @@ func TestNewRoute(t *testing.T) {
 			name:       "template is callback and returns error",
 			parameters: map[string]any{"driver": "gin"},
 			setup: func() {
-				mockConfig.On("Get", "http.drivers.gin.template").Return(func() (render.HTMLRender, error) {
+				mockConfig.EXPECT().Get("http.drivers.gin.template").Return(func() (render.HTMLRender, error) {
 					return nil, errors.New("error")
 				}).Twice()
 			},
@@ -374,8 +376,8 @@ func TestNewRoute(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			mockConfig = configmocks.NewConfig(t)
-			mockConfig.On("GetBool", "app.debug").Return(true).Once()
-			mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4096).Return(4096).Once()
+			mockConfig.EXPECT().GetBool("app.debug").Return(true).Once()
+			mockConfig.EXPECT().GetInt("http.drivers.gin.body_limit", 4096).Return(4096).Once()
 			test.setup()
 			route, err := NewRoute(mockConfig, test.parameters)
 			assert.Equal(t, test.expectError, err)
@@ -450,7 +452,7 @@ func TestShutdown(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			mockConfig = &configmocks.Config{}
+			mockConfig = configmocks.NewConfig(t)
 			mockConfig.EXPECT().GetBool("app.debug").Return(true)
 			mockConfig.EXPECT().GetInt("http.drivers.gin.header_limit", 4096).Return(4096).Once()
 			mockConfig.EXPECT().GetInt("http.drivers.gin.body_limit", 4096).Return(4096).Once()
@@ -466,7 +468,6 @@ func TestShutdown(t *testing.T) {
 			if err := test.setup(); err == nil {
 				assert.Nil(t, err)
 			}
-			mockConfig.AssertExpectations(t)
 		})
 	}
 }
