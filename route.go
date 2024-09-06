@@ -1,6 +1,7 @@
 package gin
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -17,8 +18,10 @@ import (
 
 type Route struct {
 	route.Router
-	config   config.Config
-	instance *gin.Engine
+	config    config.Config
+	instance  *gin.Engine
+	server    *http.Server
+	tlsServer *http.Server
 }
 
 func NewRoute(config config.Config, parameters map[string]any) (*Route, error) {
@@ -98,13 +101,13 @@ func (r *Route) Run(host ...string) error {
 	r.outputRoutes()
 	color.Green().Println(termlink.Link("[HTTP] Listening and serving HTTP on", "http://"+host[0]))
 
-	server := &http.Server{
+	r.server = &http.Server{
 		Addr:           host[0],
 		Handler:        http.AllowQuerySemicolons(r.instance),
 		MaxHeaderBytes: r.config.GetInt("http.drivers.gin.header_limit", 4096) << 10,
 	}
 
-	return server.ListenAndServe()
+	return r.server.ListenAndServe()
 }
 
 func (r *Route) RunTLS(host ...string) error {
@@ -135,11 +138,27 @@ func (r *Route) RunTLSWithCert(host, certFile, keyFile string) error {
 	r.outputRoutes()
 	color.Green().Println(termlink.Link("[HTTPS] Listening and serving HTTPS on", "https://"+host))
 
-	return r.instance.RunTLS(host, certFile, keyFile)
+	r.tlsServer = &http.Server{
+		Addr:           host,
+		Handler:        http.AllowQuerySemicolons(r.instance),
+		MaxHeaderBytes: r.config.GetInt("http.drivers.gin.header_limit", 4096) << 10,
+	}
+
+	return r.tlsServer.ListenAndServeTLS(certFile, keyFile)
 }
 
 func (r *Route) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	r.instance.ServeHTTP(writer, request)
+}
+
+func (r *Route) Shutdown(ctx context.Context) error {
+	if r.server != nil {
+		return r.server.Shutdown(ctx)
+	}
+	if r.tlsServer != nil {
+		return r.tlsServer.Shutdown(ctx)
+	}
+	return nil
 }
 
 func (r *Route) outputRoutes() {
