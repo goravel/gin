@@ -107,7 +107,11 @@ func (r *Route) Run(host ...string) error {
 		MaxHeaderBytes: r.config.GetInt("http.drivers.gin.header_limit", 4096) << 10,
 	}
 
-	return r.server.ListenAndServe()
+	if err := r.server.ListenAndServe(); errors.Is(err, http.ErrServerClosed) {
+		return nil
+	} else {
+		return err
+	}
 }
 
 func (r *Route) RunTLS(host ...string) error {
@@ -144,19 +148,28 @@ func (r *Route) RunTLSWithCert(host, certFile, keyFile string) error {
 		MaxHeaderBytes: r.config.GetInt("http.drivers.gin.header_limit", 4096) << 10,
 	}
 
-	return r.tlsServer.ListenAndServeTLS(certFile, keyFile)
+	if err := r.tlsServer.ListenAndServeTLS(certFile, keyFile); errors.Is(err, http.ErrServerClosed) {
+		return nil
+	} else {
+		return err
+	}
 }
 
 func (r *Route) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	r.instance.ServeHTTP(writer, request)
 }
 
-func (r *Route) Shutdown(ctx context.Context) error {
+func (r *Route) Shutdown(ctx ...context.Context) error {
+	c := context.Background()
+	if len(ctx) > 0 {
+		c = ctx[0]
+	}
+
 	if r.server != nil {
-		return r.server.Shutdown(ctx)
+		return r.server.Shutdown(c)
 	}
 	if r.tlsServer != nil {
-		return r.tlsServer.Shutdown(ctx)
+		return r.tlsServer.Shutdown(c)
 	}
 	return nil
 }
