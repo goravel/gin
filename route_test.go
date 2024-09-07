@@ -408,7 +408,7 @@ func TestShutdown(t *testing.T) {
 			name: "no new requests will be accepted after shutdown",
 			setup: func() error {
 				go func() {
-					assert.EqualError(t, route.Run(), http.ErrServerClosed.Error())
+					assert.Nil(t, route.Run())
 				}()
 
 				time.Sleep(1 * time.Second)
@@ -425,7 +425,7 @@ func TestShutdown(t *testing.T) {
 			name: "Ensure that received requests are processed",
 			setup: func() error {
 				go func() {
-					assert.EqualError(t, route.Run(), http.ErrServerClosed.Error())
+					assert.Nil(t, route.Run())
 				}()
 
 				time.Sleep(1 * time.Second)
