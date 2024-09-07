@@ -1,7 +1,6 @@
 package gin
 
 import (
-	"context"
 	"crypto/tls"
 	"errors"
 	"fmt"
@@ -409,14 +408,14 @@ func TestShutdown(t *testing.T) {
 			name: "no new requests will be accepted after shutdown",
 			setup: func() error {
 				go func() {
-					assert.EqualError(t, route.Run(), http.ErrServerClosed.Error())
+					assert.Nil(t, route.Run())
 				}()
 
 				time.Sleep(1 * time.Second)
 
 				assertHttpNormal(t, addr, true)
 
-				assert.Nil(t, route.Shutdown(context.Background()))
+				assert.Nil(t, route.Shutdown())
 
 				assertHttpNormal(t, addr, false)
 				return nil
@@ -426,7 +425,7 @@ func TestShutdown(t *testing.T) {
 			name: "Ensure that received requests are processed",
 			setup: func() error {
 				go func() {
-					assert.EqualError(t, route.Run(), http.ErrServerClosed.Error())
+					assert.Nil(t, route.Run())
 				}()
 
 				time.Sleep(1 * time.Second)
@@ -441,7 +440,7 @@ func TestShutdown(t *testing.T) {
 					}()
 				}
 				time.Sleep(100 * time.Millisecond)
-				assert.Nil(t, route.Shutdown(context.Background()))
+				assert.Nil(t, route.Shutdown())
 				assertHttpNormal(t, addr, false)
 				wg.Wait()
 				assert.Equal(t, count.Load(), int64(3))
