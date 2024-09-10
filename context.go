@@ -2,6 +2,7 @@ package gin
 
 import (
 	"context"
+	"fmt"
 	"net/http/httptest"
 	"time"
 
@@ -41,8 +42,8 @@ func (c *Context) Response() http.ContextResponse {
 	return NewContextResponse(c.instance, &BodyWriter{ResponseWriter: c.instance.Writer})
 }
 
-func (c *Context) WithValue(key string, value any) {
-	c.instance.Set(key, value)
+func (c *Context) WithValue(key any, value any) {
+	c.instance.Set(fmt.Sprintf("%v", key), value)
 }
 
 func (c *Context) Context() context.Context {
