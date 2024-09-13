@@ -15,13 +15,16 @@ func Background() http.Context {
 	return NewContext(ctx)
 }
 
+type Ctx context.Context
+
 type Context struct {
+	Ctx
 	instance *gin.Context
 	request  http.ContextRequest
 }
 
 func NewContext(ctx *gin.Context) http.Context {
-	return &Context{instance: ctx}
+	return &Context{instance: ctx, Ctx: context.Background()}
 }
 
 func (c *Context) Request() http.ContextRequest {
@@ -41,18 +44,18 @@ func (c *Context) Response() http.ContextResponse {
 	return NewContextResponse(c.instance, &BodyWriter{ResponseWriter: c.instance.Writer})
 }
 
-func (c *Context) WithValue(key string, value any) {
-	c.instance.Set(key, value)
+func (c *Context) WithValue(key any, value any) {
+	//nolint:all
+	c.Ctx = context.WithValue(c.Ctx, key, value)
 }
 
 func (c *Context) Context() context.Context {
-	ctx := context.Background()
 	for key, value := range c.instance.Keys {
 		// nolint
-		ctx = context.WithValue(ctx, key, value)
+		c.Ctx = context.WithValue(c.Ctx, key, value)
 	}
 
-	return ctx
+	return c.Ctx
 }
 
 func (c *Context) Deadline() (deadline time.Time, ok bool) {
@@ -68,7 +71,7 @@ func (c *Context) Err() error {
 }
 
 func (c *Context) Value(key any) any {
-	return c.instance.Value(key)
+	return c.Ctx.Value(key)
 }
 
 func (c *Context) Instance() *gin.Context {
