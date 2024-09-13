@@ -435,16 +435,16 @@ func TestGroup(t *testing.T) {
 						route2.Get("/middleware/{id}", func(ctx contractshttp.Context) contractshttp.Response {
 							return ctx.Response().Success().Json(contractshttp.Json{
 								"id":   ctx.Request().Input("id"),
-								"ctx":  ctx.Value("ctx").(string),
-								"ctx1": ctx.Value("ctx1").(string),
+								"ctx":  ctx.Value("ctx"),
+								"ctx1": ctx.Value("ctx1"),
 							})
 						})
 					})
 					route1.Middleware(contextMiddleware2()).Get("/middleware/{id}", func(ctx contractshttp.Context) contractshttp.Response {
 						return ctx.Response().Success().Json(contractshttp.Json{
 							"id":   ctx.Request().Input("id"),
-							"ctx":  ctx.Value("ctx").(string),
-							"ctx2": ctx.Value("ctx2").(string),
+							"ctx":  ctx.Value("ctx"),
+							"ctx2": ctx.Value("ctx2"),
 						})
 					})
 				})
@@ -462,16 +462,16 @@ func TestGroup(t *testing.T) {
 						route2.Get("/middleware/{id}", func(ctx contractshttp.Context) contractshttp.Response {
 							return ctx.Response().Success().Json(contractshttp.Json{
 								"id":   ctx.Request().Input("id"),
-								"ctx":  ctx.Value("ctx").(string),
-								"ctx1": ctx.Value("ctx1").(string),
+								"ctx":  ctx.Value("ctx"),
+								"ctx1": ctx.Value("ctx1"),
 							})
 						})
 					})
 					route1.Middleware(contextMiddleware2()).Get("/middleware/{id}", func(ctx contractshttp.Context) contractshttp.Response {
 						return ctx.Response().Success().Json(contractshttp.Json{
 							"id":   ctx.Request().Input("id"),
-							"ctx":  ctx.Value("ctx").(string),
-							"ctx2": ctx.Value("ctx2").(string),
+							"ctx":  ctx.Value("ctx"),
+							"ctx2": ctx.Value("ctx2"),
 						})
 					})
 				})
