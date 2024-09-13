@@ -2,6 +2,7 @@ package gin
 
 import (
 	"context"
+	"fmt"
 	"net/http/httptest"
 	"time"
 
@@ -45,6 +46,7 @@ func (c *Context) Response() http.ContextResponse {
 }
 
 func (c *Context) WithValue(key any, value any) {
+	c.instance.Set(fmt.Sprintf("%v", key), value) // need to store the key-val to the underlying gin too
 	//nolint:all
 	c.Ctx = context.WithValue(c.Ctx, key, value)
 }
@@ -71,7 +73,7 @@ func (c *Context) Err() error {
 }
 
 func (c *Context) Value(key any) any {
-	return c.Ctx.Value(key)
+	return c.Context().Value(key)
 }
 
 func (c *Context) Instance() *gin.Context {
