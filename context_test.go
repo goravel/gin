@@ -23,8 +23,8 @@ func TestContext(t *testing.T) {
 	httpCtx.WithValue(2.2, "two point two")
 
 	ctx := httpCtx.Context()
-	assert.Equal(t, ctx.Value("Hello").(string), "world")
-	assert.Equal(t, ctx.Value("Hi").(string), "Goravel")
+	assert.Equal(t, "world", ctx.Value("Hello"))
+	assert.Equal(t, "Goravel", ctx.Value("Hi"))
 	assert.Equal(t, "halo", ctx.Value(customTypeKey))
 	assert.Equal(t, "hola", ctx.Value(anotherCustomTypeKey))
 	assert.Equal(t, "one", ctx.Value(1))
