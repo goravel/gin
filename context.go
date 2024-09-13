@@ -16,16 +16,14 @@ func Background() http.Context {
 	return NewContext(ctx)
 }
 
-type Ctx context.Context
-
 type Context struct {
-	Ctx
+	ctx      context.Context
 	instance *gin.Context
 	request  http.ContextRequest
 }
 
 func NewContext(ctx *gin.Context) http.Context {
-	return &Context{instance: ctx, Ctx: context.Background()}
+	return &Context{instance: ctx, ctx: context.Background()}
 }
 
 func (c *Context) Request() http.ContextRequest {
@@ -48,16 +46,16 @@ func (c *Context) Response() http.ContextResponse {
 func (c *Context) WithValue(key any, value any) {
 	c.instance.Set(fmt.Sprintf("%v", key), value) // need to store the key-val to the underlying gin too
 	//nolint:all
-	c.Ctx = context.WithValue(c.Ctx, key, value)
+	c.ctx = context.WithValue(c.ctx, key, value)
 }
 
 func (c *Context) Context() context.Context {
 	for key, value := range c.instance.Keys {
 		// nolint
-		c.Ctx = context.WithValue(c.Ctx, key, value)
+		c.ctx = context.WithValue(c.ctx, key, value)
 	}
 
-	return c.Ctx
+	return c.ctx
 }
 
 func (c *Context) Deadline() (deadline time.Time, ok bool) {
