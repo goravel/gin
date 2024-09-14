@@ -2,7 +2,6 @@ package gin
 
 import (
 	"context"
-	"fmt"
 	"net/http/httptest"
 	"time"
 
@@ -46,17 +45,16 @@ func (c *Context) Response() http.ContextResponse {
 }
 
 func (c *Context) WithValue(key any, value any) {
-	c.instance.Set(fmt.Sprintf("%v", key), value) // need to store the key-val to the underlying gin too
-	//nolint:all
-	c.ctx = context.WithValue(c.ctx, key, value)
+	goravelCtx := c.getGoravelCtx()
+	goravelCtx[key] = value
+	c.instance.Set(goravelContextKey, goravelCtx)
 }
 
 func (c *Context) Context() context.Context {
-	for key, value := range c.instance.Keys {
-		// nolint
+	for key, value := range c.getGoravelCtx() {
+		//nolint:all
 		c.ctx = context.WithValue(c.ctx, key, value)
 	}
-
 	return c.ctx
 }
 
