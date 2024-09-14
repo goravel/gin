@@ -242,6 +242,10 @@ func TestGroup(t *testing.T) {
 
 				resource := resourceController{}
 				gin.GlobalMiddleware(func(ctx contractshttp.Context) {
+					type customKey struct{}
+					var customKeyCtx customKey
+					ctx.WithValue(customKeyCtx, "context with custom key")
+					ctx.WithValue(2.2, "two point two")
 					ctx.WithValue("action", "index")
 					ctx.Request().Next()
 				})
@@ -263,6 +267,10 @@ func TestGroup(t *testing.T) {
 
 				resource := resourceController{}
 				gin.GlobalMiddleware(func(ctx contractshttp.Context) {
+					type customKey struct{}
+					var customKeyCtx customKey
+					ctx.WithValue(customKeyCtx, "context with custom key")
+					ctx.WithValue(2.2, "two point two")
 					ctx.WithValue("action", "show")
 					ctx.Request().Next()
 				})
@@ -284,6 +292,10 @@ func TestGroup(t *testing.T) {
 
 				resource := resourceController{}
 				gin.GlobalMiddleware(func(ctx contractshttp.Context) {
+					type customKey struct{}
+					var customKeyCtx customKey
+					ctx.WithValue(customKeyCtx, "context with custom key")
+					ctx.WithValue(2.2, "two point two")
 					ctx.WithValue("action", "store")
 					ctx.Request().Next()
 				})
@@ -305,6 +317,10 @@ func TestGroup(t *testing.T) {
 
 				resource := resourceController{}
 				gin.GlobalMiddleware(func(ctx contractshttp.Context) {
+					type customKey struct{}
+					var customKeyCtx customKey
+					ctx.WithValue(customKeyCtx, "context with custom key")
+					ctx.WithValue(2.2, "two point two")
 					ctx.WithValue("action", "update")
 					ctx.Request().Next()
 				})
@@ -326,6 +342,10 @@ func TestGroup(t *testing.T) {
 
 				resource := resourceController{}
 				gin.GlobalMiddleware(func(ctx contractshttp.Context) {
+					type customKey struct{}
+					var customKeyCtx customKey
+					ctx.WithValue(customKeyCtx, "context with custom key")
+					ctx.WithValue(2.2, "two point two")
 					ctx.WithValue("action", "update")
 					ctx.Request().Next()
 				})
@@ -347,6 +367,10 @@ func TestGroup(t *testing.T) {
 
 				resource := resourceController{}
 				gin.GlobalMiddleware(func(ctx contractshttp.Context) {
+					type customKey struct{}
+					var customKeyCtx customKey
+					ctx.WithValue(customKeyCtx, "context with custom key")
+					ctx.WithValue(2.2, "two point two")
 					ctx.WithValue("action", "destroy")
 					ctx.Request().Next()
 				})
@@ -564,6 +588,9 @@ func abortMiddleware() contractshttp.Middleware {
 
 func contextMiddleware() contractshttp.Middleware {
 	return func(ctx contractshttp.Context) {
+		type customKey struct{}
+		var customKeyCtx customKey
+		ctx.WithValue(customKeyCtx, "context with custom key")
 		ctx.WithValue("ctx", "Goravel")
 
 		ctx.Request().Next()
@@ -572,6 +599,7 @@ func contextMiddleware() contractshttp.Middleware {
 
 func contextMiddleware1() contractshttp.Middleware {
 	return func(ctx contractshttp.Context) {
+		ctx.WithValue(2.2, "two point two")
 		ctx.WithValue("ctx1", "Hello")
 
 		ctx.Request().Next()
