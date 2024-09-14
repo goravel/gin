@@ -11,6 +11,8 @@ import (
 	"github.com/goravel/framework/contracts/http"
 )
 
+const goravelContextKey = "goravel_contextKey"
+
 func Background() http.Context {
 	ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
 	return NewContext(ctx)
@@ -56,6 +58,15 @@ func (c *Context) Context() context.Context {
 	}
 
 	return c.ctx
+}
+
+func (c *Context) getGoravelCtx() map[any]any {
+	if val, exist := c.instance.Get(goravelContextKey); exist {
+		if goravelCtxVal, ok := val.(map[any]any); ok {
+			return goravelCtxVal
+		}
+	}
+	return make(map[any]any)
 }
 
 func (c *Context) Deadline() (deadline time.Time, ok bool) {
