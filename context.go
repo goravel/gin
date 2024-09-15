@@ -18,13 +18,12 @@ func Background() http.Context {
 }
 
 type Context struct {
-	ctx      context.Context
 	instance *gin.Context
 	request  http.ContextRequest
 }
 
 func NewContext(ctx *gin.Context) http.Context {
-	return &Context{instance: ctx, ctx: context.Background()}
+	return &Context{instance: ctx}
 }
 
 func (c *Context) Request() http.ContextRequest {
@@ -50,13 +49,7 @@ func (c *Context) WithValue(key any, value any) {
 	c.instance.Set(goravelContextKey, goravelCtx)
 }
 
-func (c *Context) Context() context.Context {
-	for key, value := range c.getGoravelCtx() {
-		//nolint:all
-		c.ctx = context.WithValue(c.ctx, key, value)
-	}
-	return c.ctx
-}
+func (c *Context) Context() context.Context { return c }
 
 func (c *Context) getGoravelCtx() map[any]any {
 	if val, exist := c.instance.Get(goravelContextKey); exist {
@@ -80,7 +73,7 @@ func (c *Context) Err() error {
 }
 
 func (c *Context) Value(key any) any {
-	return c.Context().Value(key)
+	return c.getGoravelCtx()[key]
 }
 
 func (c *Context) Instance() *gin.Context {
