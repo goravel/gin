@@ -10,6 +10,8 @@ import (
 	"github.com/goravel/framework/contracts/http"
 )
 
+const goravelContextKey = "goravel_contextKey"
+
 func Background() http.Context {
 	ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
 	return NewContext(ctx)
@@ -41,19 +43,13 @@ func (c *Context) Response() http.ContextResponse {
 	return NewContextResponse(c.instance, &BodyWriter{ResponseWriter: c.instance.Writer})
 }
 
-func (c *Context) WithValue(key string, value any) {
-	c.instance.Set(key, value)
+func (c *Context) WithValue(key any, value any) {
+	goravelCtx := c.getGoravelCtx()
+	goravelCtx[key] = value
+	c.instance.Set(goravelContextKey, goravelCtx)
 }
 
-func (c *Context) Context() context.Context {
-	ctx := context.Background()
-	for key, value := range c.instance.Keys {
-		// nolint
-		ctx = context.WithValue(ctx, key, value)
-	}
-
-	return ctx
-}
+func (c *Context) Context() context.Context { return c }
 
 func (c *Context) Deadline() (deadline time.Time, ok bool) {
 	return c.instance.Deadline()
@@ -68,9 +64,18 @@ func (c *Context) Err() error {
 }
 
 func (c *Context) Value(key any) any {
-	return c.instance.Value(key)
+	return c.getGoravelCtx()[key]
 }
 
 func (c *Context) Instance() *gin.Context {
 	return c.instance
+}
+
+func (c *Context) getGoravelCtx() map[any]any {
+	if val, exist := c.instance.Get(goravelContextKey); exist {
+		if goravelCtxVal, ok := val.(map[any]any); ok {
+			return goravelCtxVal
+		}
+	}
+	return make(map[any]any)
 }
