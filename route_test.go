@@ -389,7 +389,7 @@ func TestNewRoute(t *testing.T) {
 	}
 }
 
-func TestShutdown(t *testing.T) {
+func TestStop(t *testing.T) {
 	var (
 		err        error
 		mockConfig *configmocks.Config
@@ -415,7 +415,7 @@ func TestShutdown(t *testing.T) {
 
 				assertHttpNormal(t, addr, true)
 
-				assert.Nil(t, route.Shutdown())
+				assert.Nil(t, route.Stop())
 
 				assertHttpNormal(t, addr, false)
 				return nil
@@ -440,7 +440,7 @@ func TestShutdown(t *testing.T) {
 					}()
 				}
 				time.Sleep(100 * time.Millisecond)
-				assert.Nil(t, route.Shutdown())
+				assert.Nil(t, route.Stop())
 				assertHttpNormal(t, addr, false)
 				wg.Wait()
 				assert.Equal(t, count.Load(), int64(3))

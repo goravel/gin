@@ -160,7 +160,12 @@ func (r *Route) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	r.instance.ServeHTTP(writer, request)
 }
 
+// DEPRECATED Use Stop instead.
 func (r *Route) Shutdown(ctx ...context.Context) error {
+	return r.Stop(ctx...)
+}
+
+func (r *Route) Stop(ctx ...context.Context) error {
 	c := context.Background()
 	if len(ctx) > 0 {
 		c = ctx[0]
