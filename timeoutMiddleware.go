@@ -6,11 +6,13 @@ import (
 	"time"
 
 	contractshttp "github.com/goravel/framework/contracts/http"
+	"github.com/goravel/framework/contracts/config"
 )
 
 // TimeoutMiddleware creates middleware to set a timeout for a request
 func TimeoutMiddleware(timeout time.Duration) contractshttp.Middleware {
 	return func(ctx contractshttp.Context) {
+		timeout := config.GetInt("http.http.drivers.gin.timeout", 3) * time.Second
 		timeoutCtx, cancel := context.WithTimeout(ctx.Context(), timeout)
 		defer cancel()
 
