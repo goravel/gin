@@ -1,4 +1,4 @@
-ckage gin
+package gin
 
 import (
 	"context"
