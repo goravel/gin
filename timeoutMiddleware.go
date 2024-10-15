@@ -16,25 +16,13 @@ func TimeoutMiddleware() contractshttp.Middleware {
 		timeoutCtx, cancel := context.WithTimeout(ctx.Context(), timeout)
 		defer cancel()
 
-		// Refreshing the request context with a timeout
 		ctx.WithContext(timeoutCtx)
 
-		// We start executing the request in a new goroutine
-		done := make(chan struct{})
-		go func() {
-			defer close(done)
-			ctx.Request().Next()
-		}()
+		ctx.Request().Next()
 
-		select {
-		case <-done:
-			// The request completed before the timeout expired
-		case <-timeoutCtx.Done():
-			// After the timeout expires, return the status 504 Gateway Timeout
-			if timeoutCtx.Err() == context.DeadlineExceeded {
-				ctx.Response().Writer().WriteHeader(http.StatusGatewayTimeout)
-				_, _ = ctx.Response().Writer().Write([]byte("Request timed out"))
-			}
+		if timeoutCtx.Err() == context.DeadlineExceeded {
+			ctx.Response().Writer().WriteHeader(http.StatusGatewayTimeout)
+			_, _ = ctx.Response().Writer().Write([]byte("Request timed out"))
 		}
 	}
 }
