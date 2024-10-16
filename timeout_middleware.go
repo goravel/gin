@@ -20,9 +20,13 @@ func TimeoutMiddleware() contractshttp.Middleware {
 
 		ctx.Request().Next()
 
-		if timeoutCtx.Err() == context.DeadlineExceeded {
-			ctx.Response().Writer().WriteHeader(http.StatusGatewayTimeout)
-			_, _ = ctx.Response().Writer().Write([]byte("Request timed out"))
+		select{
+		case <-ctx.Request().Origin().Context().Done():
+			
+			if timeoutCtx.Err() == context.DeadlineExceeded {
+				ctx.Response().Writer().WriteHeader(http.StatusGatewayTimeout)
+				_, _ = ctx.Response().Writer().Write([]byte("Request timed out"))
+			}
 		}
 	}
 }
