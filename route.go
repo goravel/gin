@@ -30,10 +30,7 @@ func NewRoute(config config.Config, parameters map[string]any) (*Route, error) {
 	engine := gin.New()
 	engine.MaxMultipartMemory = int64(config.GetInt("http.drivers.gin.body_limit", 4096)) << 10
 	engine.Use(gin.Recovery()) // recovery middleware
-	// timeoutMiddleware
-	// timeout := TimeoutMiddleware(config.GetInt("http.request_timeout", 3) * time.Second)
-	// engine.Use(middlewaresToGinHandlers([]httpcontract.Middleware{timeout})...)
-	
+
 	if debugLog := getDebugLog(config); debugLog != nil {
 		engine.Use(debugLog)
 	}
