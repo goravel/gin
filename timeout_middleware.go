@@ -26,6 +26,7 @@ func TimeoutMiddleware() contractshttp.Middleware {
 			if timeoutCtx.Err() == context.DeadlineExceeded {
 				ctx.Response().Writer().WriteHeader(http.StatusGatewayTimeout)
 				_, _ = ctx.Response().Writer().Write([]byte("Request timed out"))
+				ctx.Request().AbortWithStatus(http.StatusGatewayTimeout)
 			}
 		}
 	}
