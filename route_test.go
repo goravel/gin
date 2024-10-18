@@ -521,7 +521,7 @@ func TestTimeoutMiddleware(t *testing.T) {
 		}
 
 		middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			router.ServeHTTP(ctx.request.ctx.ResponseWriter, ctx.request.ctx.Request)
+			router.ServeHTTP(w, r)
 		})).ServeHTTP(w, r)
 	})
 
