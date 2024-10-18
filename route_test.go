@@ -506,12 +506,23 @@ func TestTimeoutMiddleware(t *testing.T) {
 	// Create a middleware wrapper to test the TimeoutMiddleware functionality
 	middleware := TimeoutMiddleware()
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := contractshttp.Context{
-			ResponseWriter: w,
-			Request:        r,
+		// Создаем экземпляр ContextRequest
+		contextRequest := ContextRequest{
+			ctx:      nil,
+			instance: nil,
+			httpBody: nil,
+			log:      nil,
+			validation: nil,          
 		}
-		middleware(ctx)
-		router.ServeHTTP(w, r)
+
+		ctx := Context{
+			instance: nil,
+			request:  contextRequest,
+		}
+
+		middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			router.ServeHTTP(ctx.request.ctx.ResponseWriter, ctx.request.ctx.Request)
+		})).ServeHTTP(w, r)
 	})
 
 	handler.ServeHTTP(w, req)
