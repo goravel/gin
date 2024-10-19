@@ -488,45 +488,25 @@ func assertHttpNormal(t *testing.T, addr string, expectNormal bool) {
 	}
 }
 
-func TestTimeoutMiddleware(t *testing.T) {
+func TestTimeoutMiddlewareIntegration(t *testing.T) {
 	mockConfig := configmocks.NewConfig(t)
-	mockConfig.EXPECT().GetInt("http.timeout_request", 3).Return(1).Once() // Set timeout to 1 second for testing
+	mockConfig.EXPECT().GetInt("http.timeout_request", 3).Return(1).Once() // Задаем таймаут 1 секунда для тестирования
+
+	route, err := NewRoute(mockConfig, nil)
+	assert.Nil(t, err)
+
+	route.Use(TimeoutMiddleware())
+
+	route.Get("/", func(ctx contractshttp.Context) contractshttp.Response {
+		time.Sleep(2 * time.Second)
+		return ctx.Response().String(200, "Hello, World!")
+	})
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/", nil)
 
-	// Initialize the middleware and router with a delayed handler
-	router := http.NewServeMux()
-	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		time.Sleep(2 * time.Second) // Intentionally delay to trigger timeout
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("Hello, World!"))
-	})
-
-	// Create a middleware wrapper to test the TimeoutMiddleware functionality
-	middleware := TimeoutMiddleware()
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Создаем экземпляр ContextRequest
-		contextRequest := ContextRequest{
-			ctx:      nil,
-			instance: nil,
-			httpBody: nil,
-			log:      nil,
-			validation: nil,          
-		}
-
-		ctx := Context{
-			instance: nil,
-			request:  contextRequest,
-		}
-
-		middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			router.ServeHTTP(w, r)
-		})).ServeHTTP(w, r)
-	})
-
-	handler.ServeHTTP(w, req)
-
+	route.ServeHTTP(w, req)
+	
 	assert.Equal(t, http.StatusGatewayTimeout, w.Code)
 	assert.Equal(t, "Request timed out", w.Body.String())
 }
