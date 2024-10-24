@@ -10,23 +10,17 @@ import (
 )
 
 // TimeoutMiddleware creates middleware to set a timeout for a request
-func TimeoutMiddleware(config config.Config) httpcontract.Middleware {
-	return func(ctx httpcontract.Context) {
-		timeoutDuration := time.Duration(config.GetInt("http.timeout_request", 1)) * time.Second
-		timeoutCtx, cancel := context.WithTimeout(ctx.Context(), timeoutDuration)
+func TimeoutMiddleware(config config.Config) contractshttp.Middleware {
+	return func(ctx contractshttp.Context) {
+		timeout := time.Duration(config.GetInt("http.timeout_request", 1)) * time.Second
+		timeoutCtx, cancel := context.WithTimeout(ctx.Context(), timeout)
 		defer cancel()
 
 		ctx.WithContext(timeoutCtx)
-
-		done := make(chan struct{})
-
-		go func() {
-			ctx.Request().Next()
-			close(done)
-		}()
+		
+		go ctx.Request().Next()
 
 		select {
-		case <-done:
 		case <-ctx.Request().Origin().Context().Done():
 			if timeoutCtx.Err() == context.DeadlineExceeded {
 				ctx.Response().Writer().WriteHeader(http.StatusGatewayTimeout)
