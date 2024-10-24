@@ -49,6 +49,11 @@ func (c *Context) WithValue(key any, value any) {
 	c.instance.Set(goravelContextKey, goravelCtx)
 }
 
+func (c *Context) WithContext(ctx context.Context) {
+	// Changing the request context to a new context
+	c.instance.Request = c.instance.Request.WithContext(ctx)
+}
+
 func (c *Context) Context() context.Context { return c }
 
 func (c *Context) Deadline() (deadline time.Time, ok bool) {

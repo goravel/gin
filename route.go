@@ -30,6 +30,7 @@ func NewRoute(config config.Config, parameters map[string]any) (*Route, error) {
 	engine := gin.New()
 	engine.MaxMultipartMemory = int64(config.GetInt("http.drivers.gin.body_limit", 4096)) << 10
 	engine.Use(gin.Recovery()) // recovery middleware
+
 	if debugLog := getDebugLog(config); debugLog != nil {
 		engine.Use(debugLog)
 	}
@@ -77,7 +78,7 @@ func (r *Route) Fallback(handler httpcontract.HandlerFunc) {
 }
 
 func (r *Route) GlobalMiddleware(middlewares ...httpcontract.Middleware) {
-	middlewares = append(middlewares, Cors(), Tls())
+	middlewares = append(middlewares, Cors(), Tls(), TimeoutMiddleware(r.config))
 	r.instance.Use(middlewaresToGinHandlers(middlewares)...)
 	r.Router = NewGroup(
 		r.config,
