@@ -10,7 +10,7 @@ import (
 )
 
 // TimeoutMiddleware creates middleware to set a timeout for a request
-func TimeoutMiddleware() contractshttp.Middleware {
+func TimeoutMiddleware(config config.Config) contractshttp.Middleware {
 	return func(ctx contractshttp.Context) {
 		timeout := config.GetInt("http.timeout_request", 3) * time.Second
 		timeoutCtx, cancel := context.WithTimeout(ctx.Context(), timeout)
