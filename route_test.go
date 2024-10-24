@@ -488,6 +488,13 @@ func assertHttpNormal(t *testing.T, addr string, expectNormal bool) {
 	}
 }
 
+func longMiddleware(_ config.Config) contractshttp.Middleware {
+	return func(ctx contractshttp.Context) {
+		time.Sleep(2 * time.Second)
+		ctx.Request().Next()
+	}
+}
+
 func TestTimeoutMiddlewareIntegration(t *testing.T) {
 	mockConfig := configmocks.NewConfig(t)
 	mockConfig.EXPECT().GetInt("http.timeout_request", 3).Return(1).Once()
@@ -499,8 +506,7 @@ func TestTimeoutMiddlewareIntegration(t *testing.T) {
 	route, err := NewRoute(mockConfig, nil)
 	assert.Nil(t, err)
 
-	middlewares := []contractshttp.Middleware{TimeoutMiddleware(mockConfig)}
-	route.instance.Use(middlewaresToGinHandlers(middlewares)...)
+	route.GlobalMiddleware(TimeoutMiddleware(mockConfig), longMiddleware(mockConfig)
 
 	route.Get("/", func(ctx contractshttp.Context) contractshttp.Response {
 		time.Sleep(2 * time.Second)
