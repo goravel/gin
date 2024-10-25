@@ -16,7 +16,7 @@ func TestCors(t *testing.T) {
 		resp       *httptest.ResponseRecorder
 	)
 	beforeEach := func() {
-		mockConfig = &configmocks.Config{}
+		mockConfig = configmocks.NewConfig(t)
 	}
 
 	tests := []struct {
@@ -53,10 +53,6 @@ func TestCors(t *testing.T) {
 				mockConfig.On("GetBool", "app.debug").Return(true).Once()
 				mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4096).Return(4096).Once()
 				mockConfig.On("Get", "cors.paths").Return([]string{"api"}).Once()
-				mockConfig.On("GetString", "http.tls.host").Return("").Once()
-				mockConfig.On("GetString", "http.tls.port").Return("").Once()
-				mockConfig.On("GetString", "http.tls.ssl.cert").Return("").Once()
-				mockConfig.On("GetString", "http.tls.ssl.key").Return("").Once()
 				ConfigFacade = mockConfig
 			},
 			assert: func() {
@@ -206,10 +202,12 @@ func TestCors(t *testing.T) {
 			beforeEach()
 			test.setup()
 
-			g, err := NewRoute(mockConfig, nil)
+			route, err := NewRoute(mockConfig, nil)
 			assert.Nil(t, err)
-			g.GlobalMiddleware()
-			g.Post("/any/{id}", func(ctx contractshttp.Context) contractshttp.Response {
+
+			route.setMiddlewares([]contractshttp.Middleware{Cors()})
+
+			route.Post("/any/{id}", func(ctx contractshttp.Context) contractshttp.Response {
 				return ctx.Response().Success().Json(contractshttp.Json{
 					"id": ctx.Request().Input("id"),
 				})
@@ -218,13 +216,12 @@ func TestCors(t *testing.T) {
 			resp = httptest.NewRecorder()
 			req, err := http.NewRequest("OPTIONS", "/any/1", nil)
 			assert.Nil(t, err)
+
 			req.Header.Set("Origin", "https://goravel.dev")
 			req.Header.Set("Access-Control-Request-Method", "POST")
-			g.ServeHTTP(resp, req)
+			route.ServeHTTP(resp, req)
 
 			test.assert()
-
-			mockConfig.AssertExpectations(t)
 		})
 	}
 }

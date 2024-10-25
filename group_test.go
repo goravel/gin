@@ -11,54 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type resourceController struct{}
-
-func (c resourceController) Index(ctx contractshttp.Context) contractshttp.Response {
-	action := ctx.Value("action")
-
-	return ctx.Response().Json(http.StatusOK, contractshttp.Json{
-		"action": action,
-	})
-}
-
-func (c resourceController) Show(ctx contractshttp.Context) contractshttp.Response {
-	action := ctx.Value("action")
-	id := ctx.Request().Input("id")
-
-	return ctx.Response().Json(http.StatusOK, contractshttp.Json{
-		"action": action,
-		"id":     id,
-	})
-}
-
-func (c resourceController) Store(ctx contractshttp.Context) contractshttp.Response {
-	action := ctx.Value("action")
-
-	return ctx.Response().Json(http.StatusOK, contractshttp.Json{
-		"action": action,
-	})
-}
-
-func (c resourceController) Update(ctx contractshttp.Context) contractshttp.Response {
-	action := ctx.Value("action")
-	id := ctx.Request().Input("id")
-
-	return ctx.Response().Json(http.StatusOK, contractshttp.Json{
-		"action": action,
-		"id":     id,
-	})
-}
-
-func (c resourceController) Destroy(ctx contractshttp.Context) contractshttp.Response {
-	action := ctx.Value("action")
-	id := ctx.Request().Input("id")
-
-	return ctx.Response().Json(http.StatusOK, contractshttp.Json{
-		"action": action,
-		"id":     id,
-	})
-}
-
 func TestGroup(t *testing.T) {
 	var (
 		gin        *Route
@@ -234,21 +186,15 @@ func TestGroup(t *testing.T) {
 		{
 			name: "Resource Index",
 			setup: func(req *http.Request) {
-				mockConfig.On("Get", "cors.paths").Return([]string{}).Once()
-				mockConfig.On("GetString", "http.tls.host").Return("").Once()
-				mockConfig.On("GetString", "http.tls.port").Return("").Once()
-				mockConfig.On("GetString", "http.tls.ssl.cert").Return("").Once()
-				mockConfig.On("GetString", "http.tls.ssl.key").Return("").Once()
-
 				resource := resourceController{}
-				gin.GlobalMiddleware(func(ctx contractshttp.Context) {
+				gin.setMiddlewares([]contractshttp.Middleware{func(ctx contractshttp.Context) {
 					type customKey struct{}
 					var customKeyCtx customKey
 					ctx.WithValue(customKeyCtx, "context with custom key")
 					ctx.WithValue(2.2, "two point two")
 					ctx.WithValue("action", "index")
 					ctx.Request().Next()
-				})
+				}})
 				gin.Resource("/resource", resource)
 			},
 			method:     "GET",
@@ -259,21 +205,15 @@ func TestGroup(t *testing.T) {
 		{
 			name: "Resource Show",
 			setup: func(req *http.Request) {
-				mockConfig.On("Get", "cors.paths").Return([]string{}).Once()
-				mockConfig.On("GetString", "http.tls.host").Return("").Once()
-				mockConfig.On("GetString", "http.tls.port").Return("").Once()
-				mockConfig.On("GetString", "http.tls.ssl.cert").Return("").Once()
-				mockConfig.On("GetString", "http.tls.ssl.key").Return("").Once()
-
 				resource := resourceController{}
-				gin.GlobalMiddleware(func(ctx contractshttp.Context) {
+				gin.setMiddlewares([]contractshttp.Middleware{func(ctx contractshttp.Context) {
 					type customKey struct{}
 					var customKeyCtx customKey
 					ctx.WithValue(customKeyCtx, "context with custom key")
 					ctx.WithValue(2.2, "two point two")
 					ctx.WithValue("action", "show")
 					ctx.Request().Next()
-				})
+				}})
 				gin.Resource("/resource", resource)
 			},
 			method:     "GET",
@@ -284,21 +224,15 @@ func TestGroup(t *testing.T) {
 		{
 			name: "Resource Store",
 			setup: func(req *http.Request) {
-				mockConfig.On("Get", "cors.paths").Return([]string{}).Once()
-				mockConfig.On("GetString", "http.tls.host").Return("").Once()
-				mockConfig.On("GetString", "http.tls.port").Return("").Once()
-				mockConfig.On("GetString", "http.tls.ssl.cert").Return("").Once()
-				mockConfig.On("GetString", "http.tls.ssl.key").Return("").Once()
-
 				resource := resourceController{}
-				gin.GlobalMiddleware(func(ctx contractshttp.Context) {
+				gin.setMiddlewares([]contractshttp.Middleware{func(ctx contractshttp.Context) {
 					type customKey struct{}
 					var customKeyCtx customKey
 					ctx.WithValue(customKeyCtx, "context with custom key")
 					ctx.WithValue(2.2, "two point two")
 					ctx.WithValue("action", "store")
 					ctx.Request().Next()
-				})
+				}})
 				gin.Resource("/resource", resource)
 			},
 			method:     "POST",
@@ -309,21 +243,15 @@ func TestGroup(t *testing.T) {
 		{
 			name: "Resource Update (PUT)",
 			setup: func(req *http.Request) {
-				mockConfig.On("Get", "cors.paths").Return([]string{}).Once()
-				mockConfig.On("GetString", "http.tls.host").Return("").Once()
-				mockConfig.On("GetString", "http.tls.port").Return("").Once()
-				mockConfig.On("GetString", "http.tls.ssl.cert").Return("").Once()
-				mockConfig.On("GetString", "http.tls.ssl.key").Return("").Once()
-
 				resource := resourceController{}
-				gin.GlobalMiddleware(func(ctx contractshttp.Context) {
+				gin.setMiddlewares([]contractshttp.Middleware{func(ctx contractshttp.Context) {
 					type customKey struct{}
 					var customKeyCtx customKey
 					ctx.WithValue(customKeyCtx, "context with custom key")
 					ctx.WithValue(2.2, "two point two")
 					ctx.WithValue("action", "update")
 					ctx.Request().Next()
-				})
+				}})
 				gin.Resource("/resource", resource)
 			},
 			method:     "PUT",
@@ -334,21 +262,15 @@ func TestGroup(t *testing.T) {
 		{
 			name: "Resource Update (PATCH)",
 			setup: func(req *http.Request) {
-				mockConfig.On("Get", "cors.paths").Return([]string{}).Once()
-				mockConfig.On("GetString", "http.tls.host").Return("").Once()
-				mockConfig.On("GetString", "http.tls.port").Return("").Once()
-				mockConfig.On("GetString", "http.tls.ssl.cert").Return("").Once()
-				mockConfig.On("GetString", "http.tls.ssl.key").Return("").Once()
-
 				resource := resourceController{}
-				gin.GlobalMiddleware(func(ctx contractshttp.Context) {
+				gin.setMiddlewares([]contractshttp.Middleware{func(ctx contractshttp.Context) {
 					type customKey struct{}
 					var customKeyCtx customKey
 					ctx.WithValue(customKeyCtx, "context with custom key")
 					ctx.WithValue(2.2, "two point two")
 					ctx.WithValue("action", "update")
 					ctx.Request().Next()
-				})
+				}})
 				gin.Resource("/resource", resource)
 			},
 			method:     "PATCH",
@@ -359,21 +281,15 @@ func TestGroup(t *testing.T) {
 		{
 			name: "Resource Destroy",
 			setup: func(req *http.Request) {
-				mockConfig.On("Get", "cors.paths").Return([]string{}).Once()
-				mockConfig.On("GetString", "http.tls.host").Return("").Once()
-				mockConfig.On("GetString", "http.tls.port").Return("").Once()
-				mockConfig.On("GetString", "http.tls.ssl.cert").Return("").Once()
-				mockConfig.On("GetString", "http.tls.ssl.key").Return("").Once()
-
 				resource := resourceController{}
-				gin.GlobalMiddleware(func(ctx contractshttp.Context) {
+				gin.setMiddlewares([]contractshttp.Middleware{func(ctx contractshttp.Context) {
 					type customKey struct{}
 					var customKeyCtx customKey
 					ctx.WithValue(customKeyCtx, "context with custom key")
 					ctx.WithValue(2.2, "two point two")
 					ctx.WithValue("action", "destroy")
 					ctx.Request().Next()
-				})
+				}})
 				gin.Resource("/resource", resource)
 			},
 			method:     "DELETE",
@@ -513,6 +429,7 @@ func TestGroup(t *testing.T) {
 				mockConfig.On("GetString", "http.tls.port").Return("").Once()
 				mockConfig.On("GetString", "http.tls.ssl.cert").Return("").Once()
 				mockConfig.On("GetString", "http.tls.ssl.key").Return("").Once()
+				mockConfig.On("GetInt", "http.request_timeout", 3).Return(1).Once()
 
 				gin.GlobalMiddleware(func(ctx contractshttp.Context) {
 					ctx.WithValue("global", "goravel")
@@ -612,4 +529,52 @@ func contextMiddleware2() contractshttp.Middleware {
 
 		ctx.Request().Next()
 	}
+}
+
+type resourceController struct{}
+
+func (c resourceController) Index(ctx contractshttp.Context) contractshttp.Response {
+	action := ctx.Value("action")
+
+	return ctx.Response().Json(http.StatusOK, contractshttp.Json{
+		"action": action,
+	})
+}
+
+func (c resourceController) Show(ctx contractshttp.Context) contractshttp.Response {
+	action := ctx.Value("action")
+	id := ctx.Request().Input("id")
+
+	return ctx.Response().Json(http.StatusOK, contractshttp.Json{
+		"action": action,
+		"id":     id,
+	})
+}
+
+func (c resourceController) Store(ctx contractshttp.Context) contractshttp.Response {
+	action := ctx.Value("action")
+
+	return ctx.Response().Json(http.StatusOK, contractshttp.Json{
+		"action": action,
+	})
+}
+
+func (c resourceController) Update(ctx contractshttp.Context) contractshttp.Response {
+	action := ctx.Value("action")
+	id := ctx.Request().Input("id")
+
+	return ctx.Response().Json(http.StatusOK, contractshttp.Json{
+		"action": action,
+		"id":     id,
+	})
+}
+
+func (c resourceController) Destroy(ctx contractshttp.Context) contractshttp.Response {
+	action := ctx.Value("action")
+	id := ctx.Request().Input("id")
+
+	return ctx.Response().Json(http.StatusOK, contractshttp.Json{
+		"action": action,
+		"id":     id,
+	})
 }

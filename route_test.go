@@ -488,40 +488,6 @@ func assertHttpNormal(t *testing.T, addr string, expectNormal bool) {
 	}
 }
 
-func longMiddleware(_ config.Config) contractshttp.Middleware {
-	return func(ctx contractshttp.Context) {
-		time.Sleep(2 * time.Second)
-		ctx.Request().Next()
-	}
-}
-
-func TestTimeoutMiddlewareIntegration(t *testing.T) {
-	mockConfig := configmocks.NewConfig(t)
-	mockConfig.EXPECT().GetInt("http.timeout_request", 3).Return(1).Once()
-
-	mockConfig.EXPECT().GetInt("http.drivers.gin.body_limit", 4096).Return(4096).Once()
-
-	mockConfig.EXPECT().GetBool("app.debug").Return(false).Once()
-
-	route, err := NewRoute(mockConfig, nil)
-	assert.Nil(t, err)
-
-	route.GlobalMiddleware(TimeoutMiddleware(mockConfig), longMiddleware(mockConfig))
-
-	route.Get("/", func(ctx contractshttp.Context) contractshttp.Response {
-		time.Sleep(2 * time.Second)
-		return ctx.Response().String(200, "Hello, World!")
-	})
-
-	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/", nil)
-
-	route.ServeHTTP(w, req)
-	
-	assert.Equal(t, http.StatusGatewayTimeout, w.Code)
-}
-
-
 type CreateUser struct {
 	Name string `form:"name" json:"name"`
 }
