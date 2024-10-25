@@ -506,7 +506,7 @@ func TestTimeoutMiddlewareIntegration(t *testing.T) {
 	route, err := NewRoute(mockConfig, nil)
 	assert.Nil(t, err)
 
-	route.GlobalMiddleware(TimeoutMiddleware(mockConfig), longMiddleware(mockConfig)
+	route.GlobalMiddleware(TimeoutMiddleware(mockConfig), longMiddleware(mockConfig))
 
 	route.Get("/", func(ctx contractshttp.Context) contractshttp.Response {
 		time.Sleep(2 * time.Second)
