@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/render"
@@ -78,15 +79,12 @@ func (r *Route) Fallback(handler httpcontract.HandlerFunc) {
 }
 
 func (r *Route) GlobalMiddleware(middlewares ...httpcontract.Middleware) {
-	middlewares = append(middlewares, Cors(), Tls(), TimeoutMiddleware(r.config))
-	r.instance.Use(middlewaresToGinHandlers(middlewares)...)
-	r.Router = NewGroup(
-		r.config,
-		r.instance.Group("/"),
-		"",
-		[]httpcontract.Middleware{},
-		[]httpcontract.Middleware{ResponseMiddleware()},
-	)
+	timeout := time.Duration(r.config.GetInt("http.request_timeout", 3)) * time.Second
+	defaultMiddlewares := []httpcontract.Middleware{
+		Cors(), Tls(), Timeout(timeout),
+	}
+	middlewares = append(defaultMiddlewares, middlewares...)
+	r.setMiddlewares(middlewares)
 }
 
 func (r *Route) Run(host ...string) error {
@@ -187,4 +185,15 @@ func (r *Route) outputRoutes() {
 			fmt.Printf("%-10s %s\n", item.Method, colonToBracket(item.Path))
 		}
 	}
+}
+
+func (r *Route) setMiddlewares(middlewares []httpcontract.Middleware) {
+	r.instance.Use(middlewaresToGinHandlers(middlewares)...)
+	r.Router = NewGroup(
+		r.config,
+		r.instance.Group("/"),
+		"",
+		[]httpcontract.Middleware{},
+		[]httpcontract.Middleware{ResponseMiddleware()},
+	)
 }
