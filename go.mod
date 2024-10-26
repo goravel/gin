@@ -12,7 +12,7 @@ require (
 	github.com/savioxavier/termlink v1.4.1
 	github.com/spf13/cast v1.7.0
 	github.com/stretchr/testify v1.9.0
-	github.com/unrolled/secure v1.16.0
+	github.com/unrolled/secure v1.17.0
 )
 
 require (
