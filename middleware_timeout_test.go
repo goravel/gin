@@ -21,7 +21,7 @@ func TestTimeoutMiddleware(t *testing.T) {
 	require.NoError(t, err)
 
 	route.Middleware(Timeout(1*time.Second)).Get("/timeout", func(ctx contractshttp.Context) contractshttp.Response {
-		time.Sleep(1 * time.Second)
+		time.Sleep(2 * time.Second)
 
 		return ctx.Response().Success().String("timeout")
 	})
