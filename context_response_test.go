@@ -146,6 +146,7 @@ func (s *ContextResponseSuite) TestOrigin() {
 	s.mockConfig.EXPECT().GetString("http.tls.port").Return("").Once()
 	s.mockConfig.EXPECT().GetString("http.tls.ssl.cert").Return("").Once()
 	s.mockConfig.EXPECT().GetString("http.tls.ssl.key").Return("").Once()
+	s.mockConfig.EXPECT().GetInt("http.request_timeout", 3).Return(1).Once()
 	ConfigFacade = s.mockConfig
 
 	s.route.GlobalMiddleware(func(ctx contractshttp.Context) {
