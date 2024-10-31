@@ -471,6 +471,31 @@ func TestStop(t *testing.T) {
 	}
 }
 
+func TestTest(t *testing.T) {
+	mockConfig := configmocks.NewConfig(t)
+	mockConfig.EXPECT().GetBool("app.debug").Return(true)
+	mockConfig.EXPECT().GetInt("http.drivers.gin.body_limit", 4096).Return(4096).Once()
+	route, err := NewRoute(mockConfig, nil)
+	assert.Nil(t, err)
+
+	route.Get("/", func(ctx contractshttp.Context) contractshttp.Response {
+		return ctx.Response().Success().String("Hello, Goravel!")
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+
+	resp, err := route.Test(req)
+
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	assert.Nil(t, err)
+	assert.Equal(t, "Hello, Goravel!", string(body))
+}
+
 func assertHttpNormal(t *testing.T, addr string, expectNormal bool) {
 	resp, err := http.DefaultClient.Get(addr)
 	if !expectNormal {
