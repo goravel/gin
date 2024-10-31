@@ -179,6 +179,10 @@ func (r *Route) Stop(ctx ...context.Context) error {
 	return nil
 }
 
+func (r *Route) Test(*http.Request) (*http.Response, error) {
+	panic("not support")
+}
+
 func (r *Route) outputRoutes() {
 	if r.config.GetBool("app.debug") && support.Env != support.EnvArtisan {
 		for _, item := range r.instance.Routes() {
