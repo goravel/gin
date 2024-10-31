@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -179,8 +180,12 @@ func (r *Route) Stop(ctx ...context.Context) error {
 	return nil
 }
 
-func (r *Route) Test(*http.Request) (*http.Response, error) {
-	panic("not support")
+func (r *Route) Test(request *http.Request) (*http.Response, error) {
+	recorder := httptest.NewRecorder()
+
+	r.ServeHTTP(recorder, request)
+
+	return recorder.Result(), nil
 }
 
 func (r *Route) outputRoutes() {
