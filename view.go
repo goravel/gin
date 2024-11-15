@@ -17,10 +17,13 @@ func NewView(instance *gin.Context) *View {
 }
 
 func (receive *View) Make(view string, data ...any) contractshttp.Response {
+	var shared map[string]any
 	if ViewFacade != nil {
-    		sharedData = ViewFacade.GetShared()
+		shared = ViewFacade.GetShared()
 	} else {
-    		fmt.Println("ViewFacade is nil")
+		fmt.Println("ViewFacade is nil")
+	}
+
 	if len(data) == 0 {
 		return &HtmlResponse{shared, receive.instance, view}
 	} else {
@@ -31,11 +34,9 @@ func (receive *View) Make(view string, data ...any) contractshttp.Response {
 			for key, value := range dataMap {
 				shared[key] = value
 			}
-
 			return &HtmlResponse{shared, receive.instance, view}
 		case reflect.Map:
 			fillShared(data[0], shared)
-
 			return &HtmlResponse{data[0], receive.instance, view}
 		default:
 			panic(fmt.Sprintf("make %s view failed, data must be map or struct", view))
@@ -45,13 +46,13 @@ func (receive *View) Make(view string, data ...any) contractshttp.Response {
 
 func (receive *View) First(views []string, data ...any) contractshttp.Response {
 	for _, view := range views {
-		if ViewFacade != nil {
-			if ViewFacade.Exists(view) {
-				return receive.Make(view, data...)
-			}
+		if ViewFacade != nil && ViewFacade.Exists(view) {
+			return receive.Make(view, data...)
 		} else {
-    			fmt.Println("ViewFacade is nil")
+			fmt.Println("ViewFacade is nil or view does not exist")
 		}
+	}
+
 	panic("no view exists")
 }
 
@@ -71,6 +72,7 @@ func structToMap(data any) map[string]any {
 		}
 		dbColumn := modelType.Field(i).Name
 		if modelValue.Field(i).Kind() == reflect.Pointer {
+			// Если поле - указатель, проверяем, не является ли оно nil
 			if modelValue.Field(i).IsNil() {
 				res[dbColumn] = nil
 			} else {
@@ -87,6 +89,7 @@ func structToMap(data any) map[string]any {
 func fillShared(data any, shared map[string]any) {
 	dataValue := reflect.ValueOf(data)
 	keys := dataValue.MapKeys()
+
 	for key, value := range shared {
 		exist := false
 		for _, k := range keys {
@@ -95,6 +98,7 @@ func fillShared(data any, shared map[string]any) {
 				break
 			}
 		}
+
 		if !exist {
 			dataValue.SetMapIndex(reflect.ValueOf(key), reflect.ValueOf(value))
 		}
