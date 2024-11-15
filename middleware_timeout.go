@@ -10,7 +10,7 @@ import (
 )
 
 // Timeout creates middleware to set a timeout for a request
-func Timeout(timeout time.Duration) contractshttp.Middleware {
+func Timeout(timeout time.Duration, recoverFunc func(ctx contractshttp.Context, err interface{})) contractshttp.Middleware {
 	return func(ctx contractshttp.Context) {
 		timeoutCtx, cancel := context.WithTimeout(ctx.Context(), timeout)
 		defer cancel()
@@ -22,12 +22,15 @@ func Timeout(timeout time.Duration) contractshttp.Middleware {
 		go func() {
 			defer func() {
 				if r := recover(); r != nil {
-					if LogFacade != nil {
-						LogFacade.Request(ctx.Request()).Error(r)
+					// Use the custom recoverFunc if provided, otherwise fallback to default behavior
+					if recoverFunc != nil {
+						recoverFunc(ctx, r)
+					} else {
+						if LogFacade != nil {
+							LogFacade.Request(ctx.Request()).Error(r)
+						}
+						_ = ctx.Response().Status(http.StatusInternalServerError).String("Internal Server Error").Render()
 					}
-
-					// TODO can be customized in https://github.com/goravel/goravel/issues/521
-					_ = ctx.Response().Status(http.StatusInternalServerError).String("Internal Server Error").Render()
 				}
 
 				close(done)
