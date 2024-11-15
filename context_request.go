@@ -34,9 +34,12 @@ type ContextRequest struct {
 func NewContextRequest(ctx *Context, log log.Log, validation contractsvalidate.Validation) contractshttp.ContextRequest {
 	httpBody, err := getHttpBody(ctx)
 	if err != nil {
-		LogFacade.Error(fmt.Sprintf("%+v", errors.Unwrap(err)))
+		if LogFacade != nil {
+        		LogFacade.Error(fmt.Sprintf("%+v", errors.Unwrap(err)))
+        	} else {
+            		fmt.Println("LogFacade is nil, error:", fmt.Sprintf("%+v", errors.Unwrap(err)))
+        	}
 	}
-
 	return &ContextRequest{ctx: ctx, instance: ctx.instance, httpBody: httpBody, log: log, validation: validation}
 }
 
