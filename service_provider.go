@@ -8,6 +8,7 @@ import (
 	"github.com/goravel/framework/contracts/validation"
 	"github.com/goravel/framework/errors"
 	"github.com/goravel/framework/support/color"
+	"os"
 )
 
 const RouteBinding = "goravel.gin.route"
@@ -35,13 +36,18 @@ func (receiver *ServiceProvider) Boot(app foundation.Application) {
 
 	if ConfigFacade = app.MakeConfig(); ConfigFacade == nil {
 		color.Errorln(errors.ConfigFacadeNotSet.SetModule(module))
+		shutdownOnCriticalError("ConfigFacade is not set")
 	}
+
 	if LogFacade = app.MakeLog(); LogFacade == nil {
 		color.Errorln(errors.LogFacadeNotSet.SetModule(module))
+		shutdownOnCriticalError("LogFacade is not set")
 	}
+
 	if ValidationFacade = app.MakeValidation(); ValidationFacade == nil {
 		color.Errorln(errors.New("validation facade is not initialized").SetModule(module))
 	}
+
 	if ViewFacade = app.MakeView(); ViewFacade == nil {
 		color.Errorln(errors.New("view facade is not initialized").SetModule(module))
 	}
@@ -49,4 +55,9 @@ func (receiver *ServiceProvider) Boot(app foundation.Application) {
 	app.Publishes("github.com/goravel/gin", map[string]string{
 		"config/cors.go": app.ConfigPath("cors.go"),
 	})
+}
+
+func shutdownOnCriticalError(message string) {
+	color.Errorln("Critical error:", message)
+	os.Exit(1) // Force exit to ensure the application does not run with missing dependencies
 }
