@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestiTmeoutMiddleware(t *testing.T) {
+func TestTmeoutMiddleware(t *testing.T) {
 	mockConfig := mocksconfig.NewConfig(t)
 	mockConfig.EXPECT().GetBool("app.debug").Return(true).Once()
 	mockConfig.EXPECT().GetInt("http.drivers.gin.body_limit", 4096).Return(4096).Once()
