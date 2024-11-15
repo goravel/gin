@@ -88,6 +88,21 @@ func (r *Route) GlobalMiddleware(middlewares ...httpcontract.Middleware) {
 	r.setMiddlewares(middlewares)
 }
 
+func (r *Route) Recover(recoverFunc func(ctx *gin.Context, err interface{})) {
+    r.instance.Use(func(ctx *gin.Context) {
+        defer func() {
+            if err := recover(); err != nil {
+                if recoverFunc != nil {
+                    recoverFunc(ctx, err)
+                } else {
+                    ctx.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
+                }
+            }
+        }()
+        ctx.Next()
+    })
+}
+
 func (r *Route) Run(host ...string) error {
 	if len(host) == 0 {
 		defaultHost := r.config.GetString("http.host")
