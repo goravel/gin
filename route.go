@@ -82,7 +82,7 @@ func (r *Route) Fallback(handler httpcontract.HandlerFunc) {
 func (r *Route) GlobalMiddleware(middlewares ...httpcontract.Middleware) {
 	timeout := time.Duration(r.config.GetInt("http.request_timeout", 3)) * time.Second
 	defaultMiddlewares := []httpcontract.Middleware{
-		Cors(), Tls(), Timeout(timeout),
+		Cors(), Tls(), Timeout(timeout, nil),
 	}
 	middlewares = append(defaultMiddlewares, middlewares...)
 	r.setMiddlewares(middlewares)
