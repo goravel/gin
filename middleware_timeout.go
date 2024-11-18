@@ -10,7 +10,7 @@ import (
 )
 
 // Timeout creates middleware to set a timeout for a request
-func Timeout(timeout time.Duration, recoverFunc func(ctx contractshttp.Context, err interface{})) contractshttp.Middleware {
+func Timeout(timeout time.Duration) contractshttp.Middleware {
 	return func(ctx contractshttp.Context) {
 		timeoutCtx, cancel := context.WithTimeout(ctx.Context(), timeout)
 		defer cancel()
@@ -22,17 +22,12 @@ func Timeout(timeout time.Duration, recoverFunc func(ctx contractshttp.Context, 
 		go func() {
 			defer func() {
 				if r := recover(); r != nil {
-					// Use the custom recoverFunc if provided, otherwise fallback to default behavior
-					if recoverFunc != nil {
-						recoverFunc(ctx, r)
-					} else {
-						if LogFacade != nil {
-							LogFacade.Request(ctx.Request()).Error(r)
+					Recover(func(ctx *gin.Context, err interface{}) {
+						if err != nil {
+							ctx.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
 						}
-						_ = ctx.Response().Status(http.StatusInternalServerError).String("Internal Server Error").Render()
-					}
+					})(ctx.Request().Origin().(*gin.Context), r)
 				}
-
 				close(done)
 			}()
 
