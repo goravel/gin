@@ -36,7 +36,6 @@ func (receiver *ServiceProvider) Boot(app foundation.Application) {
 
 	if ConfigFacade = app.MakeConfig(); ConfigFacade == nil {
 		color.Errorln(errors.ConfigFacadeNotSet.SetModule(module))
-		shutdownOnCriticalError("ConfigFacade is not set")
 	}
 
 	if LogFacade = app.MakeLog(); LogFacade == nil {
