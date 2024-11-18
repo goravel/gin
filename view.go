@@ -72,7 +72,6 @@ func structToMap(data any) map[string]any {
 		}
 		dbColumn := modelType.Field(i).Name
 		if modelValue.Field(i).Kind() == reflect.Pointer {
-			// Если поле - указатель, проверяем, не является ли оно nil
 			if modelValue.Field(i).IsNil() {
 				res[dbColumn] = nil
 			} else {
