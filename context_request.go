@@ -37,7 +37,7 @@ func NewContextRequest(ctx *Context, log log.Log, validation contractsvalidate.V
 		if LogFacade != nil {
         		LogFacade.Error(fmt.Sprintf("%+v", errors.Unwrap(err)))
         	} else {
-            		fmt.Println("LogFacade is nil, error:", fmt.Sprintf("%+v", errors.Unwrap(err)))
+            		color.Errorf("LogFacade is nil, error: %+v\n", errors.Unwrap(err))
         	}
 	}
 	return &ContextRequest{ctx: ctx, instance: ctx.instance, httpBody: httpBody, log: log, validation: validation}
