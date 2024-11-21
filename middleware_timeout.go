@@ -21,19 +21,16 @@ func Timeout(timeout time.Duration) contractshttp.Middleware {
 		done := make(chan struct{})
 
 		go func() {
-			defer func() {
-				if r := recover(); r != nil {
-					Recover(func(ctx *gin.Context, err interface{}) {
-						if err != nil {
-							ctx.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
-						}
-					})(ctx.Request().Origin().(*gin.Context), r)
-				}
-				close(done)
-			}()
+           	 	defer func() {
+                		if r := recover(); r != nil {
+                    			ginCtx := ctx.Request().Origin().(*gin.Context)
+                    			ginCtx.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
+                		}
+                		close(done)
+            		}()
 
-			ctx.Request().Next()
-		}()
+            		ctx.Request().Next()
+        	}()
 
 		select {
 		case <-done:
