@@ -23,8 +23,7 @@ func Timeout(timeout time.Duration) contractshttp.Middleware {
 		go func() {
            	 	defer func() {
                 		if r := recover(); r != nil {
-                    			ginCtx := ctx.Request().Origin().(*gin.Context)
-                    			ginCtx.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
+                    			ctx.Request().Origin().Context().AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
                 		}
                 		close(done)
             		}()
