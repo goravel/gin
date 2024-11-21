@@ -14,6 +14,7 @@ import (
 	"github.com/gookit/validate"
 	contractsfilesystem "github.com/goravel/framework/contracts/filesystem"
 	contractshttp "github.com/goravel/framework/contracts/http"
+	"github.com/goravel/framework/support/color"
 	"github.com/goravel/framework/contracts/log"
 	contractsession "github.com/goravel/framework/contracts/session"
 	contractsvalidate "github.com/goravel/framework/contracts/validation"
