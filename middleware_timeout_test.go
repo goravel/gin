@@ -22,15 +22,15 @@ func TestTimeoutMiddleware(t *testing.T) {
 	route, err := NewRoute(mockConfig, nil)
 	require.NoError(t, err)
 
-	route.Middleware(Timeout(1*time.Second, nil)).Get("/timeout", func(ctx contractshttp.Context) contractshttp.Response {
+	route.Middleware(Timeout(1*time.Second)).Get("/timeout", func(ctx contractshttp.Context) contractshttp.Response {
 		time.Sleep(2 * time.Second)
 
 		return ctx.Response().Success().String("timeout")
 	})
-	route.Middleware(Timeout(1*time.Second, nil)).Get("/normal", func(ctx contractshttp.Context) contractshttp.Response {
+	route.Middleware(Timeout(1*time.Second)).Get("/normal", func(ctx contractshttp.Context) contractshttp.Response {
 		return ctx.Response().Success().String("normal")
 	})
-	route.Middleware(Timeout(1*time.Second, nil)).Get("/panic", func(ctx contractshttp.Context) contractshttp.Response {
+	route.Middleware(Timeout(1*time.Second)).Get("/panic", func(ctx contractshttp.Context) contractshttp.Response {
 		panic(1)
 	})
 
