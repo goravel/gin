@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	contractshttp "github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/errors"
 )
