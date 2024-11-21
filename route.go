@@ -88,6 +88,7 @@ func (r *Route) GlobalMiddleware(middlewares ...httpcontract.Middleware) {
 	r.setMiddlewares(middlewares)
 }
 
+// the Recoverer must come first
 func (r *Route) Recover(callback func(ctx context.Context, err any)) {
     r.instance.Use(func(ctx *gin.Context) {
         defer func() {
