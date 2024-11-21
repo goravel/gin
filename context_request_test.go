@@ -44,7 +44,7 @@ func (s *ContextRequestSuite) SetupTest() {
 	ValidationFacade = validation.NewValidation()
 
 	var err error
-	route, err = NewRoute(s.mockConfig, nil)
+	route, err := NewRoute(s.mockConfig, nil)
 	s.Require().NotNil(route)
 	s.Require().NoError(err)
 	s.route = route
