@@ -31,7 +31,7 @@ func NewRoute(config config.Config, parameters map[string]any) (*Route, error) {
 	gin.DisableBindValidation()
 	engine := gin.New()
 	engine.MaxMultipartMemory = int64(config.GetInt("http.drivers.gin.body_limit", 4096)) << 10
-	engine.Use(gin.Recovery()) // recovery middleware
+	// engine.Use(gin.Recovery()) // recovery middleware
 
 	if debugLog := getDebugLog(config); debugLog != nil {
 		engine.Use(debugLog)
@@ -92,8 +92,8 @@ func (r *Route) Recover(callback func(ctx context.Context, err any)) {
     r.instance.Use(func(ctx *gin.Context) {
         defer func() {
             if err := recover(); err != nil {
-                if recoverFunc != nil {
-                    recoverFunc(ctx, err)
+                if callback != nil {
+                    callback(ctx, err)
                 } else {
                     ctx.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
                 }
