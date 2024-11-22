@@ -1,7 +1,6 @@
 package facades
 
 import (
-	"fmt"
 	"log"
 
 	"github.com/goravel/framework/contracts/route"
