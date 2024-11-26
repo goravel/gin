@@ -18,7 +18,7 @@ func NewView(instance *gin.Context) *View {
 
 func (receive *View) Make(view string, data ...any) contractshttp.Response {
 	var shared map[string]any
-	if ViewFacade != nil {
+	if ViewFacade == nil {
 		panic("ViewFacade is nil")
 	}
 	shared = ViewFacade.GetShared()
