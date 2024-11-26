@@ -14,6 +14,7 @@ import (
 	"github.com/gookit/validate"
 	contractsfilesystem "github.com/goravel/framework/contracts/filesystem"
 	contractshttp "github.com/goravel/framework/contracts/http"
+	"github.com/goravel/framework/support/color"
 	"github.com/goravel/framework/contracts/log"
 	contractsession "github.com/goravel/framework/contracts/session"
 	contractsvalidate "github.com/goravel/framework/contracts/validation"
@@ -34,9 +35,12 @@ type ContextRequest struct {
 func NewContextRequest(ctx *Context, log log.Log, validation contractsvalidate.Validation) contractshttp.ContextRequest {
 	httpBody, err := getHttpBody(ctx)
 	if err != nil {
-		LogFacade.Error(fmt.Sprintf("%+v", errors.Unwrap(err)))
+		if LogFacade != nil {
+        		LogFacade.Error(fmt.Sprintf("%+v", errors.Unwrap(err)))
+        	} else {
+            		color.Errorf("LogFacade is nil, error: %+v\n", errors.Unwrap(err))
+        	}
 	}
-
 	return &ContextRequest{ctx: ctx, instance: ctx.instance, httpBody: httpBody, log: log, validation: validation}
 }
 

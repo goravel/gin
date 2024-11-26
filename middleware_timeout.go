@@ -20,21 +20,15 @@ func Timeout(timeout time.Duration) contractshttp.Middleware {
 		done := make(chan struct{})
 
 		go func() {
-			defer func() {
-				if r := recover(); r != nil {
-					if LogFacade != nil {
-						LogFacade.Request(ctx.Request()).Error(r)
-					}
+           	 	defer func() {
+                		if r := recover(); r != nil {
+                    			ctx.Request().AbortWithStatusJson(http.StatusInternalServerError, map[string]interface{}{"error": "Internal Server Error"})
+                		}
+                		close(done)
+            		}()
 
-					// TODO can be customized in https://github.com/goravel/goravel/issues/521
-					_ = ctx.Response().Status(http.StatusInternalServerError).String("Internal Server Error").Render()
-				}
-
-				close(done)
-			}()
-
-			ctx.Request().Next()
-		}()
+            		ctx.Request().Next()
+        	}()
 
 		select {
 		case <-done:
