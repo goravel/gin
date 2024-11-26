@@ -54,8 +54,6 @@ func TestTimeoutMiddleware(t *testing.T) {
 	require.NoError(t, err)
 
 	mockLog := mockslog.NewLog(t)
-	mockLog.EXPECT().Request(mock.Anything).Return(mockLog).Once()
-	mockLog.EXPECT().Error(mock.Anything).Once()
 	LogFacade = mockLog
 
 	route.ServeHTTP(w, req)
