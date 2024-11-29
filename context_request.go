@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gookit/validate"
@@ -23,21 +24,19 @@ import (
 	"github.com/spf13/cast"
 )
 
+var contextRequestPool = sync.Pool{New: func() any {
+	return &ContextRequest{
+		log:        LogFacade,
+		validation: ValidationFacade,
+	}
+}}
+
 type ContextRequest struct {
 	ctx        *Context
 	instance   *gin.Context
 	httpBody   map[string]any
 	log        log.Log
 	validation contractsvalidate.Validation
-}
-
-func NewContextRequest(ctx *Context, log log.Log, validation contractsvalidate.Validation) contractshttp.ContextRequest {
-	httpBody, err := getHttpBody(ctx)
-	if err != nil {
-		LogFacade.Error(fmt.Sprintf("%+v", errors.Unwrap(err)))
-	}
-
-	return &ContextRequest{ctx: ctx, instance: ctx.instance, httpBody: httpBody, log: log, validation: validation}
 }
 
 func (r *ContextRequest) AbortWithStatus(code int) {
