@@ -26,7 +26,7 @@ func middlewaresToGinHandlers(middlewares []httpcontract.Middleware) []gin.Handl
 
 func handlerToGinHandler(handler httpcontract.HandlerFunc) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		context := contextPool.Get().(*Context)
+		context := NewContext().(*Context)
 		defer func() {
 			contextRequestPool.Put(context.request)
 			contextResponsePool.Put(context.response)
@@ -45,7 +45,7 @@ func handlerToGinHandler(handler httpcontract.HandlerFunc) gin.HandlerFunc {
 
 func middlewareToGinHandler(middleware httpcontract.Middleware) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		context := contextPool.Get().(*Context)
+		context := NewContext().(*Context)
 		defer func() {
 			contextRequestPool.Put(context.request)
 			contextResponsePool.Put(context.response)

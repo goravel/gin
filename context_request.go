@@ -39,6 +39,10 @@ type ContextRequest struct {
 	validation contractsvalidate.Validation
 }
 
+func NewContextRequest() contractshttp.ContextRequest {
+	return contextRequestPool.Get().(*ContextRequest)
+}
+
 func (r *ContextRequest) AbortWithStatus(code int) {
 	r.instance.AbortWithStatus(code)
 }

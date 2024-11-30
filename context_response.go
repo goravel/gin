@@ -19,6 +19,10 @@ type ContextResponse struct {
 	origin   contractshttp.ResponseOrigin
 }
 
+func NewContextResponse() contractshttp.ContextResponse {
+	return contextResponsePool.Get().(*ContextResponse)
+}
+
 func (r *ContextResponse) Cookie(cookie contractshttp.Cookie) contractshttp.ContextResponse {
 	if cookie.MaxAge == 0 {
 		if !cookie.Expires.IsZero() {
