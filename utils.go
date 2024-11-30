@@ -35,8 +35,6 @@ func handlerToGinHandler(handler httpcontract.HandlerFunc) gin.HandlerFunc {
 			contextPool.Put(context)
 		}()
 
-		context.instance = c
-
 		if response := handler(context); response != nil {
 			_ = response.Render()
 		}
@@ -53,8 +51,6 @@ func middlewareToGinHandler(middleware httpcontract.Middleware) gin.HandlerFunc 
 			context.response = nil
 			contextPool.Put(context)
 		}()
-
-		context.instance = c
 
 		middleware(context)
 	}
