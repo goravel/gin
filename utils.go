@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-
 	"github.com/goravel/framework/contracts/config"
 	httpcontract "github.com/goravel/framework/contracts/http"
 )
@@ -26,16 +25,34 @@ func middlewaresToGinHandlers(middlewares []httpcontract.Middleware) []gin.Handl
 }
 
 func handlerToGinHandler(handler httpcontract.HandlerFunc) gin.HandlerFunc {
-	return func(ginCtx *gin.Context) {
-		if response := handler(NewContext(ginCtx)); response != nil {
+	return func(c *gin.Context) {
+		context := NewContext(c)
+		defer func() {
+			contextRequestPool.Put(context.request)
+			contextResponsePool.Put(context.response)
+			context.request = nil
+			context.response = nil
+			contextPool.Put(context)
+		}()
+
+		if response := handler(context); response != nil {
 			_ = response.Render()
 		}
 	}
 }
 
-func middlewareToGinHandler(handler httpcontract.Middleware) gin.HandlerFunc {
-	return func(ginCtx *gin.Context) {
-		handler(NewContext(ginCtx))
+func middlewareToGinHandler(middleware httpcontract.Middleware) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		context := NewContext(c)
+		defer func() {
+			contextRequestPool.Put(context.request)
+			contextResponsePool.Put(context.response)
+			context.request = nil
+			context.response = nil
+			contextPool.Put(context)
+		}()
+
+		middleware(context)
 	}
 }
 

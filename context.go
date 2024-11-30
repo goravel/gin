@@ -3,10 +3,10 @@ package gin
 import (
 	"context"
 	"net/http/httptest"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
-
 	"github.com/goravel/framework/contracts/http"
 )
 
@@ -17,30 +17,43 @@ func Background() http.Context {
 	return NewContext(ctx)
 }
 
+var contextPool = sync.Pool{New: func() any {
+	return &Context{}
+}}
+
 type Context struct {
 	instance *gin.Context
 	request  http.ContextRequest
+	response http.ContextResponse
 }
 
-func NewContext(ctx *gin.Context) http.Context {
-	return &Context{instance: ctx}
+func NewContext(c *gin.Context) *Context {
+	ctx := contextPool.Get().(*Context)
+	ctx.instance = c
+	return ctx
 }
 
 func (c *Context) Request() http.ContextRequest {
 	if c.request == nil {
-		c.request = NewContextRequest(c, LogFacade, ValidationFacade)
+		request := NewContextRequest(c, LogFacade, ValidationFacade)
+		c.request = request
 	}
 
 	return c.request
 }
 
 func (c *Context) Response() http.ContextResponse {
-	responseOrigin := c.Value("responseOrigin")
-	if responseOrigin != nil {
-		return NewContextResponse(c.instance, responseOrigin.(http.ResponseOrigin))
+	if c.response == nil {
+		response := NewContextResponse(c.instance, &BodyWriter{ResponseWriter: c.instance.Writer})
+		c.response = response
 	}
 
-	return NewContextResponse(c.instance, &BodyWriter{ResponseWriter: c.instance.Writer})
+	responseOrigin := c.Value("responseOrigin")
+	if responseOrigin != nil {
+		c.response.(*ContextResponse).origin = responseOrigin.(http.ResponseOrigin)
+	}
+
+	return c.response
 }
 
 func (c *Context) WithValue(key any, value any) {
