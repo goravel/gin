@@ -19,7 +19,7 @@ type ContextResponse struct {
 	origin   contractshttp.ResponseOrigin
 }
 
-func NewContextResponse(instance *gin.Context, origin contractshttp.ResponseOrigin) *ContextResponse {
+func NewContextResponse(instance *gin.Context, origin contractshttp.ResponseOrigin) contractshttp.ContextResponse {
 	response := contextResponsePool.Get().(*ContextResponse)
 	response.instance = instance
 	response.origin = origin
