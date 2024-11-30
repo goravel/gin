@@ -34,7 +34,7 @@ type ContextRequest struct {
 func NewContextRequest(ctx *Context, log log.Log, validation contractsvalidate.Validation) contractshttp.ContextRequest {
 	postData, err := getPostData(ctx)
 	if err != nil {
-		LogFacade.Error(fmt.Sprintf("%+v", errors.Unwrap(err)))
+		LogFacade.Error(fmt.Sprintf("%+v", err))
 	}
 
 	return &ContextRequest{ctx: ctx, instance: ctx.instance, postData: postData, log: log, validation: validation}
@@ -472,11 +472,13 @@ func getPostData(ctx *Context) (map[string]any, error) {
 			return nil, fmt.Errorf("retrieve json error: %v", err)
 		}
 
-		if err := json.Unmarshal(bodyBytes, &data); err != nil {
-			return nil, fmt.Errorf("decode json [%v] error: %v", string(bodyBytes), err)
-		}
+		if len(bodyBytes) > 0 {
+			if err := json.Unmarshal(bodyBytes, &data); err != nil {
+				return nil, fmt.Errorf("decode json [%v] error: %v", string(bodyBytes), err)
+			}
 
-		request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+			request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+		}
 	}
 
 	if contentType == "multipart/form-data" {
