@@ -14,7 +14,7 @@ const goravelContextKey = "goravel_contextKey"
 
 func Background() http.Context {
 	ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
-	return &Context{instance: ctx}
+	return NewContext(ctx)
 }
 
 var contextPool = sync.Pool{New: func() any {
