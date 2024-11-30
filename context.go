@@ -2,8 +2,6 @@ package gin
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"net/http/httptest"
 	"sync"
 	"time"
@@ -29,20 +27,15 @@ type Context struct {
 	response http.ContextResponse
 }
 
-func NewContext() *Context {
-	return contextPool.Get().(*Context)
+func NewContext(c *gin.Context) *Context {
+	ctx := contextPool.Get().(*Context)
+	ctx.instance = c
+	return ctx
 }
 
 func (c *Context) Request() http.ContextRequest {
 	if c.request == nil {
-		request := NewContextRequest()
-		httpBody, err := getHttpBody(c)
-		if err != nil {
-			LogFacade.Error(fmt.Sprintf("%+v", errors.Unwrap(err)))
-		}
-		request.ctx = c
-		request.instance = c.instance
-		request.httpBody = httpBody
+		request := NewContextRequest(c, LogFacade, ValidationFacade)
 		c.request = request
 	}
 
@@ -51,16 +44,13 @@ func (c *Context) Request() http.ContextRequest {
 
 func (c *Context) Response() http.ContextResponse {
 	if c.response == nil {
-		response := NewContextResponse()
-		response.instance = c.instance
+		response := NewContextResponse(c.instance, &BodyWriter{ResponseWriter: c.instance.Writer})
 		c.response = response
 	}
 
 	responseOrigin := c.Value("responseOrigin")
 	if responseOrigin != nil {
 		c.response.(*ContextResponse).origin = responseOrigin.(http.ResponseOrigin)
-	} else {
-		c.response.(*ContextResponse).origin = &BodyWriter{ResponseWriter: c.instance.Writer}
 	}
 
 	return c.response

@@ -39,8 +39,17 @@ type ContextRequest struct {
 	validation contractsvalidate.Validation
 }
 
-func NewContextRequest() *ContextRequest {
-	return contextRequestPool.Get().(*ContextRequest)
+func NewContextRequest(ctx *Context, log log.Log, validation contractsvalidate.Validation) contractshttp.ContextRequest {
+	request := contextRequestPool.Get().(*ContextRequest)
+	httpBody, err := getHttpBody(ctx)
+	if err != nil {
+		log.Error(fmt.Sprintf("%+v", errors.Unwrap(err)))
+	}
+	request.ctx = ctx
+	request.instance = ctx.instance
+	request.httpBody = httpBody
+	request.validation = validation
+	return request
 }
 
 func (r *ContextRequest) AbortWithStatus(code int) {

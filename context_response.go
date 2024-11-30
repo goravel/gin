@@ -19,8 +19,11 @@ type ContextResponse struct {
 	origin   contractshttp.ResponseOrigin
 }
 
-func NewContextResponse() *ContextResponse {
-	return contextResponsePool.Get().(*ContextResponse)
+func NewContextResponse(instance *gin.Context, origin contractshttp.ResponseOrigin) *ContextResponse {
+	response := contextResponsePool.Get().(*ContextResponse)
+	response.instance = instance
+	response.origin = origin
+	return response
 }
 
 func (r *ContextResponse) Cookie(cookie contractshttp.Cookie) contractshttp.ContextResponse {
