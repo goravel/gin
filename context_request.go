@@ -39,7 +39,7 @@ type ContextRequest struct {
 	validation contractsvalidate.Validation
 }
 
-func NewContextRequest() contractshttp.ContextRequest {
+func NewContextRequest() *ContextRequest {
 	return contextRequestPool.Get().(*ContextRequest)
 }
 

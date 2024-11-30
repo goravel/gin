@@ -19,7 +19,7 @@ type ContextResponse struct {
 	origin   contractshttp.ResponseOrigin
 }
 
-func NewContextResponse() contractshttp.ContextResponse {
+func NewContextResponse() *ContextResponse {
 	return contextResponsePool.Get().(*ContextResponse)
 }
 

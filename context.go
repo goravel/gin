@@ -29,13 +29,13 @@ type Context struct {
 	response http.ContextResponse
 }
 
-func NewContext() http.Context {
+func NewContext() *Context {
 	return contextPool.Get().(*Context)
 }
 
 func (c *Context) Request() http.ContextRequest {
 	if c.request == nil {
-		request := NewContextRequest().(*ContextRequest)
+		request := NewContextRequest()
 		httpBody, err := getHttpBody(c)
 		if err != nil {
 			LogFacade.Error(fmt.Sprintf("%+v", errors.Unwrap(err)))
@@ -51,7 +51,7 @@ func (c *Context) Request() http.ContextRequest {
 
 func (c *Context) Response() http.ContextResponse {
 	if c.response == nil {
-		response := NewContextResponse().(*ContextResponse)
+		response := NewContextResponse()
 		response.instance = c.instance
 		c.response = response
 	}
