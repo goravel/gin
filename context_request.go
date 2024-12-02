@@ -43,7 +43,7 @@ func NewContextRequest(ctx *Context, log log.Log, validation contractsvalidate.V
 	request := contextRequestPool.Get().(*ContextRequest)
 	httpBody, err := getHttpBody(ctx)
 	if err != nil {
-		log.Error(fmt.Sprintf("%+v", errors.Unwrap(err)))
+		log.Error(fmt.Sprintf("%+v", err))
 	}
 	request.ctx = ctx
 	request.instance = ctx.instance
@@ -476,11 +476,13 @@ func getHttpBody(ctx *Context) (map[string]any, error) {
 			return nil, fmt.Errorf("retrieve json error: %v", err)
 		}
 
-		if err := json.Unmarshal(bodyBytes, &data); err != nil {
-			return nil, fmt.Errorf("decode json [%v] error: %v", string(bodyBytes), err)
-		}
+		if len(bodyBytes) > 0 {
+			if err := json.Unmarshal(bodyBytes, &data); err != nil {
+				return nil, fmt.Errorf("decode json [%v] error: %v", string(bodyBytes), err)
+			}
 
-		request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+			request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+		}
 	}
 
 	if contentType == "multipart/form-data" {
