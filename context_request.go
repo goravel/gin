@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/goravel/framework/support/str"
 	"io"
 	"net/http"
 	"reflect"
@@ -21,6 +20,7 @@ import (
 	contractsvalidate "github.com/goravel/framework/contracts/validation"
 	"github.com/goravel/framework/filesystem"
 	"github.com/goravel/framework/support/json"
+	"github.com/goravel/framework/support/str"
 	"github.com/goravel/framework/validation"
 	"github.com/spf13/cast"
 )
@@ -295,7 +295,11 @@ func (r *ContextRequest) Input(key string, defaultValue ...string) string {
 
 func (r *ContextRequest) InputArray(key string, defaultValue ...[]string) []string {
 	if valueFromHttpBody := r.getValueFromHttpBody(key); valueFromHttpBody != nil {
-		return cast.ToStringSlice(valueFromHttpBody)
+		if value := cast.ToStringSlice(valueFromHttpBody); value == nil {
+			return []string{}
+		} else {
+			return value
+		}
 	}
 
 	if value, exist := r.instance.GetQueryArray(key); exist {

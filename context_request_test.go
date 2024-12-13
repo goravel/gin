@@ -898,12 +898,14 @@ func (s *ContextRequestSuite) TestInputMap_Default() {
 func (s *ContextRequestSuite) TestInputMap_Empty() {
 	s.route.Post("/input-map/empty/{id}", func(ctx contractshttp.Context) contractshttp.Response {
 		return ctx.Response().Success().Json(contractshttp.Json{
-			"name": ctx.Request().InputMap("name"),
+			"name": ctx.Request().InputMap("name", map[string]string{
+				"a": "b",
+			}),
 		})
 	})
 
 	payload := strings.NewReader(`{
-		"id": {"a": "3", "b": "4"}
+		"name": {}
 	}`)
 	req, err := http.NewRequest("POST", "/input-map/empty/1?id=2", payload)
 	s.Require().Nil(err)
