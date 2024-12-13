@@ -652,11 +652,14 @@ func (s *ContextRequestSuite) TestInput_Route() {
 func (s *ContextRequestSuite) TestInput_Empty() {
 	s.route.Post("/input/empty/{id}", func(ctx contractshttp.Context) contractshttp.Response {
 		return ctx.Response().Success().Json(contractshttp.Json{
-			"id1": ctx.Request().Input("id1"),
+			"id1": ctx.Request().Input("id1", "a"),
 		})
 	})
 
-	req, err := http.NewRequest("POST", "/input/empty/1", nil)
+	payload := strings.NewReader(`{
+		"id1": ""
+	}`)
+	req, err := http.NewRequest("POST", "/input/empty/1", payload)
 	s.Require().Nil(err)
 
 	req.Header.Set("Content-Type", "application/json")
@@ -669,7 +672,7 @@ func (s *ContextRequestSuite) TestInput_Empty() {
 func (s *ContextRequestSuite) TestInput_Default() {
 	s.route.Post("/input/default/{id}", func(ctx contractshttp.Context) contractshttp.Response {
 		return ctx.Response().Success().Json(contractshttp.Json{
-			"id1": ctx.Request().Input("id1", "2"),
+			"id1": ctx.Request().Input("id1", "a"),
 		})
 	})
 
@@ -679,7 +682,7 @@ func (s *ContextRequestSuite) TestInput_Default() {
 	req.Header.Set("Content-Type", "application/json")
 	code, body, _, _ := s.request(req)
 
-	s.Equal("{\"id1\":\"2\"}", body)
+	s.Equal("{\"id1\":\"a\"}", body)
 	s.Equal(http.StatusOK, code)
 }
 
@@ -785,12 +788,12 @@ func (s *ContextRequestSuite) TestInputArray_Default() {
 func (s *ContextRequestSuite) TestInputArray_Empty() {
 	s.route.Post("/input-array/empty/{id}", func(ctx contractshttp.Context) contractshttp.Response {
 		return ctx.Response().Success().Json(contractshttp.Json{
-			"name": ctx.Request().InputArray("name"),
+			"name": ctx.Request().InputArray("name", []string{"a", "b"}),
 		})
 	})
 
 	payload := strings.NewReader(`{
-		"id": ["id 0", "id 1"]
+		"name": []
 	}`)
 	req, err := http.NewRequest("POST", "/input-array/empty/1?id=2", payload)
 	s.Require().Nil(err)
