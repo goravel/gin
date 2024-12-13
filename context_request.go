@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gookit/validate"
@@ -24,6 +25,13 @@ import (
 	"github.com/spf13/cast"
 )
 
+var contextRequestPool = sync.Pool{New: func() any {
+	return &ContextRequest{
+		log:        LogFacade,
+		validation: ValidationFacade,
+	}
+}}
+
 type ContextRequest struct {
 	ctx        *Context
 	instance   *gin.Context
@@ -33,6 +41,7 @@ type ContextRequest struct {
 }
 
 func NewContextRequest(ctx *Context, log log.Log, validation contractsvalidate.Validation) contractshttp.ContextRequest {
+	request := contextRequestPool.Get().(*ContextRequest)
 	httpBody, err := getHttpBody(ctx)
 	if err != nil {
 		if LogFacade != nil {
@@ -468,11 +477,13 @@ func getHttpBody(ctx *Context) (map[string]any, error) {
 			return nil, fmt.Errorf("retrieve json error: %v", err)
 		}
 
-		if err := json.Unmarshal(bodyBytes, &data); err != nil {
-			return nil, fmt.Errorf("decode json [%v] error: %v", string(bodyBytes), err)
-		}
+		if len(bodyBytes) > 0 {
+			if err := json.Unmarshal(bodyBytes, &data); err != nil {
+				return nil, fmt.Errorf("decode json [%v] error: %v", string(bodyBytes), err)
+			}
 
-		request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+			request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+		}
 	}
 
 	if contentType == "multipart/form-data" {
