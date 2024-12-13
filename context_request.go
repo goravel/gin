@@ -50,7 +50,12 @@ func NewContextRequest(ctx *Context, log log.Log, validation contractsvalidate.V
             		color.Errorf("LogFacade is nil, error: %+v\n", errors.Unwrap(err))
         	}
 	}
-	return &ContextRequest{ctx: ctx, instance: ctx.instance, httpBody: httpBody, log: log, validation: validation}
+	request.ctx = ctx
+	request.instance = ctx.instance
+	request.httpBody = httpBody
+	request.log = log
+	request.validation = validation
+	return request
 }
 
 func (r *ContextRequest) AbortWithStatus(code int) {
