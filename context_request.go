@@ -303,6 +303,10 @@ func (r *ContextRequest) InputArray(key string, defaultValue ...[]string) []stri
 	}
 
 	if value, exist := r.instance.GetQueryArray(key); exist {
+		if len(value) == 1 && value[0] == "" {
+			return []string{}
+		}
+
 		return value
 	}
 
@@ -322,8 +326,8 @@ func (r *ContextRequest) InputMap(key string, defaultValue ...map[string]string)
 		return cast.ToStringMapString(valueFromHttpBody)
 	}
 
-	if value, exist := r.instance.GetQueryMap(key); exist {
-		return value
+	if _, exist := r.instance.GetQuery(key); exist {
+		return r.instance.QueryMap(key)
 	}
 
 	if len(defaultValue) > 0 {
