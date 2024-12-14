@@ -20,6 +20,7 @@ import (
 	contractsvalidate "github.com/goravel/framework/contracts/validation"
 	"github.com/goravel/framework/filesystem"
 	"github.com/goravel/framework/support/json"
+	"github.com/goravel/framework/support/str"
 	"github.com/goravel/framework/validation"
 	"github.com/spf13/cast"
 )
@@ -277,28 +278,43 @@ func (r *ContextRequest) Input(key string, defaultValue ...string) string {
 		}
 	}
 
-	if r.instance.Query(key) != "" {
-		return r.instance.Query(key)
+	if value, exist := r.instance.GetQuery(key); exist {
+		return value
 	}
 
-	value := r.instance.Param(key)
-	if len(value) == 0 && len(defaultValue) > 0 {
-		return defaultValue[0]
-	}
-
-	return value
-}
-
-func (r *ContextRequest) InputArray(key string, defaultValue ...[]string) []string {
-	if valueFromHttpBody := r.getValueFromHttpBody(key); valueFromHttpBody != nil {
-		return cast.ToStringSlice(valueFromHttpBody)
+	if value, exist := r.instance.Params.Get(key); exist {
+		return value
 	}
 
 	if len(defaultValue) > 0 {
 		return defaultValue[0]
-	} else {
-		return []string{}
 	}
+
+	return ""
+}
+
+func (r *ContextRequest) InputArray(key string, defaultValue ...[]string) []string {
+	if valueFromHttpBody := r.getValueFromHttpBody(key); valueFromHttpBody != nil {
+		if value := cast.ToStringSlice(valueFromHttpBody); value == nil {
+			return []string{}
+		} else {
+			return value
+		}
+	}
+
+	if value, exist := r.instance.GetQueryArray(key); exist {
+		return value
+	}
+
+	if value, exist := r.instance.Params.Get(key); exist {
+		return str.Of(value).Split(",")
+	}
+
+	if len(defaultValue) > 0 {
+		return defaultValue[0]
+	}
+
+	return []string{}
 }
 
 func (r *ContextRequest) InputMap(key string, defaultValue ...map[string]string) map[string]string {
@@ -306,11 +322,15 @@ func (r *ContextRequest) InputMap(key string, defaultValue ...map[string]string)
 		return cast.ToStringMapString(valueFromHttpBody)
 	}
 
+	if value, exist := r.instance.GetQueryMap(key); exist {
+		return value
+	}
+
 	if len(defaultValue) > 0 {
 		return defaultValue[0]
-	} else {
-		return map[string]string{}
 	}
+
+	return map[string]string{}
 }
 
 func (r *ContextRequest) InputInt(key string, defaultValue ...int) int {
