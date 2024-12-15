@@ -1,8 +1,10 @@
 package gin
 
 import (
+	"net/http/httptest"
 	"testing"
 
+	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -14,7 +16,9 @@ func TestContext(t *testing.T) {
 	var customTypeKey customType
 	var anotherCustomTypeKey anotherCustomType
 
-	httpCtx := Background()
+	ginCtx, _ := gin.CreateTestContext(httptest.NewRecorder())
+	ginCtx.Request = httptest.NewRequest("GET", "/", nil)
+	httpCtx := NewContext(ginCtx)
 	httpCtx.WithValue("Hello", "world")
 	httpCtx.WithValue("Hi", "Goravel")
 	httpCtx.WithValue(customTypeKey, "halo")
