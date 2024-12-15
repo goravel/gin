@@ -111,7 +111,11 @@ func (c *Context) Err() error {
 }
 
 func (c *Context) Value(key any) any {
-	return c.getGoravelContextValues()[key]
+	if value, exist := c.getGoravelContextValues()[key]; exist {
+		return value
+	}
+
+	return c.instance.Request.Context().Value(key)
 }
 
 func (c *Context) Instance() *gin.Context {
