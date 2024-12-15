@@ -157,7 +157,7 @@ func (r *ContextRequest) Host() string {
 }
 
 func (r *ContextRequest) HasSession() bool {
-	_, ok := r.ctx.Value("session").(contractsession.Session)
+	_, ok := r.ctx.Value(sessionKey).(contractsession.Session)
 	return ok
 }
 
@@ -385,7 +385,7 @@ func (r *ContextRequest) RouteInt64(key string) int64 {
 }
 
 func (r *ContextRequest) Session() contractsession.Session {
-	s, ok := r.ctx.Value("session").(contractsession.Session)
+	s, ok := r.ctx.Value(sessionKey).(contractsession.Session)
 	if !ok {
 		return nil
 	}
@@ -393,7 +393,7 @@ func (r *ContextRequest) Session() contractsession.Session {
 }
 
 func (r *ContextRequest) SetSession(session contractsession.Session) contractshttp.ContextRequest {
-	r.ctx.WithValue("session", session)
+	r.ctx.WithValue(sessionKey, session)
 
 	return r
 }
