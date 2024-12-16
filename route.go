@@ -4,8 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/cloudflare/tableflip"
+	"log"
+	"net"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -108,11 +114,7 @@ func (r *Route) Run(host ...string) error {
 		MaxHeaderBytes: r.config.GetInt("http.drivers.gin.header_limit", 4096) << 10,
 	}
 
-	if err := r.server.ListenAndServe(); errors.Is(err, http.ErrServerClosed) {
-		return nil
-	} else {
-		return err
-	}
+	return r.start()
 }
 
 func (r *Route) RunTLS(host ...string) error {
@@ -160,6 +162,22 @@ func (r *Route) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	r.instance.ServeHTTP(writer, request)
 }
 
+func (r *Route) Listen(l net.Listener) error {
+	r.outputRoutes()
+	color.Green().Println(termlink.Link("[HTTP] Listening and serving HTTP on", l.Addr().String()))
+	r.server = &http.Server{
+		Addr:           l.Addr().String(),
+		Handler:        http.AllowQuerySemicolons(r.instance),
+		MaxHeaderBytes: r.config.GetInt("http.drivers.gin.header_limit", 4096) << 10,
+	}
+
+	if err := r.server.Serve(l); !errors.Is(err, http.ErrServerClosed) {
+		return err
+	}
+
+	return nil
+}
+
 func (r *Route) Stop(ctx ...context.Context) error {
 	c := context.Background()
 	if len(ctx) > 0 {
@@ -200,4 +218,55 @@ func (r *Route) setMiddlewares(middlewares []httpcontract.Middleware) {
 		[]httpcontract.Middleware{},
 		[]httpcontract.Middleware{ResponseMiddleware()},
 	)
+}
+
+func (r *Route) start() error {
+	upg, err := tableflip.New(tableflip.Options{})
+	if err != nil {
+		return err
+	}
+	defer upg.Stop()
+
+	// Listen for the process signal to trigger the tableflip upgrade.
+	go func() {
+		sig := make(chan os.Signal, 1)
+		signal.Notify(sig, syscall.SIGHUP)
+		for range sig {
+			if err = upg.Upgrade(); err != nil {
+				log.Println("[Graceful] upgrade failed:", err)
+			}
+		}
+	}()
+
+	ln, err := upg.Listen("tcp", r.server.Addr)
+	if err != nil {
+		return err
+	}
+	defer ln.Close()
+
+	fmt.Println("[HTTP] listening and serving on", r.server.Addr)
+	go func() {
+		if err = r.server.Serve(ln); !errors.Is(err, http.ErrServerClosed) {
+			log.Println("[HTTP] server error:", err)
+		}
+	}()
+
+	// tableflip ready
+	if err = upg.Ready(); err != nil {
+		return err
+	}
+
+	fmt.Println("[Graceful] ready for upgrade")
+	<-upg.Exit()
+
+	// Make sure to set a deadline on exiting the process
+	// after upg.Exit() is closed. No new upgrades can be
+	// performed if the parent doesn't exit.
+	time.AfterFunc(60*time.Second, func() {
+		log.Println("[Graceful] shutdown timeout, force exit")
+		os.Exit(1)
+	})
+
+	// Wait for connections to drain.
+	return r.server.Shutdown(context.Background())
 }

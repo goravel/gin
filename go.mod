@@ -5,6 +5,7 @@ go 1.22.7
 toolchain go1.23.4
 
 require (
+	github.com/cloudflare/tableflip v1.2.3
 	github.com/gin-gonic/gin v1.10.0
 	github.com/gookit/validate v1.5.3
 	github.com/goravel/framework v1.14.1-0.20241214083012-9527d29ad584
