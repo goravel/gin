@@ -116,7 +116,7 @@ func (r *Route) ListenTLS(l net.Listener, certFile, keyFile string) error {
 		MaxHeaderBytes: r.config.GetInt("http.drivers.gin.header_limit", 4096) << 10,
 	}
 
-	if err := r.tlsServer.ServeTLS(l, certFile, keyFile); errors.Is(err, http.ErrServerClosed) {
+	if err := r.tlsServer.ServeTLS(l, certFile, keyFile); !errors.Is(err, http.ErrServerClosed) {
 		return err
 	}
 
@@ -143,7 +143,7 @@ func (r *Route) Run(host ...string) error {
 		MaxHeaderBytes: r.config.GetInt("http.drivers.gin.header_limit", 4096) << 10,
 	}
 
-	if err := r.server.ListenAndServe(); errors.Is(err, http.ErrServerClosed) {
+	if err := r.server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
 		return err
 	}
 
@@ -184,7 +184,7 @@ func (r *Route) RunTLSWithCert(host, certFile, keyFile string) error {
 		MaxHeaderBytes: r.config.GetInt("http.drivers.gin.header_limit", 4096) << 10,
 	}
 
-	if err := r.tlsServer.ListenAndServeTLS(certFile, keyFile); errors.Is(err, http.ErrServerClosed) {
+	if err := r.tlsServer.ListenAndServeTLS(certFile, keyFile); !errors.Is(err, http.ErrServerClosed) {
 		return err
 	}
 
