@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"time"
@@ -86,6 +87,40 @@ func (r *Route) GlobalMiddleware(middlewares ...httpcontract.Middleware) {
 	}
 	middlewares = append(defaultMiddlewares, middlewares...)
 	r.setMiddlewares(middlewares)
+}
+
+func (r *Route) Listen(l net.Listener) error {
+	r.outputRoutes()
+	color.Green().Println(termlink.Link("[HTTP] Listening and serving HTTP on", "http://"+l.Addr().String()))
+
+	r.server = &http.Server{
+		Addr:           l.Addr().String(),
+		Handler:        http.AllowQuerySemicolons(r.instance),
+		MaxHeaderBytes: r.config.GetInt("http.drivers.gin.header_limit", 4096) << 10,
+	}
+
+	if err := r.server.Serve(l); errors.Is(err, http.ErrServerClosed) {
+		return nil
+	} else {
+		return err
+	}
+}
+
+func (r *Route) ListenTLS(l net.Listener, certFile, keyFile string) error {
+	r.outputRoutes()
+	color.Green().Println(termlink.Link("[HTTPS] Listening and serving HTTPS on", "https://"+l.Addr().String()))
+
+	r.tlsServer = &http.Server{
+		Addr:           l.Addr().String(),
+		Handler:        http.AllowQuerySemicolons(r.instance),
+		MaxHeaderBytes: r.config.GetInt("http.drivers.gin.header_limit", 4096) << 10,
+	}
+
+	if err := r.tlsServer.ServeTLS(l, certFile, keyFile); errors.Is(err, http.ErrServerClosed) {
+		return nil
+	} else {
+		return err
+	}
 }
 
 func (r *Route) Run(host ...string) error {
