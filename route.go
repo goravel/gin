@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/cloudflare/tableflip"
 	"log"
-	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -160,22 +159,6 @@ func (r *Route) RunTLSWithCert(host, certFile, keyFile string) error {
 
 func (r *Route) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	r.instance.ServeHTTP(writer, request)
-}
-
-func (r *Route) Listen(l net.Listener) error {
-	r.outputRoutes()
-	color.Green().Println(termlink.Link("[HTTP] Listening and serving HTTP on", l.Addr().String()))
-	r.server = &http.Server{
-		Addr:           l.Addr().String(),
-		Handler:        http.AllowQuerySemicolons(r.instance),
-		MaxHeaderBytes: r.config.GetInt("http.drivers.gin.header_limit", 4096) << 10,
-	}
-
-	if err := r.server.Serve(l); !errors.Is(err, http.ErrServerClosed) {
-		return err
-	}
-
-	return nil
 }
 
 func (r *Route) Stop(ctx ...context.Context) error {
