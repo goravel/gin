@@ -66,7 +66,7 @@ func TestListen(t *testing.T) {
 				go func() {
 					l, err := net.Listen("tcp", host)
 					assert.Nil(t, err)
-					assert.EqualError(t, route.Listen(l), "port can't be empty")
+					assert.Nil(t, route.Listen(l))
 				}()
 				time.Sleep(1 * time.Second)
 
