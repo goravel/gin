@@ -106,7 +106,11 @@ func (r *Route) Listen(l net.Listener) error {
 	return nil
 }
 
-func (r *Route) ListenTLS(l net.Listener, certFile, keyFile string) error {
+func (r *Route) ListenTLS(l net.Listener) error {
+	return r.ListenTLSWithCert(l, r.config.GetString("http.tls.ssl.cert"), r.config.GetString("http.tls.ssl.key"))
+}
+
+func (r *Route) ListenTLSWithCert(l net.Listener, certFile, keyFile string) error {
 	r.outputRoutes()
 	color.Green().Println(termlink.Link("[HTTPS] Listening and serving HTTPS on", "https://"+l.Addr().String()))
 
