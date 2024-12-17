@@ -95,7 +95,7 @@ func HandleRecover(ctx httpcontract.Context, recoverCallback func(ctx context.Co
         if recoverCallback != nil {
             recoverCallback(ctx, err)
         } else {
-            ctx.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
+            ctx.AbortWithStatusJson(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
         }
     }
 }
