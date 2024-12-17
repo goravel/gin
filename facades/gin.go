@@ -8,9 +8,6 @@ import (
 )
 
 func Route(driver string) route.Route {
-	if gin.App == nil {
-		panic("App is nil")
-	}
 	instance, err := gin.App.MakeWith(gin.RouteBinding, map[string]any{
 		"driver": driver,
 	})
