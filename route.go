@@ -18,6 +18,8 @@ import (
 	"github.com/savioxavier/termlink"
 )
 
+var globalRecoverCallback func(ctx context.Context, err any)
+
 type Route struct {
 	route.Router
 	config    config.Config
@@ -31,7 +33,7 @@ func NewRoute(config config.Config, parameters map[string]any) (*Route, error) {
 	gin.DisableBindValidation()
 	engine := gin.New()
 	engine.MaxMultipartMemory = int64(config.GetInt("http.drivers.gin.body_limit", 4096)) << 10
-	// engine.Use(gin.Recovery()) // recovery middleware
+	engine.Use(gin.Recovery()) // recovery middleware
 
 	if debugLog := getDebugLog(config); debugLog != nil {
 		engine.Use(debugLog)
@@ -88,27 +90,25 @@ func (r *Route) GlobalMiddleware(middlewares ...httpcontract.Middleware) {
 	r.setMiddlewares(middlewares)
 }
 
-var globalRecoverCallback func(ctx context.Context, err any)
-
-func SetGlobalRecover(callback func(ctx context.Context, err any)) {
-	globalRecoverCallback = callback
+func HandleRecover(ctx *gin.Context, recoverCallback func(ctx *gin.Context, err interface{})) {
+    if err := recover(); err != nil {
+        if recoverCallback != nil {
+            recoverCallback(ctx, err)
+        } else {
+            ctx.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
+        }
+    }
 }
 
-// the Recoverer must come first
 func (r *Route) Recover(callback func(ctx context.Context, err any)) {
-	SetGlobalRecover(callback)
-
-	r.instance.Use(func(ctx *gin.Context) {
-		defer func() {
-			if err := recover(); err != nil {
-				if globalRecoverCallback != nil {
-					globalRecoverCallback(ctx, err)
-				} else {
-					ctx.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
-				}
-			}
-		}()
-		ctx.Next()
+        globalRecoverCallback = callback
+	r.setMiddlewares([]httpcontract.Middleware{
+		func(ctx httpcontract.Context) {
+			defer func() {
+				HandleRecover(ctx, globalRecoverCallback)
+			}()
+			ctx.Request().Next()
+		},
 	})
 }
 
