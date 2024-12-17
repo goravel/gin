@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"time"
@@ -112,6 +113,44 @@ func (r *Route) Recover(callback func(ctx context.Context, err any)) {
 	})
 }
 
+func (r *Route) Listen(l net.Listener) error {
+	r.outputRoutes()
+	color.Green().Println(termlink.Link("[HTTP] Listening and serving HTTP on", "http://"+l.Addr().String()))
+
+	r.server = &http.Server{
+		Addr:           l.Addr().String(),
+		Handler:        http.AllowQuerySemicolons(r.instance),
+		MaxHeaderBytes: r.config.GetInt("http.drivers.gin.header_limit", 4096) << 10,
+	}
+
+	if err := r.server.Serve(l); !errors.Is(err, http.ErrServerClosed) {
+		return err
+	}
+
+	return nil
+}
+
+func (r *Route) ListenTLS(l net.Listener) error {
+	return r.ListenTLSWithCert(l, r.config.GetString("http.tls.ssl.cert"), r.config.GetString("http.tls.ssl.key"))
+}
+
+func (r *Route) ListenTLSWithCert(l net.Listener, certFile, keyFile string) error {
+	r.outputRoutes()
+	color.Green().Println(termlink.Link("[HTTPS] Listening and serving HTTPS on", "https://"+l.Addr().String()))
+
+	r.tlsServer = &http.Server{
+		Addr:           l.Addr().String(),
+		Handler:        http.AllowQuerySemicolons(r.instance),
+		MaxHeaderBytes: r.config.GetInt("http.drivers.gin.header_limit", 4096) << 10,
+	}
+
+	if err := r.tlsServer.ServeTLS(l, certFile, keyFile); !errors.Is(err, http.ErrServerClosed) {
+		return err
+	}
+
+	return nil
+}
+
 func (r *Route) Run(host ...string) error {
 	if len(host) == 0 {
 		defaultHost := r.config.GetString("http.host")
@@ -132,11 +171,11 @@ func (r *Route) Run(host ...string) error {
 		MaxHeaderBytes: r.config.GetInt("http.drivers.gin.header_limit", 4096) << 10,
 	}
 
-	if err := r.server.ListenAndServe(); errors.Is(err, http.ErrServerClosed) {
-		return nil
-	} else {
+	if err := r.server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
 		return err
 	}
+
+	return nil
 }
 
 func (r *Route) RunTLS(host ...string) error {
@@ -173,11 +212,11 @@ func (r *Route) RunTLSWithCert(host, certFile, keyFile string) error {
 		MaxHeaderBytes: r.config.GetInt("http.drivers.gin.header_limit", 4096) << 10,
 	}
 
-	if err := r.tlsServer.ListenAndServeTLS(certFile, keyFile); errors.Is(err, http.ErrServerClosed) {
-		return nil
-	} else {
+	if err := r.tlsServer.ListenAndServeTLS(certFile, keyFile); !errors.Is(err, http.ErrServerClosed) {
 		return err
 	}
+
+	return nil
 }
 
 func (r *Route) ServeHTTP(writer http.ResponseWriter, request *http.Request) {

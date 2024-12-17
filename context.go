@@ -10,7 +10,19 @@ import (
 	"github.com/goravel/framework/contracts/http"
 )
 
-const goravelContextKey = "goravel_contextKey"
+const (
+	contextKey        = "goravel_contextKey"
+	responseOriginKey = "goravel_responseOrigin"
+	sessionKey        = "goravel_session"
+)
+
+var (
+	internalContextKeys = []any{
+		contextKey,
+		responseOriginKey,
+		sessionKey,
+	}
+)
 
 func Background() http.Context {
 	ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
@@ -48,7 +60,7 @@ func (c *Context) Response() http.ContextResponse {
 		c.response = response
 	}
 
-	responseOrigin := c.Value("responseOrigin")
+	responseOrigin := c.Value(responseOriginKey)
 	if responseOrigin != nil {
 		c.response.(*ContextResponse).origin = responseOrigin.(http.ResponseOrigin)
 	}
@@ -57,9 +69,9 @@ func (c *Context) Response() http.ContextResponse {
 }
 
 func (c *Context) WithValue(key any, value any) {
-	goravelCtx := c.getGoravelCtx()
-	goravelCtx[key] = value
-	c.instance.Set(goravelContextKey, goravelCtx)
+	values := c.getGoravelContextValues()
+	values[key] = value
+	c.instance.Set(contextKey, values)
 }
 
 func (c *Context) WithContext(ctx context.Context) {
@@ -67,7 +79,24 @@ func (c *Context) WithContext(ctx context.Context) {
 	c.instance.Request = c.instance.Request.WithContext(ctx)
 }
 
-func (c *Context) Context() context.Context { return c }
+func (c *Context) Context() context.Context {
+	ctx := c.instance.Request.Context()
+	values := c.getGoravelContextValues()
+	for key, value := range values {
+		skip := false
+		for _, internalContextKey := range internalContextKeys {
+			if key == internalContextKey {
+				skip = true
+			}
+		}
+
+		if !skip {
+			ctx = context.WithValue(ctx, key, value)
+		}
+	}
+
+	return ctx
+}
 
 func (c *Context) Deadline() (deadline time.Time, ok bool) {
 	return c.instance.Deadline()
@@ -82,15 +111,19 @@ func (c *Context) Err() error {
 }
 
 func (c *Context) Value(key any) any {
-	return c.getGoravelCtx()[key]
+	if value, exist := c.getGoravelContextValues()[key]; exist {
+		return value
+	}
+
+	return c.instance.Request.Context().Value(key)
 }
 
 func (c *Context) Instance() *gin.Context {
 	return c.instance
 }
 
-func (c *Context) getGoravelCtx() map[any]any {
-	if val, exist := c.instance.Get(goravelContextKey); exist {
+func (c *Context) getGoravelContextValues() map[any]any {
+	if val, exist := c.instance.Get(contextKey); exist {
 		if goravelCtxVal, ok := val.(map[any]any); ok {
 			return goravelCtxVal
 		}

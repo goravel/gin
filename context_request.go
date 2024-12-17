@@ -20,6 +20,7 @@ import (
 	contractsvalidate "github.com/goravel/framework/contracts/validation"
 	"github.com/goravel/framework/filesystem"
 	"github.com/goravel/framework/support/json"
+	"github.com/goravel/framework/support/str"
 	"github.com/goravel/framework/validation"
 	"github.com/spf13/cast"
 )
@@ -157,7 +158,7 @@ func (r *ContextRequest) Host() string {
 }
 
 func (r *ContextRequest) HasSession() bool {
-	_, ok := r.ctx.Value("session").(contractsession.Session)
+	_, ok := r.ctx.Value(sessionKey).(contractsession.Session)
 	return ok
 }
 
@@ -278,28 +279,47 @@ func (r *ContextRequest) Input(key string, defaultValue ...string) string {
 		}
 	}
 
-	if r.instance.Query(key) != "" {
-		return r.instance.Query(key)
+	if value, exist := r.instance.GetQuery(key); exist {
+		return value
 	}
 
-	value := r.instance.Param(key)
-	if len(value) == 0 && len(defaultValue) > 0 {
-		return defaultValue[0]
-	}
-
-	return value
-}
-
-func (r *ContextRequest) InputArray(key string, defaultValue ...[]string) []string {
-	if valueFromHttpBody := r.getValueFromHttpBody(key); valueFromHttpBody != nil {
-		return cast.ToStringSlice(valueFromHttpBody)
+	if value, exist := r.instance.Params.Get(key); exist {
+		return value
 	}
 
 	if len(defaultValue) > 0 {
 		return defaultValue[0]
-	} else {
-		return []string{}
 	}
+
+	return ""
+}
+
+func (r *ContextRequest) InputArray(key string, defaultValue ...[]string) []string {
+	if valueFromHttpBody := r.getValueFromHttpBody(key); valueFromHttpBody != nil {
+		if value := cast.ToStringSlice(valueFromHttpBody); value == nil {
+			return []string{}
+		} else {
+			return value
+		}
+	}
+
+	if value, exist := r.instance.GetQueryArray(key); exist {
+		if len(value) == 1 && value[0] == "" {
+			return []string{}
+		}
+
+		return value
+	}
+
+	if value, exist := r.instance.Params.Get(key); exist {
+		return str.Of(value).Split(",")
+	}
+
+	if len(defaultValue) > 0 {
+		return defaultValue[0]
+	}
+
+	return []string{}
 }
 
 func (r *ContextRequest) InputMap(key string, defaultValue ...map[string]string) map[string]string {
@@ -307,11 +327,15 @@ func (r *ContextRequest) InputMap(key string, defaultValue ...map[string]string)
 		return cast.ToStringMapString(valueFromHttpBody)
 	}
 
+	if _, exist := r.instance.GetQuery(key); exist {
+		return r.instance.QueryMap(key)
+	}
+
 	if len(defaultValue) > 0 {
 		return defaultValue[0]
-	} else {
-		return map[string]string{}
 	}
+
+	return map[string]string{}
 }
 
 func (r *ContextRequest) InputInt(key string, defaultValue ...int) int {
@@ -362,7 +386,7 @@ func (r *ContextRequest) RouteInt64(key string) int64 {
 }
 
 func (r *ContextRequest) Session() contractsession.Session {
-	s, ok := r.ctx.Value("session").(contractsession.Session)
+	s, ok := r.ctx.Value(sessionKey).(contractsession.Session)
 	if !ok {
 		return nil
 	}
@@ -370,7 +394,7 @@ func (r *ContextRequest) Session() contractsession.Session {
 }
 
 func (r *ContextRequest) SetSession(session contractsession.Session) contractshttp.ContextRequest {
-	r.ctx.WithValue("session", session)
+	r.ctx.WithValue(sessionKey, session)
 
 	return r
 }
@@ -415,9 +439,21 @@ func (r *ContextRequest) ValidateRequest(request contractshttp.FormRequest) (con
 		return nil, err
 	}
 
-	validator, err := r.Validate(request.Rules(r.ctx), validation.Filters(request.Filters(r.ctx)), validation.Messages(request.Messages(r.ctx)), validation.Attributes(request.Attributes(r.ctx)), func(options map[string]any) {
-		options["prepareForValidation"] = request.PrepareForValidation
-	})
+	var options []contractsvalidate.Option
+	if requestWithFilters, ok := request.(contractshttp.FormRequestWithFilters); ok {
+		options = append(options, validation.Filters(requestWithFilters.Filters(r.ctx)))
+	}
+	if requestWithMessage, ok := request.(contractshttp.FormRequestWithMessages); ok {
+		options = append(options, validation.Messages(requestWithMessage.Messages(r.ctx)))
+	}
+	if requestWithAttributes, ok := request.(contractshttp.FormRequestWithAttributes); ok {
+		options = append(options, validation.Attributes(requestWithAttributes.Attributes(r.ctx)))
+	}
+	if prepareForValidation, ok := request.(contractshttp.FormRequestWithPrepareForValidation); ok {
+		options = append(options, validation.PrepareForValidation(prepareForValidation.PrepareForValidation))
+	}
+
+	validator, err := r.Validate(request.Rules(r.ctx), options...)
 	if err != nil {
 		return nil, err
 	}

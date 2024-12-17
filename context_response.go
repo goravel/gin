@@ -153,7 +153,7 @@ func ResponseMiddleware() contractshttp.Middleware {
 			ctx.Instance().Writer = blw
 		}
 
-		ctx.WithValue("responseOrigin", blw)
+		ctx.WithValue(responseOriginKey, blw)
 		ctx.Request().Next()
 	}
 }
