@@ -1,6 +1,8 @@
 package gin
 
 import (
+	"os"
+	
 	"github.com/goravel/framework/contracts/config"
 	"github.com/goravel/framework/contracts/foundation"
 	"github.com/goravel/framework/contracts/http"
@@ -8,7 +10,7 @@ import (
 	"github.com/goravel/framework/contracts/validation"
 	"github.com/goravel/framework/errors"
 	"github.com/goravel/framework/support/color"
-	"os"
+	
 )
 
 const RouteBinding = "goravel.gin.route"
@@ -40,7 +42,6 @@ func (receiver *ServiceProvider) Boot(app foundation.Application) {
 
 	if LogFacade = app.MakeLog(); LogFacade == nil {
 		color.Errorln(errors.LogFacadeNotSet.SetModule(module))
-		shutdownOnCriticalError("LogFacade is not set")
 	}
 
 	if ValidationFacade = app.MakeValidation(); ValidationFacade == nil {
@@ -56,7 +57,3 @@ func (receiver *ServiceProvider) Boot(app foundation.Application) {
 	})
 }
 
-func shutdownOnCriticalError(message string) {
-	color.Errorln("Critical error:", message)
-	os.Exit(1) // Force exit to ensure the application does not run with missing dependencies
-}
