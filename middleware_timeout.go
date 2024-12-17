@@ -22,15 +22,7 @@ func Timeout(timeout time.Duration) contractshttp.Middleware {
         go func() {
 
             defer func() {
-                if err := recover(); err != nil {
-                    if globalRecoverCallback != nil {
-                        globalRecoverCallback(ctx.Context(), err)
-                    } else {
-                        ctx.Request().AbortWithStatusJson(http.StatusInternalServerError, map[string]any{}{
-                            "error": "Internal Server Error",
-                        })
-                    }
-                }
+		HandleRecover(ctx, globalRecoverCallback)
             }()
 
             ctx.Request().Next()
