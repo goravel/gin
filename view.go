@@ -18,9 +18,6 @@ func NewView(instance *gin.Context) *View {
 
 func (receive *View) Make(view string, data ...any) contractshttp.Response {
 	var shared map[string]any
-	if ViewFacade == nil {
-		panic("ViewFacade is nil")
-	}
 	shared = ViewFacade.GetShared()
 	
 
@@ -46,11 +43,7 @@ func (receive *View) Make(view string, data ...any) contractshttp.Response {
 
 func (receive *View) First(views []string, data ...any) contractshttp.Response {
 	for _, view := range views {
-		if ViewFacade != nil && ViewFacade.Exists(view) {
-			return receive.Make(view, data...)
-		} else {
-			fmt.Println("ViewFacade is nil or view does not exist")
-		}
+		return receive.Make(view, data...)
 	}
 
 	panic("no view exists")
