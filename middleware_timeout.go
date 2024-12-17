@@ -21,9 +21,7 @@ func Timeout(timeout time.Duration) contractshttp.Middleware {
 
         go func() {
 
-            defer func() {
-		HandleRecover(ctx, globalRecoverCallback)
-            }()
+            defer HandleRecover(ctx, globalRecoverCallback)
 
             ctx.Request().Next()
 	    close(done)
