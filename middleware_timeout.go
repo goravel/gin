@@ -20,14 +20,13 @@ func Timeout(timeout time.Duration) contractshttp.Middleware {
         done := make(chan struct{})
 
         go func() {
-            defer close(done)
 
             defer func() {
                 if err := recover(); err != nil {
                     if globalRecoverCallback != nil {
                         globalRecoverCallback(ctx.Context(), err)
                     } else {
-                        ctx.Request().AbortWithStatusJson(http.StatusInternalServerError, map[string]interface{}{
+                        ctx.Request().AbortWithStatusJson(http.StatusInternalServerError, map[string]any{}{
                             "error": "Internal Server Error",
                         })
                     }
@@ -35,6 +34,7 @@ func Timeout(timeout time.Duration) contractshttp.Middleware {
             }()
 
             ctx.Request().Next()
+	    close(done)
         }()
 
         select {
