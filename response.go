@@ -55,6 +55,12 @@ func (r *JsonResponse) Render() error {
 	return nil
 }
 
+func (r *JsonResponse) Abort() error {
+	r.instance.AbortWithStatusJSON(r.code, r.obj)
+
+	return nil
+}
+
 type NoContentResponse struct {
 	code     int
 	instance *gin.Context
@@ -89,6 +95,12 @@ func (r *StringResponse) Render() error {
 	r.instance.String(r.code, r.format, r.values...)
 
 	return nil
+}
+
+func (r *StringResponse) Abort() error {
+	r.instance.Abort()
+
+	return r.Render()
 }
 
 type HtmlResponse struct {
