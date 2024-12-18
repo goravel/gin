@@ -43,7 +43,9 @@ func (receive *View) Make(view string, data ...any) contractshttp.Response {
 
 func (receive *View) First(views []string, data ...any) contractshttp.Response {
 	for _, view := range views {
-		return receive.Make(view, data...)
+		if ViewFacade.Exists(view) {
+			return receive.Make(view, data...)
+		}
 	}
 
 	panic("no view exists")
