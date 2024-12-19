@@ -58,5 +58,5 @@ func TestTimeoutMiddleware(t *testing.T) {
 
 	route.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
-	assert.Equal(t, "\"{\\\"error\\\": \\\"Internal Server Error\\\"}\"", w.Body.String())
+	assert.Equal(t, "{\"error\":\"Internal Server Error\"}", w.Body.String())
 }
