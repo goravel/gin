@@ -33,6 +33,7 @@ func Timeout(timeout time.Duration) contractshttp.Middleware {
             if errors.Is(ctx.Request().Origin().Context().Err(), context.DeadlineExceeded) {
                 ctx.Request().AbortWithStatus(http.StatusGatewayTimeout)
             }
+	    return
         }
     }
 }
