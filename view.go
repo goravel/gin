@@ -17,7 +17,7 @@ func NewView(instance *gin.Context) *View {
 }
 
 func (receive *View) Make(view string, data ...any) contractshttp.Response {
-	var shared map[string]any
+	var shared = map[string]any{}
 	shared = ViewFacade.GetShared()
 	
 
