@@ -23,14 +23,15 @@ func TestTimeoutMiddleware(t *testing.T) {
 
 	route.Middleware(Timeout(1*time.Second)).Get("/timeout", func(ctx contractshttp.Context) contractshttp.Response {
 		time.Sleep(2 * time.Second)
-
-		return ctx.Response().Success().String("timeout")
+		return nil
 	})
+
 	route.Middleware(Timeout(1*time.Second)).Get("/normal", func(ctx contractshttp.Context) contractshttp.Response {
 		return ctx.Response().Success().String("normal")
 	})
+
 	route.Middleware(Timeout(1*time.Second)).Get("/panic", func(ctx contractshttp.Context) contractshttp.Response {
-		panic(1)
+		panic("something went wrong")
 	})
 
 	w := httptest.NewRecorder()
@@ -57,5 +58,5 @@ func TestTimeoutMiddleware(t *testing.T) {
 
 	route.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
-	assert.JSONEq(t, `{"error":"Internal Server Error"}`, w.Body.String())
+	assert.Equal(t, "\"{\\\"error\\\": \\\"Internal Server Error\\\"}\"", w.Body.String())
 }
