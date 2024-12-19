@@ -19,6 +19,8 @@ import (
 	"github.com/savioxavier/termlink"
 )
 
+var globalRecoverCallback func(ctx context.Context, err any)
+
 type Route struct {
 	route.Router
 	config    config.Config
@@ -87,6 +89,28 @@ func (r *Route) GlobalMiddleware(middlewares ...httpcontract.Middleware) {
 	}
 	middlewares = append(defaultMiddlewares, middlewares...)
 	r.setMiddlewares(middlewares)
+}
+
+func HandleRecover(ctx httpcontract.Context, recoverCallback func(ctx context.Context, err interface{})) {
+    if err := recover(); err != nil {
+        if recoverCallback != nil {
+            recoverCallback(ctx, err)
+        } else {
+            ctx.Request().AbortWithStatusJson(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
+        }
+    }
+}
+
+func (r *Route) Recover(callback func(ctx context.Context, err any)) {
+        globalRecoverCallback = callback
+	r.setMiddlewares([]httpcontract.Middleware{
+		func(ctx httpcontract.Context) {
+			defer func() {
+				HandleRecover(ctx, globalRecoverCallback)
+			}()
+			ctx.Request().Next()
+		},
+	})
 }
 
 func (r *Route) Listen(l net.Listener) error {
