@@ -30,11 +30,9 @@ func Timeout(timeout time.Duration) contractshttp.Middleware {
         select {
         case <-done:
         case <-ctx.Request().Origin().Context().Done():
-            if errors.Is(ctx.Request().Origin().Context().Err(), context.DeadlineExceeded) {
+            if errors.Is(timeoutCtx.Err(), context.DeadlineExceeded) {
                 ctx.Request().AbortWithStatus(http.StatusGatewayTimeout)
-		return
             }
-	    
         }
     }
 }
