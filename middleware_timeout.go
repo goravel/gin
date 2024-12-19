@@ -1,38 +1,62 @@
 package gin
 
 import (
-	"context"
 	"net/http"
+	"net/http/httptest"
+	"testing"
 	"time"
 
 	contractshttp "github.com/goravel/framework/contracts/http"
-	"github.com/goravel/framework/errors"
+	mocksconfig "github.com/goravel/framework/mocks/config"
+	mockslog "github.com/goravel/framework/mocks/log"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-// Timeout creates middleware to set a timeout for a request
-func Timeout(timeout time.Duration) contractshttp.Middleware {
-    return func(ctx contractshttp.Context) {
-        timeoutCtx, cancel := context.WithTimeout(ctx.Context(), timeout)
-        defer cancel()
+func TestTimeoutMiddleware(t *testing.T) {
+	mockConfig := mocksconfig.NewConfig(t)
+	mockConfig.EXPECT().GetBool("app.debug").Return(true).Once()
+	mockConfig.EXPECT().GetInt("http.drivers.gin.body_limit", 4096).Return(4096).Once()
 
-        ctx.WithContext(timeoutCtx)
+	route, err := NewRoute(mockConfig, nil)
+	require.NoError(t, err)
 
-        done := make(chan struct{})
+	route.Middleware(Timeout(1*time.Second)).Get("/timeout", func(ctx contractshttp.Context) contractshttp.Response {
+		time.Sleep(2 * time.Second)
+		return nil // Middleware должно обработать тайм-аут с кодом 504
+	})
 
-        go func() {
+	route.Middleware(Timeout(1*time.Second)).Get("/normal", func(ctx contractshttp.Context) contractshttp.Response {
+		return ctx.Response().Success().String("normal")
+	})
 
-            defer HandleRecover(ctx, globalRecoverCallback)
+	route.Middleware(Timeout(1*time.Second)).Get("/panic", func(ctx contractshttp.Context) contractshttp.Response {
+		panic("something went wrong")
+	})
 
-            ctx.Request().Next()
-	    close(done)
-        }()
+	w := httptest.NewRecorder()
+	req, err := http.NewRequest("GET", "/timeout", nil)
+	require.NoError(t, err)
 
-        select {
-        case <-done:
-        case <-ctx.Request().Origin().Context().Done():
-            if errors.Is(timeoutCtx.Err(), context.DeadlineExceeded) {
-                ctx.Request().AbortWithStatus(http.StatusGatewayTimeout)
-            }
-        }
-    }
+	route.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusGatewayTimeout, w.Code)
+
+	w = httptest.NewRecorder()
+	req, err = http.NewRequest("GET", "/normal", nil)
+	require.NoError(t, err)
+
+	route.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, "normal", w.Body.String())
+
+	w = httptest.NewRecorder()
+	req, err = http.NewRequest("GET", "/panic", nil)
+	require.NoError(t, err)
+
+	mockLog := mockslog.NewLog(t)
+	LogFacade = mockLog
+
+	route.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	assert.Equal(t, "\"{\\\"error\\\": \\\"Internal Server Error\\\"}\"", w.Body.String())
 }
