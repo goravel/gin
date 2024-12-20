@@ -199,7 +199,7 @@ func (r *Route) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	r.instance.ServeHTTP(writer, request)
 }
 
-func (r *Route) Stop(ctx ...context.Context) error {
+func (r *Route) Shutdown(ctx ...context.Context) error {
 	c := context.Background()
 	if len(ctx) > 0 {
 		c = ctx[0]
