@@ -19,7 +19,6 @@ func NewView(instance *gin.Context) *View {
 func (receive *View) Make(view string, data ...any) contractshttp.Response {
 	shared := ViewFacade.GetShared()
 	
-
 	if len(data) == 0 {
 		return &HtmlResponse{shared, receive.instance, view}
 	} else {
