@@ -8,7 +8,6 @@ import (
 	"github.com/goravel/framework/contracts/validation"
 	"github.com/goravel/framework/errors"
 	"github.com/goravel/framework/support/color"
-	
 )
 
 const RouteBinding = "goravel.gin.route"
