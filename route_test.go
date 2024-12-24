@@ -21,6 +21,40 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestRecoverWithCustomCallback(t *testing.T) {
+	mockConfig := &configmocks.Config{}
+	mockConfig.EXPECT().GetBool("app.debug").Return(true).Once()
+	mockConfig.EXPECT().GetInt("http.drivers.gin.body_limit", 4096).Return(4096).Once()
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/recover", nil)
+
+	route, err := NewRoute(mockConfig, nil)
+	assert.Nil(t, err)
+
+	globalRecover := func(ctx context.Context, err any) {
+		httpCtx, ok := ctx.(contractshttp.Context)
+		if !ok {
+			t.Fatalf("invalid context type: %T", ctx)
+			return
+		}
+		httpCtx.Request().AbortWithStatusJson(http.StatusInternalServerError, gin.H{"error": "Internal Panic"})
+	}
+
+	route.Recover(globalRecover)
+
+	route.Get("/recover", func(ctx contractshttp.Context) contractshttp.Response {
+		panic(1)
+	})
+
+	route.ServeHTTP(w, req)
+
+	assert.Equal(t, "{\"error\":\"Internal Panic\"}", w.Body.String())
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+
+	mockConfig.AssertExpectations(t)
+}
+
 func TestFallback(t *testing.T) {
 	mockConfig := &configmocks.Config{}
 	mockConfig.EXPECT().GetBool("app.debug").Return(true).Once()
