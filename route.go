@@ -92,22 +92,20 @@ func (r *Route) GlobalMiddleware(middlewares ...httpcontract.Middleware) {
 }
 
 func HandleRecover(ctx httpcontract.Context, recoverCallback func(ctx context.Context, err any)) {
-    if err := recover(); err != nil {
-        if recoverCallback != nil {
-            recoverCallback(ctx, err)
-        } else {
-            ctx.Request().AbortWithStatusJson(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
-        }
-    }
+	if err := recover(); err != nil {
+		if recoverCallback != nil {
+			recoverCallback(ctx, err)
+		} else {
+			ctx.Request().AbortWithStatusJson(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
+		}
+	}
 }
 
 func (r *Route) Recover(callback func(ctx context.Context, err any)) {
-        globalRecoverCallback = callback
+	globalRecoverCallback = callback
 	r.setMiddlewares([]httpcontract.Middleware{
 		func(ctx httpcontract.Context) {
-			defer func() {
-				HandleRecover(ctx, globalRecoverCallback)
-			}()
+			defer HandleRecover(ctx, globalRecoverCallback)
 			ctx.Request().Next()
 		},
 	})
