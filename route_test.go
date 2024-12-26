@@ -24,7 +24,7 @@ import (
 )
 
 func TestRecoverWithCustomCallback(t *testing.T) {
-	mockConfig := &configmocks.Config{}
+	mockConfig := configmocks.NewConfig(t)
 	mockConfig.EXPECT().GetBool("app.debug").Return(true).Once()
 	mockConfig.EXPECT().GetInt("http.drivers.gin.body_limit", 4096).Return(4096).Once()
 
