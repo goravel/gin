@@ -51,6 +51,29 @@ func TestRecoverWithCustomCallback(t *testing.T) {
 	mockConfig.AssertExpectations(t)
 }
 
+func TestRecoverWithDefaultCallback(t *testing.T) {
+	mockConfig := configmocks.NewConfig(t)
+	mockConfig.EXPECT().GetBool("app.debug").Return(true).Once()
+	mockConfig.EXPECT().GetInt("http.drivers.gin.body_limit", 4096).Return(4096).Once()
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/recover", nil)
+
+	route, err := NewRoute(mockConfig, nil)
+	assert.Nil(t, err)
+
+	route.Get("/recover", func(ctx contractshttp.Context) contractshttp.Response {
+		panic(1)
+	})
+
+	route.ServeHTTP(w, req)
+
+	assert.Equal(t, "", w.Body.String())
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+
+	mockConfig.AssertExpectations(t)
+}
+
 func TestFallback(t *testing.T) {
 	mockConfig := &configmocks.Config{}
 	mockConfig.EXPECT().GetBool("app.debug").Return(true).Once()
