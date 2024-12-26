@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	contractshttp "github.com/goravel/framework/contracts/http"
 	mocksconfig "github.com/goravel/framework/mocks/config"
 	mockslog "github.com/goravel/framework/mocks/log"
@@ -31,8 +32,14 @@ func TestTimeoutMiddleware(t *testing.T) {
 	})
 
 	route.Middleware(Timeout(1*time.Second)).Get("/panic", func(ctx contractshttp.Context) contractshttp.Response {
-		panic("something went wrong")
+		panic(1)
 	})
+
+	globalRecover := func(ctx contractshttp.Context, err any) {
+		ctx.Request().AbortWithStatusJson(http.StatusInternalServerError, gin.H{"error": "Internal Panic"})
+	}
+
+	route.Recover(globalRecover)
 
 	w := httptest.NewRecorder()
 	req, err := http.NewRequest("GET", "/timeout", nil)
@@ -58,5 +65,5 @@ func TestTimeoutMiddleware(t *testing.T) {
 
 	route.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
-	assert.Equal(t, "{\"error\":\"Internal Server Error\"}", w.Body.String())
+	assert.Equal(t, "{\"error\":\"Internal Panic\"}", w.Body.String())
 }
