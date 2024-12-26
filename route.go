@@ -91,7 +91,7 @@ func (r *Route) GlobalMiddleware(middlewares ...httpcontract.Middleware) {
 	r.setMiddlewares(middlewares)
 }
 
-func HandleRecover(ctx httpcontract.Context, recoverCallback func(ctx httpcontext.Context, err any)) {
+func HandleRecover(ctx httpcontract.Context, recoverCallback func(ctx httpcontract.Context, err any)) {
 	if err := recover(); err != nil {
 		if recoverCallback != nil {
 			recoverCallback(ctx, err)
@@ -101,7 +101,7 @@ func HandleRecover(ctx httpcontract.Context, recoverCallback func(ctx httpcontex
 	}
 }
 
-func (r *Route) Recover(callback func(ctx httpcontext.Context, err any)) {
+func (r *Route) Recover(callback func(ctx httpcontract.Context, err any)) {
 	globalRecoverCallback = callback
 	r.setMiddlewares([]httpcontract.Middleware{
 		func(ctx httpcontract.Context) {
