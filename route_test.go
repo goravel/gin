@@ -34,13 +34,8 @@ func TestRecoverWithCustomCallback(t *testing.T) {
 	route, err := NewRoute(mockConfig, nil)
 	assert.Nil(t, err)
 
-	globalRecover := func(ctx context.Context, err any) {
-		httpCtx, ok := ctx.(contractshttp.Context)
-		if !ok {
-			t.Fatalf("invalid context type: %T", ctx)
-			return
-		}
-		httpCtx.Request().AbortWithStatusJson(http.StatusInternalServerError, gin.H{"error": "Internal Panic"})
+	globalRecover := func(ctx contractshttp.Context, err any) {
+		ctx.Request().AbortWithStatusJson(http.StatusInternalServerError, gin.H{"error": "Internal Panic"})
 	}
 
 	route.Recover(globalRecover)
