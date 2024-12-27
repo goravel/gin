@@ -14,12 +14,65 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/render"
 	contractshttp "github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/contracts/validation"
 	configmocks "github.com/goravel/framework/mocks/config"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestRecoverWithCustomCallback(t *testing.T) {
+	mockConfig := configmocks.NewConfig(t)
+	mockConfig.EXPECT().GetBool("app.debug").Return(true).Once()
+	mockConfig.EXPECT().GetInt("http.drivers.gin.body_limit", 4096).Return(4096).Once()
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/recover", nil)
+
+	route, err := NewRoute(mockConfig, nil)
+	assert.Nil(t, err)
+
+	globalRecover := func(ctx contractshttp.Context, err any) {
+		ctx.Request().AbortWithStatusJson(http.StatusInternalServerError, gin.H{"error": "Internal Panic"})
+	}
+
+	route.Recover(globalRecover)
+
+	route.Get("/recover", func(ctx contractshttp.Context) contractshttp.Response {
+		panic(1)
+	})
+
+	route.ServeHTTP(w, req)
+
+	assert.Equal(t, "{\"error\":\"Internal Panic\"}", w.Body.String())
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+
+	mockConfig.AssertExpectations(t)
+}
+
+func TestRecoverWithDefaultCallback(t *testing.T) {
+	mockConfig := configmocks.NewConfig(t)
+	mockConfig.EXPECT().GetBool("app.debug").Return(true).Once()
+	mockConfig.EXPECT().GetInt("http.drivers.gin.body_limit", 4096).Return(4096).Once()
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/recover", nil)
+
+	route, err := NewRoute(mockConfig, nil)
+	assert.Nil(t, err)
+
+	route.Get("/recover", func(ctx contractshttp.Context) contractshttp.Response {
+		panic(1)
+	})
+
+	route.ServeHTTP(w, req)
+
+	assert.Equal(t, "", w.Body.String())
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+
+	mockConfig.AssertExpectations(t)
+}
 
 func TestFallback(t *testing.T) {
 	mockConfig := &configmocks.Config{}
