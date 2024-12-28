@@ -56,9 +56,6 @@ func TestRecoverWithDefaultCallback(t *testing.T) {
 	mockConfig.EXPECT().GetBool("app.debug").Return(true).Once()
 	mockConfig.EXPECT().GetInt("http.drivers.gin.body_limit", 4096).Return(4096).Once()
 
-	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/recover", nil)
-
 	route, err := NewRoute(mockConfig, nil)
 	assert.Nil(t, err)
 
@@ -66,6 +63,8 @@ func TestRecoverWithDefaultCallback(t *testing.T) {
 		panic(1)
 	})
 
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/recover", nil)
 	route.ServeHTTP(w, req)
 
 	assert.Equal(t, "", w.Body.String())
