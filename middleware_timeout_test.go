@@ -35,12 +35,6 @@ func TestTimeoutMiddleware(t *testing.T) {
 		panic(1)
 	})
 
-	globalRecover := func(ctx contractshttp.Context, err any) {
-		ctx.Request().AbortWithStatusJson(http.StatusInternalServerError, gin.H{"error": "Internal Panic"})
-	}
-
-	route.Recover(globalRecover)
-
 	w := httptest.NewRecorder()
 	req, err := http.NewRequest("GET", "/timeout", nil)
 	require.NoError(t, err)
@@ -56,12 +50,28 @@ func TestTimeoutMiddleware(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 	assert.Equal(t, "normal", w.Body.String())
 
+	// Test with default recover callback
+	mockLog := mockslog.NewLog(t)
+	mockLog.EXPECT().Error(1).Once()
+	LogFacade = mockLog
+
 	w = httptest.NewRecorder()
 	req, err = http.NewRequest("GET", "/panic", nil)
 	require.NoError(t, err)
 
-	mockLog := mockslog.NewLog(t)
-	LogFacade = mockLog
+	route.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	assert.Equal(t, "{\"error\":\"Internal Server Error\"}", w.Body.String())
+
+	// Test with custom recover callback
+	globalRecover := func(ctx contractshttp.Context, err any) {
+		ctx.Request().AbortWithStatusJson(http.StatusInternalServerError, gin.H{"error": "Internal Panic"})
+	}
+	route.Recover(globalRecover)
+
+	w = httptest.NewRecorder()
+	req, err = http.NewRequest("GET", "/panic", nil)
+	require.NoError(t, err)
 
 	route.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
