@@ -344,16 +344,22 @@ func (s *ContextResponseSuite) request(method, url string, body io.Reader) (int,
 
 func testJson() contractshttp.Middleware {
 	return func(ctx contractshttp.Context) {
-		ctx.Response().Json(contractshttp.StatusOK, map[string]any{
+		err := ctx.Response().Json(contractshttp.StatusOK, map[string]any{
 			"name": "abort json",
 		}).Abort()
+		if err != nil {
+			panic(err)
+		}
 		ctx.Request().Next()
 	}
 }
 
 func testRedirect() contractshttp.Middleware {
 	return func(ctx contractshttp.Context) {
-		ctx.Response().Redirect(contractshttp.StatusMovedPermanently, "/abort-redirected").Abort()
+		err := ctx.Response().Redirect(contractshttp.StatusMovedPermanently, "/abort-redirected").Abort()
+		if err != nil {
+			panic(err)
+		}
 		ctx.Request().Next()
 	}
 }
