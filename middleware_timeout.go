@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/gin-gonic/gin"
+
 	contractshttp "github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/errors"
 )
@@ -21,25 +23,24 @@ func Timeout(timeout time.Duration) contractshttp.Middleware {
 
 		go func() {
 			defer func() {
-				if r := recover(); r != nil {
-					if LogFacade != nil {
-						LogFacade.Request(ctx.Request()).Error(r)
+				if err := recover(); err != nil {
+					if globalRecoverCallback != nil {
+						globalRecoverCallback(ctx, err)
+					} else {
+						LogFacade.Error(err)
+						ctx.Request().AbortWithStatusJson(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
 					}
-
-					// TODO can be customized in https://github.com/goravel/goravel/issues/521
-					_ = ctx.Response().Status(http.StatusInternalServerError).String("Internal Server Error").Render()
 				}
 
 				close(done)
 			}()
-
 			ctx.Request().Next()
 		}()
 
 		select {
 		case <-done:
-		case <-ctx.Request().Origin().Context().Done():
-			if errors.Is(ctx.Request().Origin().Context().Err(), context.DeadlineExceeded) {
+		case <-timeoutCtx.Done():
+			if errors.Is(timeoutCtx.Err(), context.DeadlineExceeded) {
 				ctx.Request().AbortWithStatus(http.StatusGatewayTimeout)
 			}
 		}
