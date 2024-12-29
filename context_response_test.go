@@ -310,6 +310,28 @@ func (s *ContextResponseSuite) TestWithoutCookie() {
 	s.True(exist)
 }
 
+func (s *ContextResponseSuite) TestAbort() {
+	s.route.Get("/abort-redirected", func(ctx contractshttp.Context) contractshttp.Response {
+		return ctx.Response().String(http.StatusOK, "redirected")
+	})
+
+	s.route.Middleware(testJson()).Get("/json/abort", func(ctx contractshttp.Context) contractshttp.Response {
+		return ctx.Response().String(http.StatusOK, "Goravel")
+	})
+
+	s.route.Middleware(testRedirect()).Get("/redirect/abort", func(ctx contractshttp.Context) contractshttp.Response {
+		return ctx.Response().String(http.StatusOK, "redirect")
+	})
+
+	code, body, _, _ := s.request("GET", "/json/abort", nil)
+	s.Equal(contractshttp.StatusOK, code)
+	s.JSONEq(`{"name":"abort json"}`, body)
+
+	code, _, headers, _ := s.request("GET", "/redirect/abort", nil)
+	s.Equal(contractshttp.StatusMovedPermanently, code)
+	s.Equal("/abort-redirected", headers.Get("Location"))
+}
+
 func (s *ContextResponseSuite) request(method, url string, body io.Reader) (int, string, http.Header, []*http.Cookie) {
 	req, err := http.NewRequest(method, url, body)
 	s.Require().Nil(err)
@@ -318,4 +340,20 @@ func (s *ContextResponseSuite) request(method, url string, body io.Reader) (int,
 	s.route.ServeHTTP(w, req)
 
 	return w.Code, w.Body.String(), w.Header(), w.Result().Cookies()
+}
+
+func testJson() contractshttp.Middleware {
+	return func(ctx contractshttp.Context) {
+		ctx.Response().Json(contractshttp.StatusOK, map[string]any{
+			"name": "abort json",
+		}).Abort()
+		ctx.Request().Next()
+	}
+}
+
+func testRedirect() contractshttp.Middleware {
+	return func(ctx contractshttp.Context) {
+		ctx.Response().Redirect(contractshttp.StatusMovedPermanently, "/abort-redirected").Abort()
+		ctx.Request().Next()
+	}
 }
