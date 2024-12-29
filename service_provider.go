@@ -36,12 +36,15 @@ func (receiver *ServiceProvider) Boot(app foundation.Application) {
 	if ConfigFacade = app.MakeConfig(); ConfigFacade == nil {
 		color.Errorln(errors.ConfigFacadeNotSet.SetModule(module))
 	}
+
 	if LogFacade = app.MakeLog(); LogFacade == nil {
 		color.Errorln(errors.LogFacadeNotSet.SetModule(module))
 	}
+
 	if ValidationFacade = app.MakeValidation(); ValidationFacade == nil {
 		color.Errorln(errors.New("validation facade is not initialized").SetModule(module))
 	}
+
 	if ViewFacade = app.MakeView(); ViewFacade == nil {
 		color.Errorln(errors.New("view facade is not initialized").SetModule(module))
 	}
@@ -50,3 +53,4 @@ func (receiver *ServiceProvider) Boot(app foundation.Application) {
 		"config/cors.go": app.ConfigPath("cors.go"),
 	})
 }
+

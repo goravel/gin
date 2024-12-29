@@ -19,6 +19,8 @@ import (
 	"github.com/savioxavier/termlink"
 )
 
+var globalRecoverCallback func(ctx httpcontract.Context, err any)
+
 type Route struct {
 	route.Router
 	config    config.Config
@@ -87,6 +89,20 @@ func (r *Route) GlobalMiddleware(middlewares ...httpcontract.Middleware) {
 	}
 	middlewares = append(defaultMiddlewares, middlewares...)
 	r.setMiddlewares(middlewares)
+}
+
+func (r *Route) Recover(callback func(ctx httpcontract.Context, err any)) {
+	globalRecoverCallback = callback
+	r.setMiddlewares([]httpcontract.Middleware{
+		func(ctx httpcontract.Context) {
+			defer func() {
+				if err := recover(); err != nil {
+					callback(ctx, err)
+				}
+			}()
+			ctx.Request().Next()
+		},
+	})
 }
 
 func (r *Route) Listen(l net.Listener) error {
