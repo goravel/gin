@@ -2,7 +2,6 @@ package gin
 
 import (
 	"context"
-	"net/http"
 	"time"
 
 	contractshttp "github.com/goravel/framework/contracts/http"
@@ -34,7 +33,7 @@ func Timeout(timeout time.Duration) contractshttp.Middleware {
 		case <-done:
 		case <-timeoutCtx.Done():
 			if errors.Is(timeoutCtx.Err(), context.DeadlineExceeded) {
-				ctx.Request().AbortWithStatus(http.StatusRequestTimeout)
+				ctx.Request().AbortWithStatus(contractshttp.DefaultAbortStatus)
 			}
 		}
 	}

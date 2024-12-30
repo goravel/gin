@@ -42,7 +42,7 @@ func TestTimeoutMiddleware(t *testing.T) {
 		require.NoError(t, err)
 
 		route.ServeHTTP(w, req)
-		assert.Equal(t, http.StatusRequestTimeout, w.Code)
+		assert.Equal(t, contractshttp.DefaultAbortStatus, w.Code)
 	})
 
 	t.Run("normal request", func(t *testing.T) {
