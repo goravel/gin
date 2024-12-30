@@ -44,7 +44,7 @@ func NewContextRequest(ctx *Context, log log.Log, validation contractsvalidate.V
 	request := contextRequestPool.Get().(*ContextRequest)
 	httpBody, err := getHttpBody(ctx)
 	if err != nil {
-        	LogFacade.Error(fmt.Sprintf("%+v", errors.Unwrap(err)))
+		LogFacade.Error(fmt.Sprintf("%+v", errors.Unwrap(err)))
 	}
 	request.ctx = ctx
 	request.instance = ctx.instance
@@ -54,10 +54,21 @@ func NewContextRequest(ctx *Context, log log.Log, validation contractsvalidate.V
 	return request
 }
 
+func (r *ContextRequest) Abort(code ...int) {
+	realCode := http.StatusBadRequest
+	if len(code) > 0 {
+		realCode = code[0]
+	}
+
+	r.instance.AbortWithStatus(realCode)
+}
+
+// DEPRECATED: Use Abort instead.
 func (r *ContextRequest) AbortWithStatus(code int) {
 	r.instance.AbortWithStatus(code)
 }
 
+// DEPRECATED: Use Response().Json().Abort() instead.
 func (r *ContextRequest) AbortWithStatusJson(code int, jsonObj any) {
 	r.instance.AbortWithStatusJSON(code, jsonObj)
 }
