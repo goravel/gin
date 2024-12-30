@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	contractshttp "github.com/goravel/framework/contracts/http"
 	mocksconfig "github.com/goravel/framework/mocks/config"
 	mockslog "github.com/goravel/framework/mocks/log"
@@ -42,7 +41,7 @@ func TestTimeoutMiddleware(t *testing.T) {
 		require.NoError(t, err)
 
 		route.ServeHTTP(w, req)
-		assert.Equal(t, contractshttp.DefaultAbortStatus, w.Code)
+		assert.Equal(t, contractshttp.StatusRequestTimeout, w.Code)
 	})
 
 	t.Run("normal request", func(t *testing.T) {
@@ -73,7 +72,7 @@ func TestTimeoutMiddleware(t *testing.T) {
 
 	t.Run("panic with custom recover", func(t *testing.T) {
 		globalRecover := func(ctx contractshttp.Context, err any) {
-			ctx.Request().AbortWithStatusJson(http.StatusInternalServerError, gin.H{"error": "Internal Panic"})
+			ctx.Request().Abort(http.StatusInternalServerError)
 		}
 		route.Recover(globalRecover)
 
@@ -83,6 +82,6 @@ func TestTimeoutMiddleware(t *testing.T) {
 
 		route.ServeHTTP(w, req)
 		assert.Equal(t, http.StatusInternalServerError, w.Code)
-		assert.Equal(t, "{\"error\":\"Internal Panic\"}", w.Body.String())
+		assert.Empty(t, w.Body.String())
 	})
 }

@@ -21,7 +21,7 @@ import (
 
 var globalRecoverCallback func(ctx contractshttp.Context, err any) = func(ctx contractshttp.Context, err any) {
 	LogFacade.WithContext(ctx).Request(ctx.Request()).Error(err)
-	ctx.Request().AbortWithStatus(http.StatusInternalServerError)
+	ctx.Request().Abort(http.StatusInternalServerError)
 }
 
 type Route struct {

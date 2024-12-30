@@ -33,7 +33,7 @@ func Timeout(timeout time.Duration) contractshttp.Middleware {
 		case <-done:
 		case <-timeoutCtx.Done():
 			if errors.Is(timeoutCtx.Err(), context.DeadlineExceeded) {
-				ctx.Request().AbortWithStatus(contractshttp.DefaultAbortStatus)
+				ctx.Request().Abort(contractshttp.StatusRequestTimeout)
 			}
 		}
 	}
