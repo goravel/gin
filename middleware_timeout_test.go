@@ -11,6 +11,7 @@ import (
 	mocksconfig "github.com/goravel/framework/mocks/config"
 	mockslog "github.com/goravel/framework/mocks/log"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -35,45 +36,53 @@ func TestTimeoutMiddleware(t *testing.T) {
 		panic(1)
 	})
 
-	w := httptest.NewRecorder()
-	req, err := http.NewRequest("GET", "/timeout", nil)
-	require.NoError(t, err)
+	t.Run("timeout request", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		req, err := http.NewRequest("GET", "/timeout", nil)
+		require.NoError(t, err)
 
-	route.ServeHTTP(w, req)
-	assert.Equal(t, http.StatusGatewayTimeout, w.Code)
+		route.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusGatewayTimeout, w.Code)
+	})
 
-	w = httptest.NewRecorder()
-	req, err = http.NewRequest("GET", "/normal", nil)
-	require.NoError(t, err)
+	t.Run("normal request", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		req, err := http.NewRequest("GET", "/normal", nil)
+		require.NoError(t, err)
 
-	route.ServeHTTP(w, req)
-	assert.Equal(t, http.StatusOK, w.Code)
-	assert.Equal(t, "normal", w.Body.String())
+		route.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusOK, w.Code)
+		assert.Equal(t, "normal", w.Body.String())
+	})
 
-	// Test with default recover callback
-	mockLog := mockslog.NewLog(t)
-	mockLog.EXPECT().Error(1).Once()
-	LogFacade = mockLog
+	t.Run("panic with default recover", func(t *testing.T) {
+		mockLog := mockslog.NewLog(t)
+		mockLog.EXPECT().WithContext(mock.Anything).Return(mockLog).Once()
+		mockLog.EXPECT().Request(mock.Anything).Return(mockLog).Once()
+		mockLog.EXPECT().Error(1).Once()
+		LogFacade = mockLog
 
-	w = httptest.NewRecorder()
-	req, err = http.NewRequest("GET", "/panic", nil)
-	require.NoError(t, err)
+		w := httptest.NewRecorder()
+		req, err := http.NewRequest("GET", "/panic", nil)
+		require.NoError(t, err)
 
-	route.ServeHTTP(w, req)
-	assert.Equal(t, http.StatusInternalServerError, w.Code)
-	assert.Equal(t, "{\"error\":\"Internal Server Error\"}", w.Body.String())
+		route.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
+		assert.Empty(t, w.Body.String())
+	})
 
-	// Test with custom recover callback
-	globalRecover := func(ctx contractshttp.Context, err any) {
-		ctx.Request().AbortWithStatusJson(http.StatusInternalServerError, gin.H{"error": "Internal Panic"})
-	}
-	route.Recover(globalRecover)
+	t.Run("panic with custom recover", func(t *testing.T) {
+		globalRecover := func(ctx contractshttp.Context, err any) {
+			ctx.Request().AbortWithStatusJson(http.StatusInternalServerError, gin.H{"error": "Internal Panic"})
+		}
+		route.Recover(globalRecover)
 
-	w = httptest.NewRecorder()
-	req, err = http.NewRequest("GET", "/panic", nil)
-	require.NoError(t, err)
+		w := httptest.NewRecorder()
+		req, err := http.NewRequest("GET", "/panic", nil)
+		require.NoError(t, err)
 
-	route.ServeHTTP(w, req)
-	assert.Equal(t, http.StatusInternalServerError, w.Code)
-	assert.Equal(t, "{\"error\":\"Internal Panic\"}", w.Body.String())
+		route.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
+		assert.Equal(t, "{\"error\":\"Internal Panic\"}", w.Body.String())
+	})
 }
