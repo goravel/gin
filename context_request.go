@@ -44,7 +44,7 @@ func NewContextRequest(ctx *Context, log log.Log, validation contractsvalidate.V
 	request := contextRequestPool.Get().(*ContextRequest)
 	httpBody, err := getHttpBody(ctx)
 	if err != nil {
-		LogFacade.Error(fmt.Sprintf("%+v", errors.Unwrap(err)))
+		log.Error(fmt.Sprintf("%+v", err))
 	}
 	request.ctx = ctx
 	request.instance = ctx.instance
