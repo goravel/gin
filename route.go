@@ -12,14 +12,17 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/render"
 	"github.com/goravel/framework/contracts/config"
-	httpcontract "github.com/goravel/framework/contracts/http"
+	contractshttp "github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/contracts/route"
 	"github.com/goravel/framework/support"
 	"github.com/goravel/framework/support/color"
 	"github.com/savioxavier/termlink"
 )
 
-var globalRecoverCallback func(ctx httpcontract.Context, err any)
+var globalRecoverCallback func(ctx contractshttp.Context, err any) = func(ctx contractshttp.Context, err any) {
+	LogFacade.WithContext(ctx).Request(ctx.Request()).Error(err)
+	ctx.Request().AbortWithStatus(http.StatusInternalServerError)
+}
 
 type Route struct {
 	route.Router
@@ -70,31 +73,31 @@ func NewRoute(config config.Config, parameters map[string]any) (*Route, error) {
 			config,
 			engine.Group("/"),
 			"",
-			[]httpcontract.Middleware{},
-			[]httpcontract.Middleware{ResponseMiddleware()},
+			[]contractshttp.Middleware{},
+			[]contractshttp.Middleware{ResponseMiddleware()},
 		),
 		config:   config,
 		instance: engine,
 	}, nil
 }
 
-func (r *Route) Fallback(handler httpcontract.HandlerFunc) {
+func (r *Route) Fallback(handler contractshttp.HandlerFunc) {
 	r.instance.NoRoute(handlerToGinHandler(handler))
 }
 
-func (r *Route) GlobalMiddleware(middlewares ...httpcontract.Middleware) {
+func (r *Route) GlobalMiddleware(middlewares ...contractshttp.Middleware) {
 	timeout := time.Duration(r.config.GetInt("http.request_timeout", 3)) * time.Second
-	defaultMiddlewares := []httpcontract.Middleware{
+	defaultMiddlewares := []contractshttp.Middleware{
 		Cors(), Tls(), Timeout(timeout),
 	}
 	middlewares = append(defaultMiddlewares, middlewares...)
 	r.setMiddlewares(middlewares)
 }
 
-func (r *Route) Recover(callback func(ctx httpcontract.Context, err any)) {
+func (r *Route) Recover(callback func(ctx contractshttp.Context, err any)) {
 	globalRecoverCallback = callback
-	r.setMiddlewares([]httpcontract.Middleware{
-		func(ctx httpcontract.Context) {
+	r.setMiddlewares([]contractshttp.Middleware{
+		func(ctx contractshttp.Context) {
 			defer func() {
 				if err := recover(); err != nil {
 					callback(ctx, err)
@@ -246,13 +249,13 @@ func (r *Route) outputRoutes() {
 	}
 }
 
-func (r *Route) setMiddlewares(middlewares []httpcontract.Middleware) {
+func (r *Route) setMiddlewares(middlewares []contractshttp.Middleware) {
 	r.instance.Use(middlewaresToGinHandlers(middlewares)...)
 	r.Router = NewGroup(
 		r.config,
 		r.instance.Group("/"),
 		"",
-		[]httpcontract.Middleware{},
-		[]httpcontract.Middleware{ResponseMiddleware()},
+		[]contractshttp.Middleware{},
+		[]contractshttp.Middleware{ResponseMiddleware()},
 	)
 }

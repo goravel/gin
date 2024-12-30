@@ -5,8 +5,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gin-gonic/gin"
-
 	contractshttp "github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/errors"
 )
@@ -24,12 +22,7 @@ func Timeout(timeout time.Duration) contractshttp.Middleware {
 		go func() {
 			defer func() {
 				if err := recover(); err != nil {
-					if globalRecoverCallback != nil {
-						globalRecoverCallback(ctx, err)
-					} else {
-						LogFacade.Error(err)
-						ctx.Request().AbortWithStatusJson(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
-					}
+					globalRecoverCallback(ctx, err)
 				}
 
 				close(done)
