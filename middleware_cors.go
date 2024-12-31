@@ -57,7 +57,7 @@ func Cors() http.Middleware {
 
 		if ctx.Request().Origin().Method == http.MethodOptions &&
 			ctx.Request().Header("Access-Control-Request-Method") != "" {
-			ctx.Request().AbortWithStatus(http.StatusNoContent)
+			ctx.Request().Abort(http.StatusNoContent)
 		}
 
 		ctx.Request().Next()

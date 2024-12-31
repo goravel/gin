@@ -31,7 +31,7 @@ func Tls() contractshttp.Middleware {
 		})
 
 		if err := secureMiddleware.Process(ctx.Response().Writer(), ctx.Request().Origin()); err != nil {
-			ctx.Request().AbortWithStatus(http.StatusForbidden)
+			ctx.Request().Abort(http.StatusForbidden)
 		}
 
 		ctx.Request().Next()

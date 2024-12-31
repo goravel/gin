@@ -14,7 +14,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/render"
 	contractshttp "github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/contracts/validation"
@@ -34,7 +33,7 @@ func TestRecoverWithCustomCallback(t *testing.T) {
 	assert.Nil(t, err)
 
 	globalRecover := func(ctx contractshttp.Context, err any) {
-		ctx.Request().AbortWithStatusJson(http.StatusInternalServerError, gin.H{"error": "Internal Panic"})
+		ctx.Request().Abort(http.StatusInternalServerError)
 	}
 
 	route.Recover(globalRecover)
@@ -45,7 +44,7 @@ func TestRecoverWithCustomCallback(t *testing.T) {
 
 	route.ServeHTTP(w, req)
 
-	assert.Equal(t, "{\"error\":\"Internal Panic\"}", w.Body.String())
+	assert.Empty(t, w.Body.String())
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 
 	mockConfig.AssertExpectations(t)
