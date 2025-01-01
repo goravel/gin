@@ -16,7 +16,6 @@ import (
 	"github.com/goravel/framework/contracts/route"
 	"github.com/goravel/framework/support"
 	"github.com/goravel/framework/support/color"
-	"github.com/savioxavier/termlink"
 )
 
 var globalRecoverCallback func(ctx contractshttp.Context, err any) = func(ctx contractshttp.Context, err any) {
@@ -110,7 +109,7 @@ func (r *Route) Recover(callback func(ctx contractshttp.Context, err any)) {
 
 func (r *Route) Listen(l net.Listener) error {
 	r.outputRoutes()
-	color.Green().Println(termlink.Link("[HTTP] Listening and serving HTTP on", "http://"+l.Addr().String()))
+	color.Green().Println("[HTTP] Listening on: http://" + l.Addr().String())
 
 	r.server = &http.Server{
 		Addr:           l.Addr().String(),
@@ -131,7 +130,7 @@ func (r *Route) ListenTLS(l net.Listener) error {
 
 func (r *Route) ListenTLSWithCert(l net.Listener, certFile, keyFile string) error {
 	r.outputRoutes()
-	color.Green().Println(termlink.Link("[HTTPS] Listening and serving HTTPS on", "https://"+l.Addr().String()))
+	color.Green().Println("[HTTPS] Listening on: https://" + l.Addr().String())
 
 	r.tlsServer = &http.Server{
 		Addr:           l.Addr().String(),
@@ -158,7 +157,7 @@ func (r *Route) Run(host ...string) error {
 	}
 
 	r.outputRoutes()
-	color.Green().Println(termlink.Link("[HTTP] Listening and serving HTTP on", "http://"+host[0]))
+	color.Green().Println("[HTTP] Listening on: http://" + host[0])
 
 	r.server = &http.Server{
 		Addr:           host[0],
@@ -199,7 +198,7 @@ func (r *Route) RunTLSWithCert(host, certFile, keyFile string) error {
 	}
 
 	r.outputRoutes()
-	color.Green().Println(termlink.Link("[HTTPS] Listening and serving HTTPS on", "https://"+host))
+	color.Green().Println("[HTTPS] Listening on: https://" + host)
 
 	r.tlsServer = &http.Server{
 		Addr:           host,
