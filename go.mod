@@ -2,7 +2,7 @@ module github.com/goravel/gin
 
 go 1.22.7
 
-toolchain go1.23.4
+toolchain go1.23.5
 
 require (
 	github.com/gin-gonic/gin v1.10.0
