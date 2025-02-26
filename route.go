@@ -11,6 +11,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/render"
+
 	"github.com/goravel/framework/contracts/config"
 	contractshttp "github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/contracts/route"
@@ -242,7 +243,7 @@ func (r *Route) Test(request *http.Request) (*http.Response, error) {
 }
 
 func (r *Route) outputRoutes() {
-	if r.config.GetBool("app.debug") && support.Env != support.EnvArtisan {
+	if r.config.GetBool("app.debug") && support.RuntimeMode != support.RuntimeArtisan {
 		for _, item := range r.instance.Routes() {
 			fmt.Printf("%-10s %s\n", item.Method, colonToBracket(item.Path))
 		}
