@@ -1406,7 +1406,7 @@ func (s *ContextRequestSuite) TestValidate_PostFail() {
 }
 
 func (s *ContextRequestSuite) TestValidateRequest_PrepareForValidationWithContext() {
-	s.route.Get("/validate-request/get-success", func(ctx contractshttp.Context) contractshttp.Response {
+	s.route.Get("/validate-request/prepare-for-validation-with-context", func(ctx contractshttp.Context) contractshttp.Response {
 		// nolint:all
 		ctx.WithValue("test", "-ctx")
 
@@ -1424,7 +1424,7 @@ func (s *ContextRequestSuite) TestValidateRequest_PrepareForValidationWithContex
 		})
 	})
 
-	req, err := http.NewRequest("GET", "/validate-request/get-success?name=Goravel", nil)
+	req, err := http.NewRequest("GET", "/validate-request/prepare-for-validation-with-context?name=Goravel", nil)
 	s.Require().Nil(err)
 
 	code, body, _, _ := s.request(req)
