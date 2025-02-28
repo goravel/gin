@@ -7,7 +7,7 @@ toolchain go1.24.0
 require (
 	github.com/gin-gonic/gin v1.10.0
 	github.com/gookit/validate v1.5.4
-	github.com/goravel/framework v1.15.2-0.20250228033533-2e950fffd7d9
+	github.com/goravel/framework v1.15.4
 	github.com/rs/cors v1.11.1
 	github.com/spf13/cast v1.7.1
 	github.com/stretchr/testify v1.10.0
@@ -63,8 +63,6 @@ require (
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.2.12 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
-	go.opentelemetry.io/otel/metric v1.33.0 // indirect
-	go.opentelemetry.io/otel/trace v1.33.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/arch v0.8.0 // indirect
 	golang.org/x/crypto v0.35.0 // indirect
