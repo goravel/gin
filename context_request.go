@@ -333,20 +333,53 @@ func (r *ContextRequest) InputArray(key string, defaultValue ...[]string) []stri
 	return []string{}
 }
 
-func (r *ContextRequest) InputMap(key string, defaultValue ...map[string]string) map[string]string {
+func (r *ContextRequest) InputMap(key string, defaultValue ...map[string]any) map[string]any {
 	if valueFromHttpBody := r.getValueFromHttpBody(key); valueFromHttpBody != nil {
-		return cast.ToStringMapString(valueFromHttpBody)
+		return cast.ToStringMap(valueFromHttpBody)
 	}
 
 	if _, exist := r.instance.GetQuery(key); exist {
-		return r.instance.QueryMap(key)
+		valueStr := r.instance.QueryMap(key)
+		var value = make(map[string]any)
+		for k, v := range valueStr {
+			value[k] = v
+		}
+
+		return value
 	}
 
 	if len(defaultValue) > 0 {
 		return defaultValue[0]
 	}
 
-	return map[string]string{}
+	return map[string]any{}
+}
+
+func (r *ContextRequest) InputMapArray(key string, defaultValue ...[]map[string]any) []map[string]any {
+	if valueFromHttpBody := r.getValueFromHttpBody(key); valueFromHttpBody != nil {
+		var result = make([]map[string]any, 0)
+		for _, item := range cast.ToSlice(valueFromHttpBody) {
+			if res, err := cast.ToStringMapE(item); err == nil {
+				result = append(result, res)
+			}
+		}
+
+		if len(result) == 0 {
+			for _, item := range cast.ToStringSlice(valueFromHttpBody) {
+				if res, err := cast.ToStringMapE(item); err == nil {
+					result = append(result, res)
+				}
+			}
+		}
+
+		return result
+	}
+
+	if len(defaultValue) > 0 {
+		return defaultValue[0]
+	}
+
+	return []map[string]any{}
 }
 
 func (r *ContextRequest) InputInt(key string, defaultValue ...int) int {
