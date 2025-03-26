@@ -96,6 +96,27 @@ func TestFallback(t *testing.T) {
 	mockConfig.AssertExpectations(t)
 }
 
+func TestGlobalMiddleware(t *testing.T) {
+	mockConfig := configmocks.NewConfig(t)
+	mockConfig.EXPECT().GetBool("app.debug").Return(true).Twice()
+	mockConfig.EXPECT().GetInt("http.drivers.gin.body_limit", 4096).Return(4096).Twice()
+
+	// has timeout middleware
+	mockConfig.EXPECT().GetInt("http.request_timeout", 3).Return(1).Once()
+	route, err := NewRoute(mockConfig, nil)
+	assert.Nil(t, err)
+	route.GlobalMiddleware()
+	assert.Len(t, route.instance.Handlers, 5)
+
+	// no timeout middleware
+	mockConfig.EXPECT().GetInt("http.request_timeout", 3).Return(0).Once()
+	route, err = NewRoute(mockConfig, nil)
+	assert.Nil(t, err)
+	route.GlobalMiddleware()
+	assert.Len(t, route.instance.Handlers, 4)
+
+}
+
 func TestListen(t *testing.T) {
 	var (
 		err        error
