@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 
 	"github.com/gin-gonic/gin/render"
-	"github.com/goravel/framework/support"
 	"github.com/goravel/framework/support/file"
+	"github.com/goravel/framework/support/path"
 )
 
 type Delims struct {
@@ -29,11 +29,7 @@ func NewTemplate(options RenderOptions) (*render.HTMLProduction, error) {
 		instance.Funcs(options.FuncMap)
 	}
 
-	dir := "resources/views"
-	if support.RelativePath != "" {
-		dir = support.RelativePath + "/" + dir
-	}
-
+	dir := path.Resource("views")
 	if !file.Exists(dir) {
 		return nil, nil
 	}
