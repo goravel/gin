@@ -20,7 +20,7 @@ import (
 	"github.com/goravel/framework/support/str"
 )
 
-var globalRecoverCallback func(ctx contractshttp.Context, err any) = func(ctx contractshttp.Context, err any) {
+var globalRecoverCallback = func(ctx contractshttp.Context, err any) {
 	LogFacade.WithContext(ctx).Request(ctx.Request()).Error(err)
 	ctx.Request().Abort(http.StatusInternalServerError)
 }
