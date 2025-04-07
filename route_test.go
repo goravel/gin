@@ -307,6 +307,53 @@ func TestListenTLSWithCert(t *testing.T) {
 	}
 }
 
+func TestRoutesNoRoutes(t *testing.T) {
+	mockConfig := configmocks.NewConfig(t)
+	mockConfig.EXPECT().GetBool("app.debug").Return(true).Once()
+	mockConfig.EXPECT().GetInt("http.drivers.gin.body_limit", 4096).Return(4096).Once()
+
+	route, err := NewRoute(mockConfig, nil)
+	assert.Nil(t, err)
+
+	routes := route.Routes()
+	assert.Empty(t, routes)
+}
+
+func TestRoutesWithMultipleRoutes(t *testing.T) {
+	mockConfig := configmocks.NewConfig(t)
+	mockConfig.EXPECT().GetBool("app.debug").Return(true).Once()
+	mockConfig.EXPECT().GetInt("http.drivers.gin.body_limit", 4096).Return(4096).Once()
+
+	route, err := NewRoute(mockConfig, nil)
+	assert.Nil(t, err)
+
+	route.Get("/users", func(ctx contractshttp.Context) contractshttp.Response {
+		return ctx.Response().String(200, "List Users")
+	})
+	route.Post("/users", func(ctx contractshttp.Context) contractshttp.Response {
+		return ctx.Response().String(201, "Create User")
+	})
+	route.Put("/users/:id", func(ctx contractshttp.Context) contractshttp.Response {
+		return ctx.Response().String(200, "Update User")
+	})
+	route.Delete("/users/:id", func(ctx contractshttp.Context) contractshttp.Response {
+		return ctx.Response().String(204, "Delete User")
+	})
+
+	routes := route.Routes()
+	assert.Len(t, routes, 4)
+
+	routeFound := make(map[string]bool)
+	for _, r := range routes {
+		routeFound[r.Method+":"+r.Path] = true
+	}
+
+	assert.True(t, routeFound["GET:/users"])
+	assert.True(t, routeFound["POST:/users"])
+	assert.True(t, routeFound["PUT:/users/{id}"])
+	assert.True(t, routeFound["DELETE:/users/{id}"])
+}
+
 func TestRun(t *testing.T) {
 	var (
 		err        error

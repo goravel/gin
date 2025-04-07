@@ -148,6 +148,18 @@ func (r *Route) ListenTLSWithCert(l net.Listener, certFile, keyFile string) erro
 	return nil
 }
 
+func (r *Route) Routes() []route.Info {
+	var routes []route.Info
+	for _, item := range r.instance.Routes() {
+		routes = append(routes, route.Info{
+			Method:  item.Method,
+			Path:    colonToBracket(item.Path),
+			Handler: item.Handler,
+		})
+	}
+	return routes
+}
+
 func (r *Route) Run(host ...string) error {
 	if len(host) == 0 {
 		defaultHost := r.config.GetString("http.host")
@@ -245,8 +257,8 @@ func (r *Route) Test(request *http.Request) (*http.Response, error) {
 
 func (r *Route) outputRoutes() {
 	if r.config.GetBool("app.debug") && support.RuntimeMode != support.RuntimeArtisan {
-		for _, item := range r.instance.Routes() {
-			fmt.Printf("%-10s %s\n", item.Method, colonToBracket(item.Path))
+		for _, item := range r.Routes() {
+			fmt.Printf("%-10s %s\n", item.Method, item.Path)
 		}
 	}
 }
