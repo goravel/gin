@@ -9,7 +9,7 @@ require (
 	github.com/gookit/validate v1.5.4
 	github.com/goravel/framework v1.15.2-0.20250327025920-aec2bbbe3f33
 	github.com/rs/cors v1.11.1
-	github.com/spf13/cast v1.7.1
+	github.com/spf13/cast v1.8.0
 	github.com/stretchr/testify v1.10.0
 	github.com/unrolled/secure v1.17.0
 )
