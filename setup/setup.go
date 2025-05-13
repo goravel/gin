@@ -34,11 +34,11 @@ func main() {
 		).
 		Uninstall(
 			modify.GoFile(path.Config("app.go")).
-				Find(match.Imports()).Modify(modify.RemoveImport(packages.GetModulePath())).
-				Find(match.Providers()).Modify(modify.Unregister("&gin.ServiceProvider{}")),
+				Find(match.Providers()).Modify(modify.Unregister("&gin.ServiceProvider{}")).
+				Find(match.Imports()).Modify(modify.RemoveImport(packages.GetModulePath())),
 			modify.GoFile(path.Config("http.go")).
-				Find(match.Imports()).Modify(modify.RemoveImport(packages.GetModulePath()), modify.RemoveImport("github.com/goravel/gin/facades", "ginfacades"), modify.RemoveImport("github.com/gin-gonic/gin/render")).
-				Find(match.Config("http.drivers")).Modify(modify.RemoveConfig("gin")),
+				Find(match.Config("http.drivers")).Modify(modify.RemoveConfig("gin")).
+				Find(match.Imports()).Modify(modify.RemoveImport(packages.GetModulePath()), modify.RemoveImport("github.com/goravel/gin/facades", "ginfacades"), modify.RemoveImport("github.com/gin-gonic/gin/render")),
 		).
 		Execute()
 }
