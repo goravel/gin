@@ -847,10 +847,11 @@ func (r *Unauthorize) PrepareForValidation(ctx contractshttp.Context, data valid
 }
 
 type FileImageJson struct {
-	Name  string                `form:"name" json:"name"`
-	File  *multipart.FileHeader `form:"file" json:"file"`
-	Image *multipart.FileHeader `form:"image" json:"image"`
-	Json  string                `form:"json" json:"json"`
+	Name  string                 `form:"name" json:"name"`
+	File  *multipart.FileHeader  `form:"file" json:"file"`
+	Files []multipart.FileHeader `form:"files" json:"files"`
+	Image *multipart.FileHeader  `form:"image" json:"image"`
+	Json  string                 `form:"json" json:"json"`
 }
 
 func (r *FileImageJson) Authorize(ctx contractshttp.Context) error {
