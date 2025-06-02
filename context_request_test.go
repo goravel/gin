@@ -1673,10 +1673,12 @@ func (s *ContextRequestSuite) TestValidateRequest_FormSuccess() {
 		}
 
 		return ctx.Response().Success().Json(contractshttp.Json{
-			"name":  request.Name,
-			"file":  request.File.Filename,
-			"image": request.Image.Filename,
-			"json":  request.Json,
+			"name":   request.Name,
+			"file":   request.File.Filename,
+			"files1": request.Files[0].Filename,
+			"files2": request.Files[1].Filename,
+			"image":  request.Image.Filename,
+			"json":   request.Json,
 		})
 	})
 
@@ -1699,6 +1701,18 @@ func (s *ContextRequestSuite) TestValidateRequest_FormSuccess() {
 	_, err = io.Copy(formFile, readme)
 	s.Require().NoError(err)
 
+	formFiles, err := writer.CreateFormFile("files", filepath.Base("./README.md"))
+	s.Require().NoError(err)
+
+	_, err = io.Copy(formFiles, readme)
+	s.Require().NoError(err)
+
+	formFiles, err = writer.CreateFormFile("files", filepath.Base("./README.md"))
+	s.Require().NoError(err)
+
+	_, err = io.Copy(formFiles, readme)
+	s.Require().NoError(err)
+
 	logo, err := os.Open("./logo.png")
 	s.Require().NoError(err)
 	defer logo.Close()
@@ -1718,7 +1732,7 @@ func (s *ContextRequestSuite) TestValidateRequest_FormSuccess() {
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	code, body, _, _ := s.request(req)
 
-	s.Equal("{\"file\":\"README.md\",\"image\":\"logo.png\",\"json\":\"{\\\"age\\\": 1, \\\"name\\\": \\\"Bowen\\\"}\",\"name\":\"Goravel\"}", body)
+	s.Equal("{\"file\":\"README.md\",\"files1\":\"README.md\",\"files2\":\"README.md\",\"image\":\"logo.png\",\"json\":\"{\\\"age\\\": 1, \\\"name\\\": \\\"Bowen\\\"}\",\"name\":\"Goravel\"}", body)
 	s.Equal(http.StatusOK, code)
 }
 
