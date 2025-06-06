@@ -296,8 +296,6 @@ func (r *ContextRequest) OriginPath() string {
 }
 
 func (r *ContextRequest) Path() string {
-	fmt.Println("Path", r.instance.FullPath())
-
 	return r.instance.Request.URL.Path
 }
 
