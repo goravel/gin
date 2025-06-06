@@ -291,7 +291,13 @@ func (r *ContextRequest) Origin() *http.Request {
 	return r.instance.Request
 }
 
+func (r *ContextRequest) OriginPath() string {
+	return colonToBracket(r.instance.FullPath())
+}
+
 func (r *ContextRequest) Path() string {
+	fmt.Println("Path", r.instance.FullPath())
+
 	return r.instance.Request.URL.Path
 }
 
