@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	contractshttp "github.com/goravel/framework/contracts/http"
-	"github.com/goravel/framework/contracts/route"
+	contractsroute "github.com/goravel/framework/contracts/route"
 	configmocks "github.com/goravel/framework/mocks/config"
 	"github.com/stretchr/testify/assert"
 )
@@ -370,8 +370,8 @@ func TestGroup(t *testing.T) {
 		{
 			name: "Multiple Prefix Group Middleware",
 			setup: func(req *http.Request) {
-				gin.Prefix("group1").Middleware(contextMiddleware()).Group(func(route1 route.Router) {
-					route1.Prefix("group2").Middleware(contextMiddleware1()).Group(func(route2 route.Router) {
+				gin.Prefix("group1").Middleware(contextMiddleware()).Group(func(route1 contractsroute.Router) {
+					route1.Prefix("group2").Middleware(contextMiddleware1()).Group(func(route2 contractsroute.Router) {
 						route2.Get("/middleware/{id}", func(ctx contractshttp.Context) contractshttp.Response {
 							return ctx.Response().Success().Json(contractshttp.Json{
 								"id":   ctx.Request().Input("id"),
@@ -397,8 +397,8 @@ func TestGroup(t *testing.T) {
 		{
 			name: "Multiple Group Middleware",
 			setup: func(req *http.Request) {
-				gin.Prefix("group1").Middleware(contextMiddleware()).Group(func(route1 route.Router) {
-					route1.Prefix("group2").Middleware(contextMiddleware1()).Group(func(route2 route.Router) {
+				gin.Prefix("group1").Middleware(contextMiddleware()).Group(func(route1 contractsroute.Router) {
+					route1.Prefix("group2").Middleware(contextMiddleware1()).Group(func(route2 contractsroute.Router) {
 						route2.Get("/middleware/{id}", func(ctx contractshttp.Context) contractshttp.Response {
 							return ctx.Response().Success().Json(contractshttp.Json{
 								"id":   ctx.Request().Input("id"),
@@ -449,7 +449,7 @@ func TestGroup(t *testing.T) {
 		{
 			name: "Middleware Conflict",
 			setup: func(req *http.Request) {
-				gin.Prefix("conflict").Group(func(route1 route.Router) {
+				gin.Prefix("conflict").Group(func(route1 contractsroute.Router) {
 					route1.Middleware(contextMiddleware()).Get("/middleware1/{id}", func(ctx contractshttp.Context) contractshttp.Response {
 						return ctx.Response().Success().Json(contractshttp.Json{
 							"id":   ctx.Request().Input("id"),
@@ -495,6 +495,32 @@ func TestGroup(t *testing.T) {
 			mockConfig.AssertExpectations(t)
 		})
 	}
+}
+
+// https://github.com/goravel/goravel/issues/408
+func TestIssue408(t *testing.T) {
+	mockConfig := configmocks.NewConfig(t)
+	mockConfig.EXPECT().GetBool("app.debug").Return(true).Once()
+	mockConfig.EXPECT().GetInt("http.drivers.gin.body_limit", 4096).Return(4096).Once()
+
+	route, err := NewRoute(mockConfig, nil)
+	assert.Nil(t, err)
+
+	route.Prefix("prefix/{id}").Group(func(route contractsroute.Router) {
+		route.Get("", func(ctx contractshttp.Context) contractshttp.Response {
+			return ctx.Response().String(200, "ok")
+		})
+		route.Post("test/{name}", func(ctx contractshttp.Context) contractshttp.Response {
+			return ctx.Response().String(200, "ok")
+		})
+	})
+
+	routes := route.GetRoutes()
+	assert.Len(t, routes, 2)
+	assert.Equal(t, "GET", routes[0].Method)
+	assert.Equal(t, "/prefix/{id}", routes[0].Path)
+	assert.Equal(t, "POST", routes[1].Method)
+	assert.Equal(t, "/prefix/{id}/test/{name}", routes[1].Path)
 }
 
 func abortMiddleware() contractshttp.Middleware {
