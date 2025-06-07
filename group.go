@@ -34,7 +34,11 @@ func (r *Group) Group(handler route.GroupFunc) {
 	middlewares = append(middlewares, r.originMiddlewares...)
 	middlewares = append(middlewares, r.middlewares...)
 	r.middlewares = []httpcontract.Middleware{}
-	prefix := pathToGinPath(r.originPrefix + "/" + r.prefix)
+
+	prefix := r.originPrefix
+	if r.prefix != "" {
+		prefix += "/" + r.prefix
+	}
 	r.prefix = ""
 
 	handler(NewGroup(r.config, r.instance, prefix, middlewares, r.lastMiddlewares))
@@ -113,7 +117,11 @@ func (r *Group) StaticFS(relativePath string, fs http.FileSystem) {
 }
 
 func (r *Group) getRoutesWithMiddlewares() gin.IRoutes {
-	prefix := pathToGinPath(r.originPrefix + "/" + r.prefix)
+	prefix := r.originPrefix
+	if r.prefix != "" {
+		prefix += "/" + r.prefix
+	}
+	prefix = pathToGinPath(prefix)
 
 	r.prefix = ""
 	ginGroup := r.instance.Group(prefix)
