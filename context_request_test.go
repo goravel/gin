@@ -622,14 +622,15 @@ func (s *ContextRequestSuite) TestHeaders() {
 func (s *ContextRequestSuite) TestMethods() {
 	s.route.Get("/methods/{id}", func(ctx contractshttp.Context) contractshttp.Response {
 		return ctx.Response().Success().Json(contractshttp.Json{
-			"id":       ctx.Request().Input("id"),
-			"name":     ctx.Request().Query("name", "Hello"),
-			"header":   ctx.Request().Header("Hello", "World"),
-			"method":   ctx.Request().Method(),
-			"path":     ctx.Request().Path(),
-			"url":      ctx.Request().Url(),
-			"full_url": ctx.Request().FullUrl(),
-			"ip":       ctx.Request().Ip(),
+			"id":          ctx.Request().Input("id"),
+			"name":        ctx.Request().Query("name", "Hello"),
+			"header":      ctx.Request().Header("Hello", "World"),
+			"method":      ctx.Request().Method(),
+			"origin_path": ctx.Request().OriginPath(),
+			"path":        ctx.Request().Path(),
+			"url":         ctx.Request().Url(),
+			"full_url":    ctx.Request().FullUrl(),
+			"ip":          ctx.Request().Ip(),
 		})
 	})
 
@@ -639,7 +640,7 @@ func (s *ContextRequestSuite) TestMethods() {
 	req.Header.Set("Hello", "Goravel")
 	code, body, _, _ := s.request(req)
 
-	s.Equal("{\"full_url\":\"\",\"header\":\"Goravel\",\"id\":\"1\",\"ip\":\"\",\"method\":\"GET\",\"name\":\"Goravel\",\"path\":\"/methods/1\",\"url\":\"\"}", body)
+	s.Equal("{\"full_url\":\"\",\"header\":\"Goravel\",\"id\":\"1\",\"ip\":\"\",\"method\":\"GET\",\"name\":\"Goravel\",\"origin_path\":\"/methods/{id}\",\"path\":\"/methods/1\",\"url\":\"\"}", body)
 	s.Equal(http.StatusOK, code)
 }
 

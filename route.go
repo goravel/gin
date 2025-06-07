@@ -86,6 +86,18 @@ func (r *Route) Fallback(handler contractshttp.HandlerFunc) {
 	r.instance.NoRoute(handlerToGinHandler(handler))
 }
 
+func (r *Route) GetRoutes() []route.RouteInfo {
+	var routes []route.RouteInfo
+	for _, item := range r.instance.Routes() {
+		routes = append(routes, route.RouteInfo{
+			Method: item.Method,
+			Path:   colonToBracket(item.Path),
+		})
+	}
+
+	return routes
+}
+
 func (r *Route) GlobalMiddleware(middlewares ...contractshttp.Middleware) {
 	defaultMiddlewares := []contractshttp.Middleware{Cors(), Tls()}
 	timeout := time.Duration(r.config.GetInt("http.request_timeout", 3)) * time.Second
@@ -245,8 +257,8 @@ func (r *Route) Test(request *http.Request) (*http.Response, error) {
 
 func (r *Route) outputRoutes() {
 	if r.config.GetBool("app.debug") && support.RuntimeMode != support.RuntimeArtisan {
-		for _, item := range r.instance.Routes() {
-			fmt.Printf("%-10s %s\n", item.Method, colonToBracket(item.Path))
+		for _, item := range r.GetRoutes() {
+			fmt.Printf("%-10s %s\n", item.Method, item.Path)
 		}
 	}
 }

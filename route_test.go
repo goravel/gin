@@ -96,6 +96,24 @@ func TestFallback(t *testing.T) {
 	mockConfig.AssertExpectations(t)
 }
 
+func TestGetRoutes(t *testing.T) {
+	mockConfig := configmocks.NewConfig(t)
+	mockConfig.EXPECT().GetBool("app.debug").Return(true).Once()
+	mockConfig.EXPECT().GetInt("http.drivers.gin.body_limit", 4096).Return(4096).Once()
+
+	route, err := NewRoute(mockConfig, nil)
+	assert.Nil(t, err)
+
+	route.Get("/test/{id}", func(ctx contractshttp.Context) contractshttp.Response {
+		return ctx.Response().String(200, "ok")
+	})
+
+	routes := route.GetRoutes()
+	assert.Len(t, routes, 1)
+	assert.Equal(t, "GET", routes[0].Method)
+	assert.Equal(t, "/test/{id}", routes[0].Path)
+}
+
 func TestGlobalMiddleware(t *testing.T) {
 	mockConfig := configmocks.NewConfig(t)
 	mockConfig.EXPECT().GetBool("app.debug").Return(true).Twice()
