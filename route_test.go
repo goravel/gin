@@ -325,6 +325,26 @@ func TestListenTLSWithCert(t *testing.T) {
 	}
 }
 
+func TestInfo(t *testing.T) {
+	mockConfig := configmocks.NewConfig(t)
+	mockConfig.EXPECT().GetBool("app.debug").Return(true).Once()
+	mockConfig.EXPECT().GetInt("http.drivers.gin.body_limit", 4096).Return(4096).Once()
+
+	route, err := NewRoute(mockConfig, nil)
+	assert.Nil(t, err)
+
+	route.Get("/test", func(ctx contractshttp.Context) contractshttp.Response {
+		return ctx.Response().Json(200, contractshttp.Json{
+			"Hello": "Goravel",
+		})
+	}).Name("test")
+
+	info := route.Info("test")
+	assert.Equal(t, "GET", info.Method)
+	assert.Equal(t, "test", info.Name)
+	assert.Equal(t, "/test", info.Path)
+}
+
 func TestRun(t *testing.T) {
 	var (
 		err        error

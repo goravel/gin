@@ -6,142 +6,136 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/goravel/framework/contracts/config"
 	httpcontract "github.com/goravel/framework/contracts/http"
-	"github.com/goravel/framework/contracts/route"
+	contractsroute "github.com/goravel/framework/contracts/route"
+	"github.com/goravel/framework/support/str"
 )
 
+var routes = make(map[string]contractsroute.Info)
+
 type Group struct {
-	config            config.Config
-	instance          gin.IRouter
-	originPrefix      string
-	prefix            string
-	originMiddlewares []httpcontract.Middleware
-	middlewares       []httpcontract.Middleware
-	lastMiddlewares   []httpcontract.Middleware
+	config          config.Config
+	instance        gin.IRouter
+	prefix          string
+	middlewares     []httpcontract.Middleware
+	lastMiddlewares []httpcontract.Middleware
 }
 
-func NewGroup(config config.Config, instance gin.IRouter, prefix string, originMiddlewares []httpcontract.Middleware, lastMiddlewares []httpcontract.Middleware) route.Router {
+func NewGroup(config config.Config, instance gin.IRouter, prefix string, middlewares []httpcontract.Middleware, lastMiddlewares []httpcontract.Middleware) contractsroute.Router {
 	return &Group{
-		config:            config,
-		instance:          instance,
-		originPrefix:      prefix,
-		originMiddlewares: originMiddlewares,
-		lastMiddlewares:   lastMiddlewares,
+		config:          config,
+		instance:        instance,
+		prefix:          prefix,
+		middlewares:     middlewares,
+		lastMiddlewares: lastMiddlewares,
 	}
 }
 
-func (r *Group) Group(handler route.GroupFunc) {
-	var middlewares []httpcontract.Middleware
-	middlewares = append(middlewares, r.originMiddlewares...)
-	middlewares = append(middlewares, r.middlewares...)
-	r.middlewares = []httpcontract.Middleware{}
+func (r *Group) Group(handler contractsroute.GroupFunc) {
+	handler(NewGroup(r.config, r.instance, r.getFullPath(""), r.middlewares, r.lastMiddlewares))
+}
 
-	prefix := r.originPrefix
-	if r.prefix != "" {
-		prefix += "/" + r.prefix
+func (r *Group) Prefix(path string) contractsroute.Router {
+	return NewGroup(r.config, r.instance, r.getFullPath(path), r.middlewares, r.lastMiddlewares)
+}
+
+func (r *Group) Middleware(middlewares ...httpcontract.Middleware) contractsroute.Router {
+	return NewGroup(r.config, r.instance, r.getFullPath(""), append(r.middlewares, middlewares...), r.lastMiddlewares)
+}
+
+func (r *Group) Any(path string, handler httpcontract.HandlerFunc) contractsroute.Action {
+	r.WithMiddlewares().Any(r.getGinFullPath(path), []gin.HandlerFunc{handlerToGinHandler(handler)}...)
+
+	return NewAction("ANY", r.getFullPath(path))
+}
+
+func (r *Group) Get(path string, handler httpcontract.HandlerFunc) contractsroute.Action {
+	r.WithMiddlewares().GET(r.getGinFullPath(path), []gin.HandlerFunc{handlerToGinHandler(handler)}...)
+
+	return NewAction("GET", r.getFullPath(path))
+}
+
+func (r *Group) Post(path string, handler httpcontract.HandlerFunc) contractsroute.Action {
+	r.WithMiddlewares().POST(r.getGinFullPath(path), []gin.HandlerFunc{handlerToGinHandler(handler)}...)
+
+	return NewAction("POST", r.getFullPath(path))
+}
+
+func (r *Group) Delete(path string, handler httpcontract.HandlerFunc) contractsroute.Action {
+	r.WithMiddlewares().DELETE(r.getGinFullPath(path), []gin.HandlerFunc{handlerToGinHandler(handler)}...)
+
+	return NewAction("DELETE", r.getFullPath(path))
+}
+
+func (r *Group) Patch(path string, handler httpcontract.HandlerFunc) contractsroute.Action {
+	r.WithMiddlewares().PATCH(r.getGinFullPath(path), []gin.HandlerFunc{handlerToGinHandler(handler)}...)
+
+	return NewAction("PATCH", r.getFullPath(path))
+}
+
+func (r *Group) Put(path string, handler httpcontract.HandlerFunc) contractsroute.Action {
+	r.WithMiddlewares().PUT(r.getGinFullPath(path), []gin.HandlerFunc{handlerToGinHandler(handler)}...)
+
+	return NewAction("PUT", r.getFullPath(path))
+}
+
+func (r *Group) Options(path string, handler httpcontract.HandlerFunc) contractsroute.Action {
+	r.WithMiddlewares().OPTIONS(r.getGinFullPath(path), []gin.HandlerFunc{handlerToGinHandler(handler)}...)
+
+	return NewAction("OPTIONS", r.getFullPath(path))
+}
+
+func (r *Group) Resource(path string, controller httpcontract.ResourceController) contractsroute.Action {
+	ginFullPath := r.getGinFullPath(path)
+	r.WithMiddlewares().GET(ginFullPath, []gin.HandlerFunc{handlerToGinHandler(controller.Index)}...)
+	r.WithMiddlewares().POST(ginFullPath, []gin.HandlerFunc{handlerToGinHandler(controller.Store)}...)
+
+	ginFullPathWithID := r.getGinFullPath(path + "/{id}")
+	r.WithMiddlewares().GET(ginFullPathWithID, []gin.HandlerFunc{handlerToGinHandler(controller.Show)}...)
+	r.WithMiddlewares().PUT(ginFullPathWithID, []gin.HandlerFunc{handlerToGinHandler(controller.Update)}...)
+	r.WithMiddlewares().PATCH(ginFullPathWithID, []gin.HandlerFunc{handlerToGinHandler(controller.Update)}...)
+	r.WithMiddlewares().DELETE(ginFullPathWithID, []gin.HandlerFunc{handlerToGinHandler(controller.Destroy)}...)
+
+	return NewAction("RESOURCE", r.getFullPath(path))
+}
+
+func (r *Group) Static(path, root string) contractsroute.Action {
+	fullPath := r.getFullPath(path)
+	r.WithMiddlewares().Static(pathToGinPath(fullPath), root)
+
+	return NewAction("STATIC", fullPath)
+}
+
+func (r *Group) StaticFile(path, filepath string) contractsroute.Action {
+	r.WithMiddlewares().StaticFile(r.getGinFullPath(path), filepath)
+
+	return NewAction("STATIC_FILE", r.getFullPath(path))
+}
+
+func (r *Group) StaticFS(path string, fs http.FileSystem) contractsroute.Action {
+	r.WithMiddlewares().StaticFS(r.getGinFullPath(path), fs)
+
+	return NewAction("STATIC_FS", r.getFullPath(path))
+}
+
+func (r *Group) getFullPath(path string) string {
+	if path == "" {
+		return r.prefix
 	}
-	r.prefix = ""
 
-	handler(NewGroup(r.config, r.instance, prefix, middlewares, r.lastMiddlewares))
+	return r.prefix + str.Of(path).Start("/").String()
 }
 
-func (r *Group) Prefix(addr string) route.Router {
-	r.prefix += "/" + addr
-
-	return r
+func (r *Group) getGinFullPath(path string) string {
+	return pathToGinPath(r.getFullPath(path))
 }
 
-func (r *Group) Middleware(middlewares ...httpcontract.Middleware) route.Router {
-	r.middlewares = append(r.middlewares, middlewares...)
+func (r *Group) WithMiddlewares() gin.IRoutes {
+	ginGroup := r.instance.Group("")
+	ginMiddlewares := middlewaresToGinHandlers(append(r.middlewares, r.lastMiddlewares...))
 
-	return r
-}
-
-func (r *Group) Any(relativePath string, handler httpcontract.HandlerFunc) {
-	r.getRoutesWithMiddlewares().Any(pathToGinPath(relativePath), []gin.HandlerFunc{handlerToGinHandler(handler)}...)
-	r.clearMiddlewares()
-}
-
-func (r *Group) Get(relativePath string, handler httpcontract.HandlerFunc) {
-	r.getRoutesWithMiddlewares().GET(pathToGinPath(relativePath), []gin.HandlerFunc{handlerToGinHandler(handler)}...)
-	r.clearMiddlewares()
-}
-
-func (r *Group) Post(relativePath string, handler httpcontract.HandlerFunc) {
-	r.getRoutesWithMiddlewares().POST(pathToGinPath(relativePath), []gin.HandlerFunc{handlerToGinHandler(handler)}...)
-	r.clearMiddlewares()
-}
-
-func (r *Group) Delete(relativePath string, handler httpcontract.HandlerFunc) {
-	r.getRoutesWithMiddlewares().DELETE(pathToGinPath(relativePath), []gin.HandlerFunc{handlerToGinHandler(handler)}...)
-	r.clearMiddlewares()
-}
-
-func (r *Group) Patch(relativePath string, handler httpcontract.HandlerFunc) {
-	r.getRoutesWithMiddlewares().PATCH(pathToGinPath(relativePath), []gin.HandlerFunc{handlerToGinHandler(handler)}...)
-	r.clearMiddlewares()
-}
-
-func (r *Group) Put(relativePath string, handler httpcontract.HandlerFunc) {
-	r.getRoutesWithMiddlewares().PUT(pathToGinPath(relativePath), []gin.HandlerFunc{handlerToGinHandler(handler)}...)
-	r.clearMiddlewares()
-}
-
-func (r *Group) Options(relativePath string, handler httpcontract.HandlerFunc) {
-	r.getRoutesWithMiddlewares().OPTIONS(pathToGinPath(relativePath), []gin.HandlerFunc{handlerToGinHandler(handler)}...)
-	r.clearMiddlewares()
-}
-
-func (r *Group) Resource(relativePath string, controller httpcontract.ResourceController) {
-	r.getRoutesWithMiddlewares().GET(pathToGinPath(relativePath), []gin.HandlerFunc{handlerToGinHandler(controller.Index)}...)
-	r.getRoutesWithMiddlewares().POST(pathToGinPath(relativePath), []gin.HandlerFunc{handlerToGinHandler(controller.Store)}...)
-	r.getRoutesWithMiddlewares().GET(pathToGinPath(relativePath+"/{id}"), []gin.HandlerFunc{handlerToGinHandler(controller.Show)}...)
-	r.getRoutesWithMiddlewares().PUT(pathToGinPath(relativePath+"/{id}"), []gin.HandlerFunc{handlerToGinHandler(controller.Update)}...)
-	r.getRoutesWithMiddlewares().PATCH(pathToGinPath(relativePath+"/{id}"), []gin.HandlerFunc{handlerToGinHandler(controller.Update)}...)
-	r.getRoutesWithMiddlewares().DELETE(pathToGinPath(relativePath+"/{id}"), []gin.HandlerFunc{handlerToGinHandler(controller.Destroy)}...)
-	r.clearMiddlewares()
-}
-
-func (r *Group) Static(relativePath, root string) {
-	r.getRoutesWithMiddlewares().Static(pathToGinPath(relativePath), root)
-	r.clearMiddlewares()
-}
-
-func (r *Group) StaticFile(relativePath, filepath string) {
-	r.getRoutesWithMiddlewares().StaticFile(pathToGinPath(relativePath), filepath)
-	r.clearMiddlewares()
-}
-
-func (r *Group) StaticFS(relativePath string, fs http.FileSystem) {
-	r.getRoutesWithMiddlewares().StaticFS(pathToGinPath(relativePath), fs)
-	r.clearMiddlewares()
-}
-
-func (r *Group) getRoutesWithMiddlewares() gin.IRoutes {
-	prefix := r.originPrefix
-	if r.prefix != "" {
-		prefix += "/" + r.prefix
-	}
-	prefix = pathToGinPath(prefix)
-
-	r.prefix = ""
-	ginGroup := r.instance.Group(prefix)
-
-	var middlewares []gin.HandlerFunc
-	ginOriginMiddlewares := middlewaresToGinHandlers(r.originMiddlewares)
-	ginMiddlewares := middlewaresToGinHandlers(r.middlewares)
-	ginLastMiddlewares := middlewaresToGinHandlers(r.lastMiddlewares)
-
-	middlewares = append(middlewares, ginOriginMiddlewares...)
-	middlewares = append(middlewares, ginMiddlewares...)
-	middlewares = append(middlewares, ginLastMiddlewares...)
-
-	if len(middlewares) > 0 {
-		return ginGroup.Use(middlewares...)
+	if len(ginMiddlewares) > 0 {
+		return ginGroup.Use(ginMiddlewares...)
 	}
 
 	return ginGroup
-}
-
-func (r *Group) clearMiddlewares() {
-	r.middlewares = []httpcontract.Middleware{}
 }

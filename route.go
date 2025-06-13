@@ -86,10 +86,10 @@ func (r *Route) Fallback(handler contractshttp.HandlerFunc) {
 	r.instance.NoRoute(handlerToGinHandler(handler))
 }
 
-func (r *Route) GetRoutes() []route.RouteInfo {
-	var routes []route.RouteInfo
+func (r *Route) GetRoutes() []route.Info {
+	var routes []route.Info
 	for _, item := range r.instance.Routes() {
-		routes = append(routes, route.RouteInfo{
+		routes = append(routes, route.Info{
 			Method: item.Method,
 			Path:   colonToBracket(item.Path),
 		})
@@ -158,6 +158,16 @@ func (r *Route) ListenTLSWithCert(l net.Listener, certFile, keyFile string) erro
 	}
 
 	return nil
+}
+
+func (r *Route) Info(name string) route.Info {
+	for _, info := range routes {
+		if info.Name == name {
+			return info
+		}
+	}
+
+	return route.Info{}
 }
 
 func (r *Route) Run(host ...string) error {
