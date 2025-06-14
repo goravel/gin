@@ -318,9 +318,9 @@ func (s *GroupTestSuite) TestIssue408() {
 
 	routes := s.route.GetRoutes()
 	s.Equal(2, len(routes))
-	s.Equal("GET|HEAD", routes[0].Method)
+	s.Equal(MethodGet, routes[0].Method)
 	s.Equal("/prefix/{id}", routes[0].Path)
-	s.Equal("POST", routes[1].Method)
+	s.Equal(MethodPost, routes[1].Method)
 	s.Equal("/prefix/{id}/test/{name}", routes[1].Path)
 }
 
