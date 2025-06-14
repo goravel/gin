@@ -22,6 +22,8 @@ func TestGroupTestSuite(t *testing.T) {
 }
 
 func (s *GroupTestSuite) SetupTest() {
+	routes = make(map[string]map[string]contractsroute.Info)
+
 	s.mockConfig = configmocks.NewConfig(s.T())
 	s.mockConfig.EXPECT().GetBool("app.debug").Return(true).Once()
 	s.mockConfig.EXPECT().GetInt("http.drivers.gin.body_limit", 4096).Return(4096).Once()
@@ -41,8 +43,9 @@ func (s *GroupTestSuite) TestGet() {
 	}).Name("get")
 
 	s.assert("GET", "/input/1", http.StatusOK, "{\"id\":\"1\"}")
+	s.assert("HEAD", "/input/1", http.StatusOK, "{\"id\":\"1\"}")
 	s.Equal(contractsroute.Info{
-		Method: "GET",
+		Method: MethodGet,
 		Path:   "/input/{id}",
 		Name:   "get",
 	}, s.route.Info("get"))
@@ -57,7 +60,7 @@ func (s *GroupTestSuite) TestPost() {
 
 	s.assert("POST", "/input/1", http.StatusOK, "{\"id\":\"1\"}")
 	s.Equal(contractsroute.Info{
-		Method: "POST",
+		Method: MethodPost,
 		Path:   "/input/{id}",
 		Name:   "post",
 	}, s.route.Info("post"))
@@ -72,7 +75,7 @@ func (s *GroupTestSuite) TestPut() {
 
 	s.assert("PUT", "/input/1", http.StatusOK, "{\"id\":\"1\"}")
 	s.Equal(contractsroute.Info{
-		Method: "PUT",
+		Method: MethodPut,
 		Path:   "/input/{id}",
 		Name:   "put",
 	}, s.route.Info("put"))
@@ -87,7 +90,7 @@ func (s *GroupTestSuite) TestDelete() {
 
 	s.assert("DELETE", "/input/1", http.StatusOK, "{\"id\":\"1\"}")
 	s.Equal(contractsroute.Info{
-		Method: "DELETE",
+		Method: MethodDelete,
 		Path:   "/input/{id}",
 		Name:   "delete",
 	}, s.route.Info("delete"))
@@ -102,7 +105,7 @@ func (s *GroupTestSuite) TestOptions() {
 
 	s.assert("OPTIONS", "/input/1", http.StatusOK, "{\"id\":\"1\"}")
 	s.Equal(contractsroute.Info{
-		Method: "OPTIONS",
+		Method: MethodOptions,
 		Path:   "/input/{id}",
 		Name:   "options",
 	}, s.route.Info("options"))
@@ -117,7 +120,7 @@ func (s *GroupTestSuite) TestPatch() {
 
 	s.assert("PATCH", "/input/1", http.StatusOK, "{\"id\":\"1\"}")
 	s.Equal(contractsroute.Info{
-		Method: "PATCH",
+		Method: MethodPatch,
 		Path:   "/input/{id}",
 		Name:   "patch",
 	}, s.route.Info("patch"))
@@ -141,7 +144,7 @@ func (s *GroupTestSuite) TestAny() {
 	s.assert("OPTIONS", path, http.StatusOK, body)
 
 	s.Equal(contractsroute.Info{
-		Method: "ANY",
+		Method: MethodAny,
 		Path:   "/input/{id}",
 		Name:   "any",
 	}, s.route.Info("any"))
@@ -162,7 +165,7 @@ func (s *GroupTestSuite) TestResource() {
 	s.assert("DELETE", "/resource/1", http.StatusOK, "{\"action\":\"DELETE\",\"id\":\"1\"}")
 
 	s.Equal(contractsroute.Info{
-		Method: "RESOURCE",
+		Method: MethodResource,
 		Path:   "/resource",
 		Name:   "resource",
 	}, s.route.Info("resource"))
@@ -174,7 +177,7 @@ func (s *GroupTestSuite) TestStatic() {
 	s.assert("GET", "/static/README.md", http.StatusOK, "")
 
 	s.Equal(contractsroute.Info{
-		Method: "STATIC",
+		Method: MethodStatic,
 		Path:   "/static",
 		Name:   "static",
 	}, s.route.Info("static"))
@@ -186,7 +189,7 @@ func (s *GroupTestSuite) TestStaticFile() {
 	s.assert("GET", "/static-file", http.StatusOK, "")
 
 	s.Equal(contractsroute.Info{
-		Method: "STATIC_FILE",
+		Method: MethodStaticFile,
 		Path:   "/static-file",
 		Name:   "static-file",
 	}, s.route.Info("static-file"))
@@ -198,7 +201,7 @@ func (s *GroupTestSuite) TestStaticFS() {
 	s.assert("GET", "/static-fs", http.StatusMovedPermanently, "")
 
 	s.Equal(contractsroute.Info{
-		Method: "STATIC_FS",
+		Method: MethodStaticFS,
 		Path:   "/static-fs",
 		Name:   "static-fs",
 	}, s.route.Info("static-fs"))
@@ -315,7 +318,7 @@ func (s *GroupTestSuite) TestIssue408() {
 
 	routes := s.route.GetRoutes()
 	s.Equal(2, len(routes))
-	s.Equal("GET", routes[0].Method)
+	s.Equal("GET|HEAD", routes[0].Method)
 	s.Equal("/prefix/{id}", routes[0].Path)
 	s.Equal("POST", routes[1].Method)
 	s.Equal("/prefix/{id}/test/{name}", routes[1].Path)

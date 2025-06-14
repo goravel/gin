@@ -42,7 +42,7 @@ func (s *RouteTestSuite) SetupTest() {
 	s.Require().Nil(err)
 	s.route = route
 
-	routes = make(map[string]contractsroute.Info)
+	routes = make(map[string]map[string]contractsroute.Info)
 }
 
 func (s *RouteTestSuite) TestRecoverWithCustomCallback() {
@@ -93,14 +93,24 @@ func (s *RouteTestSuite) TestFallback() {
 }
 
 func (s *RouteTestSuite) TestGetRoutes() {
-	s.route.Get("/test/{id}", func(ctx contractshttp.Context) contractshttp.Response {
+	s.route.Get("/b/{id}", func(ctx contractshttp.Context) contractshttp.Response {
+		return ctx.Response().String(200, "ok")
+	})
+	s.route.Post("/b/{id}", func(ctx contractshttp.Context) contractshttp.Response {
+		return ctx.Response().String(200, "ok")
+	})
+	s.route.Get("/a/{id}", func(ctx contractshttp.Context) contractshttp.Response {
 		return ctx.Response().String(200, "ok")
 	})
 
 	routes := s.route.GetRoutes()
-	s.Len(routes, 1)
-	s.Equal("GET", routes[0].Method)
-	s.Equal("/test/{id}", routes[0].Path)
+	s.Len(routes, 3)
+	s.Equal(MethodGet, routes[0].Method)
+	s.Equal("/a/{id}", routes[0].Path)
+	s.Equal(MethodGet, routes[1].Method)
+	s.Equal("/b/{id}", routes[1].Path)
+	s.Equal(MethodPost, routes[2].Method)
+	s.Equal("/b/{id}", routes[2].Path)
 }
 
 func (s *RouteTestSuite) TestGlobalMiddleware() {
@@ -216,7 +226,7 @@ func (s *RouteTestSuite) TestInfo() {
 	}).Name("test")
 
 	info := s.route.Info("test")
-	s.Equal("GET", info.Method)
+	s.Equal(MethodGet, info.Method)
 	s.Equal("test", info.Name)
 	s.Equal("/test", info.Path)
 }
