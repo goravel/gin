@@ -8,505 +8,303 @@ import (
 	contractshttp "github.com/goravel/framework/contracts/http"
 	contractsroute "github.com/goravel/framework/contracts/route"
 	configmocks "github.com/goravel/framework/mocks/config"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 )
 
-func TestGroup(t *testing.T) {
-	var (
-		gin        *Route
-		mockConfig *configmocks.Config
-	)
-	beforeEach := func() {
-		mockConfig = &configmocks.Config{}
-		mockConfig.On("GetBool", "app.debug").Return(true).Once()
-		mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4096).Return(4096).Once()
-		ConfigFacade = mockConfig
-	}
-	tests := []struct {
-		name       string
-		setup      func(req *http.Request)
-		method     string
-		url        string
-		expectCode int
-		expectBody string
-	}{
-		{
-			name: "Get",
-			setup: func(req *http.Request) {
-				gin.Get("/input/{id}", func(ctx contractshttp.Context) contractshttp.Response {
-					return ctx.Response().Json(http.StatusOK, contractshttp.Json{
-						"id": ctx.Request().Input("id"),
-					})
-				})
-			},
-			method:     "GET",
-			url:        "/input/1",
-			expectCode: http.StatusOK,
-			expectBody: "{\"id\":\"1\"}",
-		},
-		{
-			name: "Post",
-			setup: func(req *http.Request) {
-				gin.Post("/input/{id}", func(ctx contractshttp.Context) contractshttp.Response {
-					return ctx.Response().Success().Json(contractshttp.Json{
-						"id": ctx.Request().Input("id"),
-					})
-				})
-			},
-			method:     "POST",
-			url:        "/input/1",
-			expectCode: http.StatusOK,
-			expectBody: "{\"id\":\"1\"}",
-		},
-		{
-			name: "Put",
-			setup: func(req *http.Request) {
-				gin.Put("/input/{id}", func(ctx contractshttp.Context) contractshttp.Response {
-					return ctx.Response().Success().Json(contractshttp.Json{
-						"id": ctx.Request().Input("id"),
-					})
-				})
-			},
-			method:     "PUT",
-			url:        "/input/1",
-			expectCode: http.StatusOK,
-			expectBody: "{\"id\":\"1\"}",
-		},
-		{
-			name: "Delete",
-			setup: func(req *http.Request) {
-				gin.Delete("/input/{id}", func(ctx contractshttp.Context) contractshttp.Response {
-					return ctx.Response().Success().Json(contractshttp.Json{
-						"id": ctx.Request().Input("id"),
-					})
-				})
-			},
-			method:     "DELETE",
-			url:        "/input/1",
-			expectCode: http.StatusOK,
-			expectBody: "{\"id\":\"1\"}",
-		},
-		{
-			name: "Options",
-			setup: func(req *http.Request) {
-				gin.Options("/input/{id}", func(ctx contractshttp.Context) contractshttp.Response {
-					return ctx.Response().Success().Json(contractshttp.Json{
-						"id": ctx.Request().Input("id"),
-					})
-				})
-			},
-			method:     "OPTIONS",
-			url:        "/input/1",
-			expectCode: http.StatusOK,
-		},
-		{
-			name: "Patch",
-			setup: func(req *http.Request) {
-				gin.Patch("/input/{id}", func(ctx contractshttp.Context) contractshttp.Response {
-					return ctx.Response().Success().Json(contractshttp.Json{
-						"id": ctx.Request().Input("id"),
-					})
-				})
-			},
-			method:     "PATCH",
-			url:        "/input/1",
-			expectCode: http.StatusOK,
-			expectBody: "{\"id\":\"1\"}",
-		},
-		{
-			name: "Any Get",
-			setup: func(req *http.Request) {
-				gin.Any("/any/{id}", func(ctx contractshttp.Context) contractshttp.Response {
-					return ctx.Response().Success().Json(contractshttp.Json{
-						"id": ctx.Request().Input("id"),
-					})
-				})
-			},
-			method:     "GET",
-			url:        "/any/1",
-			expectCode: http.StatusOK,
-			expectBody: "{\"id\":\"1\"}",
-		},
-		{
-			name: "Any Post",
-			setup: func(req *http.Request) {
-				gin.Any("/any/{id}", func(ctx contractshttp.Context) contractshttp.Response {
-					return ctx.Response().Success().Json(contractshttp.Json{
-						"id": ctx.Request().Input("id"),
-					})
-				})
-			},
-			method:     "POST",
-			url:        "/any/1",
-			expectCode: http.StatusOK,
-			expectBody: "{\"id\":\"1\"}",
-		},
-		{
-			name: "Any Put",
-			setup: func(req *http.Request) {
-				gin.Any("/any/{id}", func(ctx contractshttp.Context) contractshttp.Response {
-					return ctx.Response().Success().Json(contractshttp.Json{
-						"id": ctx.Request().Input("id"),
-					})
-				})
-			},
-			method:     "PUT",
-			url:        "/any/1",
-			expectCode: http.StatusOK,
-			expectBody: "{\"id\":\"1\"}",
-		},
-		{
-			name: "Any Delete",
-			setup: func(req *http.Request) {
-				gin.Any("/any/{id}", func(ctx contractshttp.Context) contractshttp.Response {
-					return ctx.Response().Success().Json(contractshttp.Json{
-						"id": ctx.Request().Input("id"),
-					})
-				})
-			},
-			method:     "DELETE",
-			url:        "/any/1",
-			expectCode: http.StatusOK,
-			expectBody: "{\"id\":\"1\"}",
-		},
-		{
-			name: "Any Patch",
-			setup: func(req *http.Request) {
-				gin.Any("/any/{id}", func(ctx contractshttp.Context) contractshttp.Response {
-					return ctx.Response().Success().Json(contractshttp.Json{
-						"id": ctx.Request().Input("id"),
-					})
-				})
-			},
-			method:     "PATCH",
-			url:        "/any/1",
-			expectCode: http.StatusOK,
-			expectBody: "{\"id\":\"1\"}",
-		},
-		{
-			name: "Resource Index",
-			setup: func(req *http.Request) {
-				resource := resourceController{}
-				gin.setMiddlewares([]contractshttp.Middleware{func(ctx contractshttp.Context) {
-					type customKey struct{}
-					var customKeyCtx customKey
-					ctx.WithValue(customKeyCtx, "context with custom key")
-					ctx.WithValue(2.2, "two point two")
-					ctx.WithValue("action", "index")
-					ctx.Request().Next()
-				}})
-				gin.Resource("/resource", resource)
-			},
-			method:     "GET",
-			url:        "/resource",
-			expectCode: http.StatusOK,
-			expectBody: "{\"action\":\"index\"}",
-		},
-		{
-			name: "Resource Show",
-			setup: func(req *http.Request) {
-				resource := resourceController{}
-				gin.setMiddlewares([]contractshttp.Middleware{func(ctx contractshttp.Context) {
-					type customKey struct{}
-					var customKeyCtx customKey
-					ctx.WithValue(customKeyCtx, "context with custom key")
-					ctx.WithValue(2.2, "two point two")
-					ctx.WithValue("action", "show")
-					ctx.Request().Next()
-				}})
-				gin.Resource("/resource", resource)
-			},
-			method:     "GET",
-			url:        "/resource/1",
-			expectCode: http.StatusOK,
-			expectBody: "{\"action\":\"show\",\"id\":\"1\"}",
-		},
-		{
-			name: "Resource Store",
-			setup: func(req *http.Request) {
-				resource := resourceController{}
-				gin.setMiddlewares([]contractshttp.Middleware{func(ctx contractshttp.Context) {
-					type customKey struct{}
-					var customKeyCtx customKey
-					ctx.WithValue(customKeyCtx, "context with custom key")
-					ctx.WithValue(2.2, "two point two")
-					ctx.WithValue("action", "store")
-					ctx.Request().Next()
-				}})
-				gin.Resource("/resource", resource)
-			},
-			method:     "POST",
-			url:        "/resource",
-			expectCode: http.StatusOK,
-			expectBody: "{\"action\":\"store\"}",
-		},
-		{
-			name: "Resource Update (PUT)",
-			setup: func(req *http.Request) {
-				resource := resourceController{}
-				gin.setMiddlewares([]contractshttp.Middleware{func(ctx contractshttp.Context) {
-					type customKey struct{}
-					var customKeyCtx customKey
-					ctx.WithValue(customKeyCtx, "context with custom key")
-					ctx.WithValue(2.2, "two point two")
-					ctx.WithValue("action", "update")
-					ctx.Request().Next()
-				}})
-				gin.Resource("/resource", resource)
-			},
-			method:     "PUT",
-			url:        "/resource/1",
-			expectCode: http.StatusOK,
-			expectBody: "{\"action\":\"update\",\"id\":\"1\"}",
-		},
-		{
-			name: "Resource Update (PATCH)",
-			setup: func(req *http.Request) {
-				resource := resourceController{}
-				gin.setMiddlewares([]contractshttp.Middleware{func(ctx contractshttp.Context) {
-					type customKey struct{}
-					var customKeyCtx customKey
-					ctx.WithValue(customKeyCtx, "context with custom key")
-					ctx.WithValue(2.2, "two point two")
-					ctx.WithValue("action", "update")
-					ctx.Request().Next()
-				}})
-				gin.Resource("/resource", resource)
-			},
-			method:     "PATCH",
-			url:        "/resource/1",
-			expectCode: http.StatusOK,
-			expectBody: "{\"action\":\"update\",\"id\":\"1\"}",
-		},
-		{
-			name: "Resource Destroy",
-			setup: func(req *http.Request) {
-				resource := resourceController{}
-				gin.setMiddlewares([]contractshttp.Middleware{func(ctx contractshttp.Context) {
-					type customKey struct{}
-					var customKeyCtx customKey
-					ctx.WithValue(customKeyCtx, "context with custom key")
-					ctx.WithValue(2.2, "two point two")
-					ctx.WithValue("action", "destroy")
-					ctx.Request().Next()
-				}})
-				gin.Resource("/resource", resource)
-			},
-			method:     "DELETE",
-			url:        "/resource/1",
-			expectCode: http.StatusOK,
-			expectBody: "{\"action\":\"destroy\",\"id\":\"1\"}",
-		},
-		{
-			name: "Static",
-			setup: func(req *http.Request) {
-				gin.Static("static", "./")
-			},
-			method:     "GET",
-			url:        "/static/README.md",
-			expectCode: http.StatusOK,
-		},
-		{
-			name: "StaticFile",
-			setup: func(req *http.Request) {
-				gin.StaticFile("static-file", "./README.md")
-			},
-			method:     "GET",
-			url:        "/static-file",
-			expectCode: http.StatusOK,
-		},
-		{
-			name: "StaticFS",
-			setup: func(req *http.Request) {
-				gin.StaticFS("static-fs", http.Dir("./"))
-			},
-			method:     "GET",
-			url:        "/static-fs",
-			expectCode: http.StatusMovedPermanently,
-		},
-		{
-			name: "Abort Middleware",
-			setup: func(req *http.Request) {
-				gin.Middleware(abortMiddleware()).Get("/middleware/{id}", func(ctx contractshttp.Context) contractshttp.Response {
-					return ctx.Response().Success().Json(contractshttp.Json{
-						"id": ctx.Request().Input("id"),
-					})
-				})
-			},
-			method:     "GET",
-			url:        "/middleware/1",
-			expectCode: http.StatusNonAuthoritativeInfo,
-		},
-		{
-			name: "Multiple Middleware",
-			setup: func(req *http.Request) {
-				gin.Middleware(contextMiddleware(), contextMiddleware1()).Get("/middlewares/{id}", func(ctx contractshttp.Context) contractshttp.Response {
-					return ctx.Response().Success().Json(contractshttp.Json{
-						"id":   ctx.Request().Input("id"),
-						"ctx":  ctx.Value("ctx"),
-						"ctx1": ctx.Value("ctx1"),
-					})
-				})
-			},
-			method:     "GET",
-			url:        "/middlewares/1",
-			expectCode: http.StatusOK,
-			expectBody: "{\"ctx\":\"Goravel\",\"ctx1\":\"Hello\",\"id\":\"1\"}",
-		},
-		{
-			name: "Multiple Prefix",
-			setup: func(req *http.Request) {
-				gin.Prefix("prefix1").Prefix("prefix2").Get("input/{id}", func(ctx contractshttp.Context) contractshttp.Response {
-					return ctx.Response().Success().Json(contractshttp.Json{
-						"id": ctx.Request().Input("id"),
-					})
-				})
-			},
-			method:     "GET",
-			url:        "/prefix1/prefix2/input/1",
-			expectCode: http.StatusOK,
-			expectBody: "{\"id\":\"1\"}",
-		},
-		{
-			name: "Multiple Prefix Group Middleware",
-			setup: func(req *http.Request) {
-				gin.Prefix("group1").Middleware(contextMiddleware()).Group(func(route1 contractsroute.Router) {
-					route1.Prefix("group2").Middleware(contextMiddleware1()).Group(func(route2 contractsroute.Router) {
-						route2.Get("/middleware/{id}", func(ctx contractshttp.Context) contractshttp.Response {
-							return ctx.Response().Success().Json(contractshttp.Json{
-								"id":   ctx.Request().Input("id"),
-								"ctx":  ctx.Value("ctx"),
-								"ctx1": ctx.Value("ctx1"),
-							})
-						})
-					})
-					route1.Middleware(contextMiddleware2()).Get("/middleware/{id}", func(ctx contractshttp.Context) contractshttp.Response {
-						return ctx.Response().Success().Json(contractshttp.Json{
-							"id":   ctx.Request().Input("id"),
-							"ctx":  ctx.Value("ctx"),
-							"ctx2": ctx.Value("ctx2"),
-						})
-					})
-				})
-			},
-			method:     "GET",
-			url:        "/group1/group2/middleware/1",
-			expectCode: http.StatusOK,
-			expectBody: "{\"ctx\":\"Goravel\",\"ctx1\":\"Hello\",\"id\":\"1\"}",
-		},
-		{
-			name: "Multiple Group Middleware",
-			setup: func(req *http.Request) {
-				gin.Prefix("group1").Middleware(contextMiddleware()).Group(func(route1 contractsroute.Router) {
-					route1.Prefix("group2").Middleware(contextMiddleware1()).Group(func(route2 contractsroute.Router) {
-						route2.Get("/middleware/{id}", func(ctx contractshttp.Context) contractshttp.Response {
-							return ctx.Response().Success().Json(contractshttp.Json{
-								"id":   ctx.Request().Input("id"),
-								"ctx":  ctx.Value("ctx"),
-								"ctx1": ctx.Value("ctx1"),
-							})
-						})
-					})
-					route1.Middleware(contextMiddleware2()).Get("/middleware/{id}", func(ctx contractshttp.Context) contractshttp.Response {
-						return ctx.Response().Success().Json(contractshttp.Json{
-							"id":   ctx.Request().Input("id"),
-							"ctx":  ctx.Value("ctx"),
-							"ctx2": ctx.Value("ctx2"),
-						})
-					})
-				})
-			},
-			method:     "GET",
-			url:        "/group1/middleware/1",
-			expectCode: http.StatusOK,
-			expectBody: "{\"ctx\":\"Goravel\",\"ctx2\":\"World\",\"id\":\"1\"}",
-		},
-		{
-			name: "Global Middleware",
-			setup: func(req *http.Request) {
-				mockConfig.On("Get", "cors.paths").Return([]string{}).Once()
-				mockConfig.On("GetString", "http.tls.host").Return("").Once()
-				mockConfig.On("GetString", "http.tls.port").Return("").Once()
-				mockConfig.On("GetString", "http.tls.ssl.cert").Return("").Once()
-				mockConfig.On("GetString", "http.tls.ssl.key").Return("").Once()
-				mockConfig.On("GetInt", "http.request_timeout", 3).Return(1).Once()
+type GroupTestSuite struct {
+	suite.Suite
+	mockConfig *configmocks.Config
+	route      *Route
+}
 
-				gin.GlobalMiddleware(func(ctx contractshttp.Context) {
-					ctx.WithValue("global", "goravel")
-					ctx.Request().Next()
-				})
-				gin.Get("/global-middleware", func(ctx contractshttp.Context) contractshttp.Response {
-					return ctx.Response().Json(http.StatusOK, contractshttp.Json{
-						"global": ctx.Value("global"),
-					})
-				})
-			},
-			method:     "GET",
-			url:        "/global-middleware",
-			expectCode: http.StatusOK,
-			expectBody: "{\"global\":\"goravel\"}",
-		},
-		{
-			name: "Middleware Conflict",
-			setup: func(req *http.Request) {
-				gin.Prefix("conflict").Group(func(route1 contractsroute.Router) {
-					route1.Middleware(contextMiddleware()).Get("/middleware1/{id}", func(ctx contractshttp.Context) contractshttp.Response {
-						return ctx.Response().Success().Json(contractshttp.Json{
-							"id":   ctx.Request().Input("id"),
-							"ctx":  ctx.Value("ctx"),
-							"ctx2": ctx.Value("ctx2"),
-						})
-					})
-					route1.Middleware(contextMiddleware2()).Post("/middleware2/{id}", func(ctx contractshttp.Context) contractshttp.Response {
-						return ctx.Response().Success().Json(contractshttp.Json{
-							"id":   ctx.Request().Input("id"),
-							"ctx":  ctx.Value("ctx"),
-							"ctx2": ctx.Value("ctx2"),
-						})
-					})
-				})
-			},
-			method:     "POST",
-			url:        "/conflict/middleware2/1",
-			expectCode: http.StatusOK,
-			expectBody: "{\"ctx\":null,\"ctx2\":\"World\",\"id\":\"1\"}",
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			beforeEach()
-			w := httptest.NewRecorder()
-			req, err := http.NewRequest(test.method, test.url, nil)
-			assert.Nil(t, err)
+func TestGroupTestSuite(t *testing.T) {
+	suite.Run(t, new(GroupTestSuite))
+}
 
-			gin, err = NewRoute(mockConfig, nil)
-			assert.Nil(t, err)
+func (s *GroupTestSuite) SetupTest() {
+	s.mockConfig = configmocks.NewConfig(s.T())
+	s.mockConfig.EXPECT().GetBool("app.debug").Return(true).Once()
+	s.mockConfig.EXPECT().GetInt("http.drivers.gin.body_limit", 4096).Return(4096).Once()
+	ConfigFacade = s.mockConfig
 
-			if test.setup != nil {
-				test.setup(req)
-			}
+	route, err := NewRoute(s.mockConfig, nil)
+	s.NoError(err)
 
-			gin.ServeHTTP(w, req)
+	s.route = route
+}
 
-			if test.expectBody != "" {
-				assert.Equal(t, test.expectBody, w.Body.String(), test.name)
-			}
-			assert.Equal(t, test.expectCode, w.Code, test.name)
-			mockConfig.AssertExpectations(t)
+func (s *GroupTestSuite) TestGet() {
+	s.route.Get("/input/{id}", func(ctx contractshttp.Context) contractshttp.Response {
+		return ctx.Response().Json(http.StatusOK, contractshttp.Json{
+			"id": ctx.Request().Input("id"),
 		})
-	}
+	}).Name("get")
+
+	s.assert("GET", "/input/1", http.StatusOK, "{\"id\":\"1\"}")
+	s.Equal(contractsroute.Info{
+		Method: "GET",
+		Path:   "/input/{id}",
+		Name:   "get",
+	}, s.route.Info("get"))
+}
+
+func (s *GroupTestSuite) TestPost() {
+	s.route.Post("/input/{id}", func(ctx contractshttp.Context) contractshttp.Response {
+		return ctx.Response().Json(http.StatusOK, contractshttp.Json{
+			"id": ctx.Request().Input("id"),
+		})
+	}).Name("post")
+
+	s.assert("POST", "/input/1", http.StatusOK, "{\"id\":\"1\"}")
+	s.Equal(contractsroute.Info{
+		Method: "POST",
+		Path:   "/input/{id}",
+		Name:   "post",
+	}, s.route.Info("post"))
+}
+
+func (s *GroupTestSuite) TestPut() {
+	s.route.Put("/input/{id}", func(ctx contractshttp.Context) contractshttp.Response {
+		return ctx.Response().Json(http.StatusOK, contractshttp.Json{
+			"id": ctx.Request().Input("id"),
+		})
+	}).Name("put")
+
+	s.assert("PUT", "/input/1", http.StatusOK, "{\"id\":\"1\"}")
+	s.Equal(contractsroute.Info{
+		Method: "PUT",
+		Path:   "/input/{id}",
+		Name:   "put",
+	}, s.route.Info("put"))
+}
+
+func (s *GroupTestSuite) TestDelete() {
+	s.route.Delete("/input/{id}", func(ctx contractshttp.Context) contractshttp.Response {
+		return ctx.Response().Json(http.StatusOK, contractshttp.Json{
+			"id": ctx.Request().Input("id"),
+		})
+	}).Name("delete")
+
+	s.assert("DELETE", "/input/1", http.StatusOK, "{\"id\":\"1\"}")
+	s.Equal(contractsroute.Info{
+		Method: "DELETE",
+		Path:   "/input/{id}",
+		Name:   "delete",
+	}, s.route.Info("delete"))
+}
+
+func (s *GroupTestSuite) TestOptions() {
+	s.route.Options("/input/{id}", func(ctx contractshttp.Context) contractshttp.Response {
+		return ctx.Response().Json(http.StatusOK, contractshttp.Json{
+			"id": ctx.Request().Input("id"),
+		})
+	}).Name("options")
+
+	s.assert("OPTIONS", "/input/1", http.StatusOK, "{\"id\":\"1\"}")
+	s.Equal(contractsroute.Info{
+		Method: "OPTIONS",
+		Path:   "/input/{id}",
+		Name:   "options",
+	}, s.route.Info("options"))
+}
+
+func (s *GroupTestSuite) TestPatch() {
+	s.route.Patch("/input/{id}", func(ctx contractshttp.Context) contractshttp.Response {
+		return ctx.Response().Json(http.StatusOK, contractshttp.Json{
+			"id": ctx.Request().Input("id"),
+		})
+	}).Name("patch")
+
+	s.assert("PATCH", "/input/1", http.StatusOK, "{\"id\":\"1\"}")
+	s.Equal(contractsroute.Info{
+		Method: "PATCH",
+		Path:   "/input/{id}",
+		Name:   "patch",
+	}, s.route.Info("patch"))
+}
+
+func (s *GroupTestSuite) TestAny() {
+	s.route.Any("/input/{id}", func(ctx contractshttp.Context) contractshttp.Response {
+		return ctx.Response().Json(http.StatusOK, contractshttp.Json{
+			"id": ctx.Request().Input("id"),
+		})
+	}).Name("any")
+
+	path := "/input/1"
+	body := "{\"id\":\"1\"}"
+
+	s.assert("GET", path, http.StatusOK, body)
+	s.assert("POST", path, http.StatusOK, body)
+	s.assert("PUT", path, http.StatusOK, body)
+	s.assert("DELETE", path, http.StatusOK, body)
+	s.assert("PATCH", path, http.StatusOK, body)
+	s.assert("OPTIONS", path, http.StatusOK, body)
+
+	s.Equal(contractsroute.Info{
+		Method: "ANY",
+		Path:   "/input/{id}",
+		Name:   "any",
+	}, s.route.Info("any"))
+}
+
+func (s *GroupTestSuite) TestResource() {
+	s.route.setMiddlewares([]contractshttp.Middleware{func(ctx contractshttp.Context) {
+		ctx.WithValue("action", ctx.Request().Origin().Method)
+		ctx.Request().Next()
+	}})
+	s.route.Resource("/resource", resourceController{}).Name("resource")
+
+	s.assert("GET", "/resource", http.StatusOK, "{\"action\":\"GET\"}")
+	s.assert("GET", "/resource/1", http.StatusOK, "{\"action\":\"GET\",\"id\":\"1\"}")
+	s.assert("POST", "/resource", http.StatusOK, "{\"action\":\"POST\"}")
+	s.assert("PUT", "/resource/1", http.StatusOK, "{\"action\":\"PUT\",\"id\":\"1\"}")
+	s.assert("PATCH", "/resource/1", http.StatusOK, "{\"action\":\"PATCH\",\"id\":\"1\"}")
+	s.assert("DELETE", "/resource/1", http.StatusOK, "{\"action\":\"DELETE\",\"id\":\"1\"}")
+
+	s.Equal(contractsroute.Info{
+		Method: "RESOURCE",
+		Path:   "/resource",
+		Name:   "resource",
+	}, s.route.Info("resource"))
+}
+
+func (s *GroupTestSuite) TestStatic() {
+	s.route.Static("static", "./").Name("static")
+
+	s.assert("GET", "/static/README.md", http.StatusOK, "")
+
+	s.Equal(contractsroute.Info{
+		Method: "STATIC",
+		Path:   "/static",
+		Name:   "static",
+	}, s.route.Info("static"))
+}
+
+func (s *GroupTestSuite) TestStaticFile() {
+	s.route.StaticFile("static-file", "./README.md").Name("static-file")
+
+	s.assert("GET", "/static-file", http.StatusOK, "")
+
+	s.Equal(contractsroute.Info{
+		Method: "STATIC_FILE",
+		Path:   "/static-file",
+		Name:   "static-file",
+	}, s.route.Info("static-file"))
+}
+
+func (s *GroupTestSuite) TestStaticFS() {
+	s.route.StaticFS("/static-fs", http.Dir("./")).Name("static-fs")
+
+	s.assert("GET", "/static-fs", http.StatusMovedPermanently, "")
+
+	s.Equal(contractsroute.Info{
+		Method: "STATIC_FS",
+		Path:   "/static-fs",
+		Name:   "static-fs",
+	}, s.route.Info("static-fs"))
+}
+
+func (s *GroupTestSuite) TestAbortMiddleware() {
+	s.route.Middleware(abortMiddleware()).Get("/middleware/{id}", func(ctx contractshttp.Context) contractshttp.Response {
+		return ctx.Response().Success().Json(contractshttp.Json{
+			"id": ctx.Request().Input("id"),
+		})
+	})
+
+	s.assert("GET", "/middleware/1", http.StatusNonAuthoritativeInfo, "")
+}
+
+func (s *GroupTestSuite) TestMultipleMiddleware() {
+	s.route.Middleware(contextMiddleware(), contextMiddleware1()).Get("/middlewares/{id}", func(ctx contractshttp.Context) contractshttp.Response {
+		return ctx.Response().Success().Json(contractshttp.Json{
+			"id":   ctx.Request().Input("id"),
+			"ctx":  ctx.Value("ctx"),
+			"ctx1": ctx.Value("ctx1"),
+		})
+	})
+
+	s.assert("GET", "/middlewares/1", http.StatusOK, "{\"ctx\":\"Goravel\",\"ctx1\":\"Hello\",\"id\":\"1\"}")
+}
+
+func (s *GroupTestSuite) TestMultiplePrefix() {
+	s.route.Prefix("prefix1").Prefix("prefix2").Get("input/{id}", func(ctx contractshttp.Context) contractshttp.Response {
+		return ctx.Response().Success().Json(contractshttp.Json{
+			"id": ctx.Request().Input("id"),
+		})
+	})
+
+	s.assert("GET", "/prefix1/prefix2/input/1", http.StatusOK, "{\"id\":\"1\"}")
+}
+
+func (s *GroupTestSuite) TestMultiplePrefixGroupMiddleware() {
+	s.route.Prefix("group1").Middleware(contextMiddleware()).Group(func(route1 contractsroute.Router) {
+		route1.Prefix("group2").Middleware(contextMiddleware1()).Group(func(route2 contractsroute.Router) {
+			route2.Get("/middleware/{id}", func(ctx contractshttp.Context) contractshttp.Response {
+				return ctx.Response().Success().Json(contractshttp.Json{
+					"id":   ctx.Request().Input("id"),
+					"ctx":  ctx.Value("ctx"),
+					"ctx1": ctx.Value("ctx1"),
+				})
+			})
+		})
+		route1.Middleware(contextMiddleware2()).Get("/middleware/{id}", func(ctx contractshttp.Context) contractshttp.Response {
+			return ctx.Response().Success().Json(contractshttp.Json{
+				"id":   ctx.Request().Input("id"),
+				"ctx":  ctx.Value("ctx"),
+				"ctx2": ctx.Value("ctx2"),
+			})
+		})
+	})
+
+	s.assert("GET", "/group1/group2/middleware/1", http.StatusOK, "{\"ctx\":\"Goravel\",\"ctx1\":\"Hello\",\"id\":\"1\"}")
+	s.assert("GET", "/group1/middleware/1", http.StatusOK, "{\"ctx\":\"Goravel\",\"ctx2\":\"World\",\"id\":\"1\"}")
+}
+
+func (s *GroupTestSuite) TestGlobalMiddleware() {
+	s.mockConfig.On("Get", "cors.paths").Return([]string{}).Once()
+	s.mockConfig.On("GetString", "http.tls.host").Return("").Once()
+	s.mockConfig.On("GetString", "http.tls.port").Return("").Once()
+	s.mockConfig.On("GetString", "http.tls.ssl.cert").Return("").Once()
+	s.mockConfig.On("GetString", "http.tls.ssl.key").Return("").Once()
+	s.mockConfig.On("GetInt", "http.request_timeout", 3).Return(1).Once()
+
+	s.route.GlobalMiddleware(func(ctx contractshttp.Context) {
+		ctx.WithValue("global", "goravel")
+		ctx.Request().Next()
+	})
+	s.route.Get("/global-middleware", func(ctx contractshttp.Context) contractshttp.Response {
+		return ctx.Response().Json(http.StatusOK, contractshttp.Json{
+			"global": ctx.Value("global"),
+		})
+	})
+
+	s.assert("GET", "/global-middleware", http.StatusOK, "{\"global\":\"goravel\"}")
+}
+
+func (s *GroupTestSuite) TestMiddlewareConflict() {
+	s.route.Prefix("conflict").Group(func(route1 contractsroute.Router) {
+		route1.Middleware(contextMiddleware()).Get("/middleware1/{id}", func(ctx contractshttp.Context) contractshttp.Response {
+			return ctx.Response().Success().Json(contractshttp.Json{
+				"id":   ctx.Request().Input("id"),
+				"ctx":  ctx.Value("ctx"),
+				"ctx2": ctx.Value("ctx2"),
+			})
+		})
+		route1.Middleware(contextMiddleware2()).Post("/middleware2/{id}", func(ctx contractshttp.Context) contractshttp.Response {
+			return ctx.Response().Success().Json(contractshttp.Json{
+				"id":   ctx.Request().Input("id"),
+				"ctx":  ctx.Value("ctx"),
+				"ctx2": ctx.Value("ctx2"),
+			})
+		})
+	})
+
+	s.assert("POST", "/conflict/middleware2/1", http.StatusOK, "{\"ctx\":null,\"ctx2\":\"World\",\"id\":\"1\"}")
 }
 
 // https://github.com/goravel/goravel/issues/408
-func TestIssue408(t *testing.T) {
-	mockConfig := configmocks.NewConfig(t)
-	mockConfig.EXPECT().GetBool("app.debug").Return(true).Once()
-	mockConfig.EXPECT().GetInt("http.drivers.gin.body_limit", 4096).Return(4096).Once()
-
-	route, err := NewRoute(mockConfig, nil)
-	assert.Nil(t, err)
-
-	route.Prefix("prefix/{id}").Group(func(route contractsroute.Router) {
+func (s *GroupTestSuite) TestIssue408() {
+	s.route.Prefix("prefix/{id}").Group(func(route contractsroute.Router) {
 		route.Get("", func(ctx contractshttp.Context) contractshttp.Response {
 			return ctx.Response().String(200, "ok")
 		})
@@ -515,12 +313,25 @@ func TestIssue408(t *testing.T) {
 		})
 	})
 
-	routes := route.GetRoutes()
-	assert.Len(t, routes, 2)
-	assert.Equal(t, "GET", routes[0].Method)
-	assert.Equal(t, "/prefix/{id}", routes[0].Path)
-	assert.Equal(t, "POST", routes[1].Method)
-	assert.Equal(t, "/prefix/{id}/test/{name}", routes[1].Path)
+	routes := s.route.GetRoutes()
+	s.Equal(2, len(routes))
+	s.Equal("GET", routes[0].Method)
+	s.Equal("/prefix/{id}", routes[0].Path)
+	s.Equal("POST", routes[1].Method)
+	s.Equal("/prefix/{id}/test/{name}", routes[1].Path)
+}
+
+func (s *GroupTestSuite) assert(method, url string, expectCode int, expectBody string) {
+	w := httptest.NewRecorder()
+	req, err := http.NewRequest(method, url, nil)
+	s.NoError(err)
+
+	s.route.ServeHTTP(w, req)
+
+	if expectBody != "" {
+		s.Equal(expectBody, w.Body.String())
+	}
+	s.Equal(expectCode, w.Code)
 }
 
 func abortMiddleware() contractshttp.Middleware {
