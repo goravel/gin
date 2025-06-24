@@ -45,9 +45,10 @@ func (s *GroupTestSuite) TestGet() {
 	s.assert("GET", "/input/1", http.StatusOK, "{\"id\":\"1\"}")
 	s.assert("HEAD", "/input/1", http.StatusOK, "{\"id\":\"1\"}")
 	s.Equal(contractsroute.Info{
-		Method: MethodGet,
-		Path:   "/input/{id}",
-		Name:   "get",
+		Handler: "github.com/goravel/gin.(*GroupTestSuite).TestGet.func1",
+		Method:  MethodGet,
+		Path:    "/input/{id}",
+		Name:    "get",
 	}, s.route.Info("get"))
 }
 
@@ -60,9 +61,10 @@ func (s *GroupTestSuite) TestPost() {
 
 	s.assert("POST", "/input/1", http.StatusOK, "{\"id\":\"1\"}")
 	s.Equal(contractsroute.Info{
-		Method: MethodPost,
-		Path:   "/input/{id}",
-		Name:   "post",
+		Handler: "github.com/goravel/gin.(*GroupTestSuite).TestPost.func1",
+		Method:  MethodPost,
+		Path:    "/input/{id}",
+		Name:    "post",
 	}, s.route.Info("post"))
 }
 
@@ -75,9 +77,10 @@ func (s *GroupTestSuite) TestPut() {
 
 	s.assert("PUT", "/input/1", http.StatusOK, "{\"id\":\"1\"}")
 	s.Equal(contractsroute.Info{
-		Method: MethodPut,
-		Path:   "/input/{id}",
-		Name:   "put",
+		Handler: "github.com/goravel/gin.(*GroupTestSuite).TestPut.func1",
+		Method:  MethodPut,
+		Path:    "/input/{id}",
+		Name:    "put",
 	}, s.route.Info("put"))
 }
 
@@ -90,9 +93,10 @@ func (s *GroupTestSuite) TestDelete() {
 
 	s.assert("DELETE", "/input/1", http.StatusOK, "{\"id\":\"1\"}")
 	s.Equal(contractsroute.Info{
-		Method: MethodDelete,
-		Path:   "/input/{id}",
-		Name:   "delete",
+		Handler: "github.com/goravel/gin.(*GroupTestSuite).TestDelete.func1",
+		Method:  MethodDelete,
+		Path:    "/input/{id}",
+		Name:    "delete",
 	}, s.route.Info("delete"))
 }
 
@@ -105,9 +109,10 @@ func (s *GroupTestSuite) TestOptions() {
 
 	s.assert("OPTIONS", "/input/1", http.StatusOK, "{\"id\":\"1\"}")
 	s.Equal(contractsroute.Info{
-		Method: MethodOptions,
-		Path:   "/input/{id}",
-		Name:   "options",
+		Handler: "github.com/goravel/gin.(*GroupTestSuite).TestOptions.func1",
+		Method:  MethodOptions,
+		Path:    "/input/{id}",
+		Name:    "options",
 	}, s.route.Info("options"))
 }
 
@@ -120,9 +125,10 @@ func (s *GroupTestSuite) TestPatch() {
 
 	s.assert("PATCH", "/input/1", http.StatusOK, "{\"id\":\"1\"}")
 	s.Equal(contractsroute.Info{
-		Method: MethodPatch,
-		Path:   "/input/{id}",
-		Name:   "patch",
+		Handler: "github.com/goravel/gin.(*GroupTestSuite).TestPatch.func1",
+		Method:  MethodPatch,
+		Path:    "/input/{id}",
+		Name:    "patch",
 	}, s.route.Info("patch"))
 }
 
@@ -144,9 +150,10 @@ func (s *GroupTestSuite) TestAny() {
 	s.assert("OPTIONS", path, http.StatusOK, body)
 
 	s.Equal(contractsroute.Info{
-		Method: MethodAny,
-		Path:   "/input/{id}",
-		Name:   "any",
+		Handler: "github.com/goravel/gin.(*GroupTestSuite).TestAny.func1",
+		Method:  MethodAny,
+		Path:    "/input/{id}",
+		Name:    "any",
 	}, s.route.Info("any"))
 }
 
@@ -165,9 +172,10 @@ func (s *GroupTestSuite) TestResource() {
 	s.assert("DELETE", "/resource/1", http.StatusOK, "{\"action\":\"DELETE\",\"id\":\"1\"}")
 
 	s.Equal(contractsroute.Info{
-		Method: MethodResource,
-		Path:   "/resource",
-		Name:   "resource",
+		Handler: "github.com/goravel/gin.(resourceController)",
+		Method:  MethodResource,
+		Path:    "/resource",
+		Name:    "resource",
 	}, s.route.Info("resource"))
 }
 

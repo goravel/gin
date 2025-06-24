@@ -8,19 +8,16 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/render"
-
 	"github.com/goravel/framework/contracts/config"
 	contractshttp "github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/contracts/route"
 	contractsroute "github.com/goravel/framework/contracts/route"
 	"github.com/goravel/framework/support"
 	"github.com/goravel/framework/support/color"
-	"github.com/goravel/framework/support/console"
 	"github.com/goravel/framework/support/str"
 )
 
@@ -299,22 +296,10 @@ func (r *Route) Test(request *http.Request) (*http.Response, error) {
 }
 
 func (r *Route) outputRoutes() {
-	if r.config.GetBool("app.debug") && support.RuntimeMode != support.RuntimeArtisan {
-		routes := r.GetRoutes()
-
-		if len(routes) == 0 {
-			return
+	if r.config.GetBool("app.debug") && support.RuntimeMode != support.RuntimeArtisan && support.RuntimeMode != support.RuntimeTest {
+		if err := App.MakeArtisan().Call("route:list"); err != nil {
+			color.Errorln(fmt.Errorf("print route list failed: %w", err))
 		}
-
-		print := []string{""}
-
-		for _, item := range routes {
-			first := fmt.Sprintf("%-12s %s", item.Method, item.Path)
-
-			print = append(print, console.TwoColumnDetail(first, item.Name))
-		}
-
-		color.Gray().Println(strings.Join(print, "\n") + "\n")
 	}
 }
 
