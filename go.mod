@@ -7,7 +7,7 @@ toolchain go1.24.4
 require (
 	github.com/gin-gonic/gin v1.10.1
 	github.com/gookit/validate v1.5.5
-	github.com/goravel/framework v1.15.2-0.20250630125237-bd4544fa5c81
+	github.com/goravel/framework v1.15.2-0.20250701070909-51b5ee2aed12
 	github.com/rs/cors v1.11.1
 	github.com/spf13/cast v1.9.2
 	github.com/stretchr/testify v1.10.0
@@ -35,6 +35,7 @@ require (
 	github.com/go-playground/validator/v10 v10.20.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.3.0 // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
+	github.com/goforj/godump v1.4.0 // indirect
 	github.com/gookit/color v1.5.4 // indirect
 	github.com/gookit/filter v1.2.2 // indirect
 	github.com/gookit/goutil v0.6.18 // indirect
