@@ -14,57 +14,20 @@ Gin http driver for Goravel.
 
 | goravel/gin | goravel/framework |
 |-------------|-------------------|
+| v1.4.x      | v1.16.x           |
 | v1.3.x      | v1.15.x           |
 | v1.2.x      | v1.14.x           |
 | v1.1.x      | v1.13.x           |
 
 ## Install
 
-1. Add package
+Run the command below in your project to install the package automatically:
 
 ```
-go get -u github.com/goravel/gin
+./artisan package:install github.com/goravel/gin
 ```
 
-2. Register service provider
-
-```
-// config/app.go
-import "github.com/goravel/gin"
-
-"providers": []foundation.ServiceProvider{
-    ...
-    &gin.ServiceProvider{},
-}
-```
-
-3. Add gin config to `config/http.go` file
-
-```
-// config/http.go
-import (
-    ginfacades "github.com/goravel/gin/facades"
-    "github.com/gin-gonic/gin/render"
-    "github.com/goravel/gin"
-)
-
-"default": "gin",
-
-"drivers": map[string]any{
-    "gin": map[string]any{
-        // Optional, default is 4096 KB
-        "body_limit": 4096,
-        "header_limit": 4096,
-        "route": func() (route.Route, error) {
-            return ginfacades.Route(), nil
-        },
-        // Optional, default is http/template
-        "template": func() (render.HTMLRender, error) {
-            return gin.DefaultTemplate()
-        },
-    },
-},
-```
+Or check [the setup file](./setup/setup.go) to install the package manually.
 
 ## Testing
 
