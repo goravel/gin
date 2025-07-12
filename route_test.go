@@ -15,7 +15,6 @@ import (
 
 	"github.com/gin-gonic/gin/render"
 	contractshttp "github.com/goravel/framework/contracts/http"
-	contractsroute "github.com/goravel/framework/contracts/route"
 	"github.com/goravel/framework/contracts/validation"
 	configmocks "github.com/goravel/framework/mocks/config"
 	"github.com/spf13/cast"
@@ -42,7 +41,7 @@ func (s *RouteTestSuite) SetupTest() {
 	s.Require().Nil(err)
 	s.route = route
 
-	routes = make(map[string]map[string]contractsroute.Info)
+	routes = make(map[string]map[string]contractshttp.Info)
 }
 
 func (s *RouteTestSuite) TestRecoverWithCustomCallback() {
@@ -105,11 +104,11 @@ func (s *RouteTestSuite) TestGetRoutes() {
 
 	routes := s.route.GetRoutes()
 	s.Len(routes, 3)
-	s.Equal(MethodGet, routes[0].Method)
+	s.Equal("GET|HEAD", routes[0].Method)
 	s.Equal("/a/{id}", routes[0].Path)
-	s.Equal(MethodGet, routes[1].Method)
+	s.Equal("GET|HEAD", routes[1].Method)
 	s.Equal("/b/{id}", routes[1].Path)
-	s.Equal(MethodPost, routes[2].Method)
+	s.Equal("POST", routes[2].Method)
 	s.Equal("/b/{id}", routes[2].Path)
 }
 
@@ -226,7 +225,7 @@ func (s *RouteTestSuite) TestInfo() {
 	}).Name("test")
 
 	info := s.route.Info("test")
-	s.Equal(MethodGet, info.Method)
+	s.Equal("GET|HEAD", info.Method)
 	s.Equal("test", info.Name)
 	s.Equal("/test", info.Path)
 }
