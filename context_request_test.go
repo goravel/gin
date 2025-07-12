@@ -666,6 +666,36 @@ func (s *ContextRequestSuite) TestMethods() {
 	s.Equal(http.StatusOK, code)
 }
 
+func (s *ContextRequestSuite) TestName() {
+	s.route.Get("/name/{id}", func(ctx contractshttp.Context) contractshttp.Response {
+		return ctx.Response().Success().Json(contractshttp.Json{
+			"name": ctx.Request().Name(),
+		})
+	}).Name("test-name")
+
+	req, err := http.NewRequest("GET", "/name/1", nil)
+	s.Require().Nil(err)
+
+	code, body, _, _ := s.request(req)
+	s.Equal("{\"name\":\"test-name\"}", body)
+	s.Equal(http.StatusOK, code)
+}
+
+func (s *ContextRequestSuite) TestInfo() {
+	s.route.Get("/info/{id}", func(ctx contractshttp.Context) contractshttp.Response {
+		return ctx.Response().Success().Json(contractshttp.Json{
+			"info": ctx.Request().Info(),
+		})
+	}).Name("test-info")
+
+	req, err := http.NewRequest("GET", "/info/1", nil)
+	s.Require().Nil(err)
+
+	code, body, _, _ := s.request(req)
+	s.Equal(`{"info":{"handler":"github.com/goravel/gin.(*ContextRequestSuite).TestInfo.func1","method":"GET","name":"test-info","path":"/info/{id}"}}`, body)
+	s.Equal(http.StatusOK, code)
+}
+
 func (s *ContextRequestSuite) TestInput_Json() {
 	s.route.Post("/input/json/{id}", func(ctx contractshttp.Context) contractshttp.Response {
 		return ctx.Response().Success().Json(contractshttp.Json{

@@ -22,7 +22,7 @@ func TestGroupTestSuite(t *testing.T) {
 }
 
 func (s *GroupTestSuite) SetupTest() {
-	routes = make(map[string]map[string]contractsroute.Info)
+	routes = make(map[string]map[string]contractshttp.Info)
 
 	s.mockConfig = configmocks.NewConfig(s.T())
 	s.mockConfig.EXPECT().GetBool("app.debug").Return(true).Once()
@@ -44,9 +44,9 @@ func (s *GroupTestSuite) TestGet() {
 
 	s.assert("GET", "/input/1", http.StatusOK, "{\"id\":\"1\"}")
 	s.assert("HEAD", "/input/1", http.StatusOK, "{\"id\":\"1\"}")
-	s.Equal(contractsroute.Info{
+	s.Equal(contractshttp.Info{
 		Handler: "github.com/goravel/gin.(*GroupTestSuite).TestGet.func1",
-		Method:  MethodGet,
+		Method:  contractshttp.MethodGet + "|" + contractshttp.MethodHead,
 		Path:    "/input/{id}",
 		Name:    "get",
 	}, s.route.Info("get"))
@@ -60,9 +60,9 @@ func (s *GroupTestSuite) TestPost() {
 	}).Name("post")
 
 	s.assert("POST", "/input/1", http.StatusOK, "{\"id\":\"1\"}")
-	s.Equal(contractsroute.Info{
+	s.Equal(contractshttp.Info{
 		Handler: "github.com/goravel/gin.(*GroupTestSuite).TestPost.func1",
-		Method:  MethodPost,
+		Method:  contractshttp.MethodPost,
 		Path:    "/input/{id}",
 		Name:    "post",
 	}, s.route.Info("post"))
@@ -76,9 +76,9 @@ func (s *GroupTestSuite) TestPut() {
 	}).Name("put")
 
 	s.assert("PUT", "/input/1", http.StatusOK, "{\"id\":\"1\"}")
-	s.Equal(contractsroute.Info{
+	s.Equal(contractshttp.Info{
 		Handler: "github.com/goravel/gin.(*GroupTestSuite).TestPut.func1",
-		Method:  MethodPut,
+		Method:  contractshttp.MethodPut,
 		Path:    "/input/{id}",
 		Name:    "put",
 	}, s.route.Info("put"))
@@ -92,9 +92,9 @@ func (s *GroupTestSuite) TestDelete() {
 	}).Name("delete")
 
 	s.assert("DELETE", "/input/1", http.StatusOK, "{\"id\":\"1\"}")
-	s.Equal(contractsroute.Info{
+	s.Equal(contractshttp.Info{
 		Handler: "github.com/goravel/gin.(*GroupTestSuite).TestDelete.func1",
-		Method:  MethodDelete,
+		Method:  contractshttp.MethodDelete,
 		Path:    "/input/{id}",
 		Name:    "delete",
 	}, s.route.Info("delete"))
@@ -108,9 +108,9 @@ func (s *GroupTestSuite) TestOptions() {
 	}).Name("options")
 
 	s.assert("OPTIONS", "/input/1", http.StatusOK, "{\"id\":\"1\"}")
-	s.Equal(contractsroute.Info{
+	s.Equal(contractshttp.Info{
 		Handler: "github.com/goravel/gin.(*GroupTestSuite).TestOptions.func1",
-		Method:  MethodOptions,
+		Method:  contractshttp.MethodOptions,
 		Path:    "/input/{id}",
 		Name:    "options",
 	}, s.route.Info("options"))
@@ -124,9 +124,9 @@ func (s *GroupTestSuite) TestPatch() {
 	}).Name("patch")
 
 	s.assert("PATCH", "/input/1", http.StatusOK, "{\"id\":\"1\"}")
-	s.Equal(contractsroute.Info{
+	s.Equal(contractshttp.Info{
 		Handler: "github.com/goravel/gin.(*GroupTestSuite).TestPatch.func1",
-		Method:  MethodPatch,
+		Method:  contractshttp.MethodPatch,
 		Path:    "/input/{id}",
 		Name:    "patch",
 	}, s.route.Info("patch"))
@@ -149,9 +149,9 @@ func (s *GroupTestSuite) TestAny() {
 	s.assert("PATCH", path, http.StatusOK, body)
 	s.assert("OPTIONS", path, http.StatusOK, body)
 
-	s.Equal(contractsroute.Info{
+	s.Equal(contractshttp.Info{
 		Handler: "github.com/goravel/gin.(*GroupTestSuite).TestAny.func1",
-		Method:  MethodAny,
+		Method:  contractshttp.MethodAny,
 		Path:    "/input/{id}",
 		Name:    "any",
 	}, s.route.Info("any"))
@@ -171,9 +171,9 @@ func (s *GroupTestSuite) TestResource() {
 	s.assert("PATCH", "/resource/1", http.StatusOK, "{\"action\":\"PATCH\",\"id\":\"1\"}")
 	s.assert("DELETE", "/resource/1", http.StatusOK, "{\"action\":\"DELETE\",\"id\":\"1\"}")
 
-	s.Equal(contractsroute.Info{
+	s.Equal(contractshttp.Info{
 		Handler: "github.com/goravel/gin.(resourceController)",
-		Method:  MethodResource,
+		Method:  contractshttp.MethodResource,
 		Path:    "/resource",
 		Name:    "resource",
 	}, s.route.Info("resource"))
@@ -184,8 +184,8 @@ func (s *GroupTestSuite) TestStatic() {
 
 	s.assert("GET", "/static/README.md", http.StatusOK, "")
 
-	s.Equal(contractsroute.Info{
-		Method: MethodStatic,
+	s.Equal(contractshttp.Info{
+		Method: contractshttp.MethodStatic,
 		Path:   "/static",
 		Name:   "static",
 	}, s.route.Info("static"))
@@ -196,8 +196,8 @@ func (s *GroupTestSuite) TestStaticFile() {
 
 	s.assert("GET", "/static-file", http.StatusOK, "")
 
-	s.Equal(contractsroute.Info{
-		Method: MethodStaticFile,
+	s.Equal(contractshttp.Info{
+		Method: contractshttp.MethodStaticFile,
 		Path:   "/static-file",
 		Name:   "static-file",
 	}, s.route.Info("static-file"))
@@ -208,8 +208,8 @@ func (s *GroupTestSuite) TestStaticFS() {
 
 	s.assert("GET", "/static-fs", http.StatusMovedPermanently, "")
 
-	s.Equal(contractsroute.Info{
-		Method: MethodStaticFS,
+	s.Equal(contractshttp.Info{
+		Method: contractshttp.MethodStaticFS,
 		Path:   "/static-fs",
 		Name:   "static-fs",
 	}, s.route.Info("static-fs"))
@@ -326,9 +326,9 @@ func (s *GroupTestSuite) TestIssue408() {
 
 	routes := s.route.GetRoutes()
 	s.Equal(2, len(routes))
-	s.Equal(MethodGet, routes[0].Method)
+	s.Equal("GET|HEAD", routes[0].Method)
 	s.Equal("/prefix/{id}", routes[0].Path)
-	s.Equal(MethodPost, routes[1].Method)
+	s.Equal("POST", routes[1].Method)
 	s.Equal("/prefix/{id}/test/{name}", routes[1].Path)
 }
 
