@@ -310,7 +310,7 @@ func (r *ContextRequest) Info() contractshttp.Info {
 	}
 
 	method := r.Method()
-	if method == contractshttp.MethodGet {
+	if method == contractshttp.MethodGet || method == contractshttp.MethodHead {
 		method = contractshttp.MethodGet + "|" + contractshttp.MethodHead
 	}
 

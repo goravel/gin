@@ -686,13 +686,32 @@ func (s *ContextRequestSuite) TestInfo() {
 		return ctx.Response().Success().Json(contractshttp.Json{
 			"info": ctx.Request().Info(),
 		})
-	}).Name("test-info")
+	}).Name("test-info-get")
+	s.route.Post("/info/{id}", func(ctx contractshttp.Context) contractshttp.Response {
+		return ctx.Response().Success().Json(contractshttp.Json{
+			"info": ctx.Request().Info(),
+		})
+	}).Name("test-info-post")
 
 	req, err := http.NewRequest("GET", "/info/1", nil)
 	s.Require().Nil(err)
 
 	code, body, _, _ := s.request(req)
-	s.Equal(`{"info":{"handler":"github.com/goravel/gin.(*ContextRequestSuite).TestInfo.func1","method":"GET","name":"test-info","path":"/info/{id}"}}`, body)
+	s.Equal(`{"info":{"handler":"github.com/goravel/gin.(*ContextRequestSuite).TestInfo.func1","method":"GET","name":"test-info-get","path":"/info/{id}"}}`, body)
+	s.Equal(http.StatusOK, code)
+
+	req, err = http.NewRequest("HEAD", "/info/1", nil)
+	s.Require().Nil(err)
+
+	code, body, _, _ = s.request(req)
+	s.Equal(`{"info":{"handler":"github.com/goravel/gin.(*ContextRequestSuite).TestInfo.func1","method":"HEAD","name":"test-info-get","path":"/info/{id}"}}`, body)
+	s.Equal(http.StatusOK, code)
+
+	req, err = http.NewRequest("POST", "/info/1", nil)
+	s.Require().Nil(err)
+
+	code, body, _, _ = s.request(req)
+	s.Equal(`{"info":{"handler":"github.com/goravel/gin.(*ContextRequestSuite).TestInfo.func2","method":"POST","name":"test-info-post","path":"/info/{id}"}}`, body)
 	s.Equal(http.StatusOK, code)
 }
 

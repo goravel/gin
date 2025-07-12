@@ -46,7 +46,7 @@ func (s *GroupTestSuite) TestGet() {
 	s.assert("HEAD", "/input/1", http.StatusOK, "{\"id\":\"1\"}")
 	s.Equal(contractshttp.Info{
 		Handler: "github.com/goravel/gin.(*GroupTestSuite).TestGet.func1",
-		Method:  contractshttp.MethodGet + "|" + contractshttp.MethodHead,
+		Method:  "GET|HEAD",
 		Path:    "/input/{id}",
 		Name:    "get",
 	}, s.route.Info("get"))
