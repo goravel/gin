@@ -509,7 +509,9 @@ func (s *ContextRequestSuite) TestFile() {
 	writer := multipart.NewWriter(payload)
 	readme, err := os.Open("./README.md")
 	s.Require().Nil(err)
-	defer readme.Close()
+	defer func() {
+		_ = readme.Close()
+	}()
 
 	part1, err := writer.CreateFormFile("file", filepath.Base("./README.md"))
 	s.Require().Nil(err)
@@ -580,11 +582,15 @@ func (s *ContextRequestSuite) TestFiles() {
 	writer := multipart.NewWriter(payload)
 	readme, err := os.Open("./README.md")
 	s.Require().Nil(err)
-	defer readme.Close()
+	defer func() {
+		_ = readme.Close()
+	}()
 
 	route, err := os.Open("./route.go")
 	s.Require().Nil(err)
-	defer route.Close()
+	defer func() {
+		_ = route.Close()
+	}()
 
 	part1, err := writer.CreateFormFile("files", filepath.Base("./README.md"))
 	s.Require().Nil(err)
@@ -1789,7 +1795,9 @@ func (s *ContextRequestSuite) TestValidateRequest_FormSuccess() {
 
 	readme, err := os.Open("./README.md")
 	s.Require().NoError(err)
-	defer readme.Close()
+	defer func() {
+		_ = readme.Close()
+	}()
 
 	formFile, err := writer.CreateFormFile("file", filepath.Base("./README.md"))
 	s.Require().NoError(err)
@@ -1811,7 +1819,9 @@ func (s *ContextRequestSuite) TestValidateRequest_FormSuccess() {
 
 	logo, err := os.Open("./logo.png")
 	s.Require().NoError(err)
-	defer logo.Close()
+	defer func() {
+		_ = logo.Close()
+	}()
 
 	formImage, err := writer.CreateFormFile("image", filepath.Base("./logo.png"))
 	s.Require().NoError(err)
@@ -1862,7 +1872,9 @@ func (s *ContextRequestSuite) TestValidateRequest_FormFail() {
 
 	readme, err := os.Open("./README.md")
 	s.Require().NoError(err)
-	defer readme.Close()
+	defer func() {
+		_ = readme.Close()
+	}()
 
 	formFile, err := writer.CreateFormFile("file", filepath.Base("./README.md"))
 	s.Require().NoError(err)
@@ -1872,7 +1884,9 @@ func (s *ContextRequestSuite) TestValidateRequest_FormFail() {
 
 	logo, err := os.Open("./README.md")
 	s.Require().NoError(err)
-	defer logo.Close()
+	defer func() {
+		_ = logo.Close()
+	}()
 
 	formImage, err := writer.CreateFormFile("image", filepath.Base("./README.md"))
 	s.Require().NoError(err)

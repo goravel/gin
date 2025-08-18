@@ -146,7 +146,9 @@ func (s *RouteTestSuite) TestListen() {
 
 	resp, err := http.Get("http://127.0.0.1:3102")
 	s.Require().Nil(err)
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	body, err := io.ReadAll(resp.Body)
 	s.Nil(err)
@@ -179,7 +181,9 @@ func (s *RouteTestSuite) TestListenTLS() {
 	client := &http.Client{Transport: tr}
 	resp, err := client.Get("https://127.0.0.1:3103")
 	s.Require().Nil(err)
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	body, err := io.ReadAll(resp.Body)
 	s.Nil(err)
@@ -210,7 +214,9 @@ func (s *RouteTestSuite) TestListenTLSWithCert() {
 	client := &http.Client{Transport: tr}
 	resp, err := client.Get("https://127.0.0.1:3104")
 	s.Require().Nil(err)
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	body, err := io.ReadAll(resp.Body)
 	s.Nil(err)
@@ -274,7 +280,9 @@ func (s *RouteTestSuite) TestRun() {
 		hostUrl := "http://" + host + ":" + port
 		resp, err := http.Get(hostUrl)
 		s.Require().Nil(err)
-		defer resp.Body.Close()
+		defer func() {
+			_ = resp.Body.Close()
+		}()
 
 		body, err := io.ReadAll(resp.Body)
 		s.Require().Nil(err)
@@ -308,7 +316,9 @@ func (s *RouteTestSuite) TestRun() {
 		hostUrl := "http://127.0.0.1:3032"
 		resp, err := http.Get(hostUrl)
 		s.Require().Nil(err)
-		defer resp.Body.Close()
+		defer func() {
+			_ = resp.Body.Close()
+		}()
 
 		body, err := io.ReadAll(resp.Body)
 		s.Require().Nil(err)
@@ -366,7 +376,9 @@ func (s *RouteTestSuite) TestRunTLS() {
 		client := &http.Client{Transport: tr}
 		resp, err := client.Get(addr)
 		s.Require().Nil(err)
-		defer resp.Body.Close()
+		defer func() {
+			_ = resp.Body.Close()
+		}()
 
 		body, err := io.ReadAll(resp.Body)
 		s.Require().Nil(err)
@@ -409,7 +421,9 @@ func (s *RouteTestSuite) TestRunTLS() {
 		client := &http.Client{Transport: tr}
 		resp, err := client.Get(addr)
 		s.Require().Nil(err)
-		defer resp.Body.Close()
+		defer func() {
+			_ = resp.Body.Close()
+		}()
 
 		body, err := io.ReadAll(resp.Body)
 		s.Require().Nil(err)
@@ -482,7 +496,9 @@ func (s *RouteTestSuite) TestRunTLSWithCert() {
 		client := &http.Client{Transport: tr}
 		resp, err := client.Get(addr)
 		s.Require().Nil(err)
-		defer resp.Body.Close()
+		defer func() {
+			_ = resp.Body.Close()
+		}()
 
 		body, err := io.ReadAll(resp.Body)
 		s.Require().Nil(err)
@@ -648,7 +664,9 @@ func (s *RouteTestSuite) TestTest() {
 	s.NoError(err)
 	s.Equal(http.StatusOK, resp.StatusCode)
 
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	body, err := io.ReadAll(resp.Body)
 	s.NoError(err)
