@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	contractshttp "github.com/goravel/framework/contracts/http"
+	contractsession "github.com/goravel/framework/contracts/session"
 )
 
 type View struct {
@@ -18,7 +19,16 @@ func NewView(instance *gin.Context) *View {
 
 func (receive *View) Make(view string, data ...any) contractshttp.Response {
 	shared := ViewFacade.GetShared()
-	
+	contextValues, exists := receive.instance.Get(contextKey)
+	if exists {
+		contextValuesMap := contextValues.(map[any]any)
+		session := contextValuesMap[sessionKey]
+		sessionValue := session.(contractsession.Session)
+		sessionValue.Regenerate()
+		token := sessionValue.Token()
+		receive.instance.SetCookie("X-CSRF-TOKEN", token, 3600, "/", "", false, true)
+		shared["csrf_token"] = token
+	}
 	if len(data) == 0 {
 		return &HtmlResponse{shared, receive.instance, view}
 	} else {
