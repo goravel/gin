@@ -23,11 +23,13 @@ func (receive *View) Make(view string, data ...any) contractshttp.Response {
 	if exists {
 		contextValuesMap := contextValues.(map[any]any)
 		session := contextValuesMap[sessionKey]
-		sessionValue := session.(contractsession.Session)
-		sessionValue.Regenerate()
-		token := sessionValue.Token()
-		receive.instance.SetCookie("X-CSRF-TOKEN", token, 3600, "/", "", false, true)
-		shared["csrf_token"] = token
+		if session != nil {
+			sessionValue := session.(contractsession.Session)
+			sessionValue.Regenerate()
+			token := sessionValue.Token()
+			receive.instance.SetCookie("X-CSRF-TOKEN", token, 3600, "/", "", false, true)
+			shared["csrf_token"] = token
+		}
 	}
 	if len(data) == 0 {
 		return &HtmlResponse{shared, receive.instance, view}

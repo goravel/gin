@@ -1,13 +1,16 @@
 package gin
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	contractshttp "github.com/goravel/framework/contracts/http"
+	foundationjson "github.com/goravel/framework/foundation/json"
 	configmocks "github.com/goravel/framework/mocks/config"
 	httpmocks "github.com/goravel/framework/mocks/http"
+	"github.com/goravel/framework/session"
 	"github.com/goravel/framework/support/file"
 	"github.com/goravel/framework/support/path"
 	"github.com/stretchr/testify/assert"
@@ -42,13 +45,14 @@ func TestView_Make(t *testing.T) {
 		ViewFacade = mockView
 	}
 	tests := []struct {
-		name        string
-		method      string
-		url         string
-		setup       func(method, url string) error
-		expectCode  int
-		expectBody  string
-		expectPanic bool
+		name           string
+		method         string
+		url            string
+		setup          func(method, url string) error
+		expectCode     int
+		expectBody     string
+		expectPanic    bool
+		presentHeaders []string
 	}{
 		{
 			name:   "data is empty, shared is empty",
@@ -191,7 +195,6 @@ func TestView_Make(t *testing.T) {
 					assert.Panics(t, func() {
 						ctx.Response().View().Make("data.tmpl", []string{"test"})
 					})
-
 					return nil
 				})
 
@@ -200,7 +203,6 @@ func TestView_Make(t *testing.T) {
 				if err != nil {
 					return err
 				}
-
 				return nil
 			},
 			expectCode: http.StatusOK,
@@ -365,13 +367,82 @@ func TestView_First(t *testing.T) {
 
 			w := httptest.NewRecorder()
 			route.ServeHTTP(w, req)
-
 			if test.expectBody != "" {
 				assert.Equal(t, test.expectBody, w.Body.String())
 			}
 
 			assert.Equal(t, test.expectCode, w.Code)
 
+			mockConfig.AssertExpectations(t)
+			mockView.AssertExpectations(t)
+		})
+	}
+
+	assert.Nil(t, file.Remove("resources"))
+}
+
+func TestView_CSRFToken(t *testing.T) {
+	var (
+		err        error
+		route      *Route
+		req        *http.Request
+		mockConfig *configmocks.Config
+		mockView   *httpmocks.View
+	)
+
+	assert.Nil(t, file.PutContent(path.Resource("views", "csrf.tmpl"), `{{ define "csrf.tmpl" }}
+csrf_token={{ .csrf_token }}
+{{ end }}
+`))
+	beforeEach := func() {
+		mockConfig = &configmocks.Config{}
+		mockConfig.On("GetBool", "app.debug").Return(false).Once()
+		mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4096).Return(4096).Once()
+		ConfigFacade = mockConfig
+
+		mockView = &httpmocks.View{}
+		ViewFacade = mockView
+	}
+
+	tests := []struct {
+		name   string
+		method string
+		url    string
+		setup  func(method, url string) error
+	}{
+		{
+			name:   "CSRF exits",
+			method: "GET",
+			url:    "/csrf",
+			setup: func(method, url string) error {
+				mockView.On("GetShared").Return(map[string]any{}).Once()
+				route.Get("/csrf", func(ctx contractshttp.Context) contractshttp.Response {
+					ctx.Request().SetSession(session.NewSession("goravel_session", nil, foundationjson.New()))
+					return ctx.Response().View().Make("csrf.tmpl")
+				})
+				var err error
+				req, err = http.NewRequest(method, url, nil)
+				if err != nil {
+					return err
+				}
+				return nil
+			},
+		},
+	}
+
+	for _, test := range tests {
+		beforeEach()
+		t.Run(test.name, func(t *testing.T) {
+			route, err = NewRoute(mockConfig, nil)
+			// route.setMiddlewares([]contractshttp.Middleware{sessionMiddleware.StartSession()})
+			assert.Nil(t, err)
+			err := test.setup(test.method, test.url)
+			assert.Nil(t, err)
+			w := httptest.NewRecorder()
+			route.ServeHTTP(w, req)
+			fmt.Println("Get cookie ", w.Header().Get("Set-Cookie"))
+			assert.Regexp(t, `^X-CSRF-TOKEN=([A-Za-z0-9\-_]+);.*$`, w.Header().Get("Set-Cookie"))
+			assert.Regexp(t, `^\ncsrf_token=([A-Za-z0-9\-_]+)\n$`, w.Body.String())
 			mockConfig.AssertExpectations(t)
 			mockView.AssertExpectations(t)
 		})
