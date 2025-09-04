@@ -1,7 +1,6 @@
 package gin
 
 import (
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -434,13 +433,11 @@ csrf_token={{ .csrf_token }}
 		beforeEach()
 		t.Run(test.name, func(t *testing.T) {
 			route, err = NewRoute(mockConfig, nil)
-			// route.setMiddlewares([]contractshttp.Middleware{sessionMiddleware.StartSession()})
 			assert.Nil(t, err)
 			err := test.setup(test.method, test.url)
 			assert.Nil(t, err)
 			w := httptest.NewRecorder()
 			route.ServeHTTP(w, req)
-			fmt.Println("Get cookie ", w.Header().Get("Set-Cookie"))
 			assert.Regexp(t, `^X-CSRF-TOKEN=([A-Za-z0-9\-_]+);.*$`, w.Header().Get("Set-Cookie"))
 			assert.Regexp(t, `^\ncsrf_token=([A-Za-z0-9\-_]+)\n$`, w.Body.String())
 			mockConfig.AssertExpectations(t)
