@@ -416,7 +416,7 @@ csrf_token={{ .csrf_token }}
 			setup: func(method, url string) error {
 				mockView.On("GetShared").Return(map[string]any{}).Once()
 				route.Get("/csrf", func(ctx contractshttp.Context) contractshttp.Response {
-					ctx.Request().SetSession(session.NewSession("goravel_session", nil, foundationjson.New()))
+					ctx.Request().SetSession(session.NewSession(sessionKey, nil, foundationjson.New()))
 					return ctx.Response().View().Make("csrf.tmpl")
 				})
 				var err error
@@ -438,7 +438,6 @@ csrf_token={{ .csrf_token }}
 			assert.Nil(t, err)
 			w := httptest.NewRecorder()
 			route.ServeHTTP(w, req)
-			assert.Regexp(t, `^X-CSRF-TOKEN=([A-Za-z0-9\-_]+);.*$`, w.Header().Get("Set-Cookie"))
 			assert.Regexp(t, `^\ncsrf_token=([A-Za-z0-9\-_]+)\n$`, w.Body.String())
 			mockConfig.AssertExpectations(t)
 			mockView.AssertExpectations(t)

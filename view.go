@@ -19,11 +19,10 @@ func NewView(instance *gin.Context) *View {
 
 func (receive *View) Make(view string, data ...any) contractshttp.Response {
 	shared := ViewFacade.GetShared()
-	contextValues, exists := receive.instance.Get(contextKey)
-	if exists {
+
+	if contextValues, exists := receive.instance.Get(contextKey); exists {
 		contextValuesMap := contextValues.(map[any]any)
-		session := contextValuesMap[sessionKey]
-		if session != nil {
+		if session := contextValuesMap[sessionKey]; session != nil {
 			sessionValue := session.(contractsession.Session)
 			sessionValue.Regenerate()
 			token := sessionValue.Token()
