@@ -400,7 +400,8 @@ csrf_token={{ .csrf_token }}
 		route.Get("/csrf", func(ctx contractshttp.Context) contractshttp.Response {
 			sessionData := session.NewSession(sessionKey, nil, foundationjson.New())
 			ctx.Request().SetSession(sessionData)
-			sessionData.Regenerate()
+			err = sessionData.Regenerate()
+			assert.Nil(t, err)
 			return ctx.Response().View().Make("csrf.tmpl")
 		})
 		req, err := http.NewRequest("GET", "/csrf", nil)
