@@ -390,9 +390,9 @@ csrf_token={{ .csrf_token }}
 	mockConfig.EXPECT().GetInt("http.drivers.gin.body_limit", 4096).Return(4096).Once()
 	ConfigFacade = mockConfig
 
-	mockView := &httpmocks.View{}
+	mockView := httpmocks.NewView(t)
 	ViewFacade = mockView
-	mockView.On("GetShared").Return(map[string]any{}).Once()
+	mockView.EXPECT().GetShared().Return(map[string]any{}).Once()
 
 	t.Run("CSRF token", func(t *testing.T) {
 		route, err := NewRoute(mockConfig, nil)
@@ -409,8 +409,6 @@ csrf_token={{ .csrf_token }}
 		w := httptest.NewRecorder()
 		route.ServeHTTP(w, req)
 		assert.Regexp(t, `^\ncsrf_token=([A-Za-z0-9\-_]+)\n$`, w.Body.String())
-		mockConfig.AssertExpectations(t)
-		mockView.AssertExpectations(t)
 	})
 
 	assert.Nil(t, file.Remove("resources"))
