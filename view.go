@@ -24,9 +24,7 @@ func (receive *View) Make(view string, data ...any) contractshttp.Response {
 		contextValuesMap := contextValues.(map[any]any)
 		if session := contextValuesMap[sessionKey]; session != nil {
 			sessionValue := session.(contractsession.Session)
-			sessionValue.Regenerate()
 			token := sessionValue.Token()
-			receive.instance.SetCookie("X-CSRF-TOKEN", token, 3600, "/", "", false, true)
 			shared["csrf_token"] = token
 		}
 	}

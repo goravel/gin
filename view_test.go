@@ -44,14 +44,13 @@ func TestView_Make(t *testing.T) {
 		ViewFacade = mockView
 	}
 	tests := []struct {
-		name           string
-		method         string
-		url            string
-		setup          func(method, url string) error
-		expectCode     int
-		expectBody     string
-		expectPanic    bool
-		presentHeaders []string
+		name        string
+		method      string
+		url         string
+		setup       func(method, url string) error
+		expectCode  int
+		expectBody  string
+		expectPanic bool
 	}{
 		{
 			name:   "data is empty, shared is empty",
@@ -381,68 +380,37 @@ func TestView_First(t *testing.T) {
 }
 
 func TestView_CSRFToken(t *testing.T) {
-	var (
-		err        error
-		route      *Route
-		req        *http.Request
-		mockConfig *configmocks.Config
-		mockView   *httpmocks.View
-	)
 
 	assert.Nil(t, file.PutContent(path.Resource("views", "csrf.tmpl"), `{{ define "csrf.tmpl" }}
 csrf_token={{ .csrf_token }}
 {{ end }}
 `))
-	beforeEach := func() {
-		mockConfig = &configmocks.Config{}
-		mockConfig.On("GetBool", "app.debug").Return(false).Once()
-		mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4096).Return(4096).Once()
-		ConfigFacade = mockConfig
+	mockConfig := configmocks.NewConfig(t)
+	mockConfig.EXPECT().GetBool("app.debug").Return(false).Once()
+	mockConfig.EXPECT().GetInt("http.drivers.gin.body_limit", 4096).Return(4096).Once()
+	ConfigFacade = mockConfig
 
-		mockView = &httpmocks.View{}
-		ViewFacade = mockView
-	}
+	mockView := &httpmocks.View{}
+	ViewFacade = mockView
+	mockView.On("GetShared").Return(map[string]any{}).Once()
 
-	tests := []struct {
-		name   string
-		method string
-		url    string
-		setup  func(method, url string) error
-	}{
-		{
-			name:   "CSRF exits",
-			method: "GET",
-			url:    "/csrf",
-			setup: func(method, url string) error {
-				mockView.On("GetShared").Return(map[string]any{}).Once()
-				route.Get("/csrf", func(ctx contractshttp.Context) contractshttp.Response {
-					ctx.Request().SetSession(session.NewSession(sessionKey, nil, foundationjson.New()))
-					return ctx.Response().View().Make("csrf.tmpl")
-				})
-				var err error
-				req, err = http.NewRequest(method, url, nil)
-				if err != nil {
-					return err
-				}
-				return nil
-			},
-		},
-	}
-
-	for _, test := range tests {
-		beforeEach()
-		t.Run(test.name, func(t *testing.T) {
-			route, err = NewRoute(mockConfig, nil)
-			assert.Nil(t, err)
-			err := test.setup(test.method, test.url)
-			assert.Nil(t, err)
-			w := httptest.NewRecorder()
-			route.ServeHTTP(w, req)
-			assert.Regexp(t, `^\ncsrf_token=([A-Za-z0-9\-_]+)\n$`, w.Body.String())
-			mockConfig.AssertExpectations(t)
-			mockView.AssertExpectations(t)
+	t.Run("CSRF token", func(t *testing.T) {
+		route, err := NewRoute(mockConfig, nil)
+		assert.Nil(t, err)
+		route.Get("/csrf", func(ctx contractshttp.Context) contractshttp.Response {
+			sessionData := session.NewSession(sessionKey, nil, foundationjson.New())
+			ctx.Request().SetSession(sessionData)
+			sessionData.Regenerate()
+			return ctx.Response().View().Make("csrf.tmpl")
 		})
-	}
+		req, err := http.NewRequest("GET", "/csrf", nil)
+		assert.Nil(t, err)
+		w := httptest.NewRecorder()
+		route.ServeHTTP(w, req)
+		assert.Regexp(t, `^\ncsrf_token=([A-Za-z0-9\-_]+)\n$`, w.Body.String())
+		mockConfig.AssertExpectations(t)
+		mockView.AssertExpectations(t)
+	})
 
 	assert.Nil(t, file.Remove("resources"))
 }
