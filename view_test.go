@@ -6,8 +6,10 @@ import (
 	"testing"
 
 	contractshttp "github.com/goravel/framework/contracts/http"
+	foundationjson "github.com/goravel/framework/foundation/json"
 	configmocks "github.com/goravel/framework/mocks/config"
 	httpmocks "github.com/goravel/framework/mocks/http"
+	"github.com/goravel/framework/session"
 	"github.com/goravel/framework/support/file"
 	"github.com/goravel/framework/support/path"
 	"github.com/stretchr/testify/assert"
@@ -191,7 +193,6 @@ func TestView_Make(t *testing.T) {
 					assert.Panics(t, func() {
 						ctx.Response().View().Make("data.tmpl", []string{"test"})
 					})
-
 					return nil
 				})
 
@@ -200,7 +201,6 @@ func TestView_Make(t *testing.T) {
 				if err != nil {
 					return err
 				}
-
 				return nil
 			},
 			expectCode: http.StatusOK,
@@ -365,7 +365,6 @@ func TestView_First(t *testing.T) {
 
 			w := httptest.NewRecorder()
 			route.ServeHTTP(w, req)
-
 			if test.expectBody != "" {
 				assert.Equal(t, test.expectBody, w.Body.String())
 			}
@@ -376,6 +375,41 @@ func TestView_First(t *testing.T) {
 			mockView.AssertExpectations(t)
 		})
 	}
+
+	assert.Nil(t, file.Remove("resources"))
+}
+
+func TestView_CSRFToken(t *testing.T) {
+
+	assert.Nil(t, file.PutContent(path.Resource("views", "csrf.tmpl"), `{{ define "csrf.tmpl" }}
+csrf_token={{ .csrf_token }}
+{{ end }}
+`))
+	mockConfig := configmocks.NewConfig(t)
+	mockConfig.EXPECT().GetBool("app.debug").Return(false).Once()
+	mockConfig.EXPECT().GetInt("http.drivers.gin.body_limit", 4096).Return(4096).Once()
+	ConfigFacade = mockConfig
+
+	mockView := httpmocks.NewView(t)
+	ViewFacade = mockView
+	mockView.EXPECT().GetShared().Return(map[string]any{}).Once()
+
+	t.Run("CSRF token", func(t *testing.T) {
+		route, err := NewRoute(mockConfig, nil)
+		assert.Nil(t, err)
+		route.Get("/csrf", func(ctx contractshttp.Context) contractshttp.Response {
+			sessionData := session.NewSession(sessionKey, nil, foundationjson.New())
+			ctx.Request().SetSession(sessionData)
+			err = sessionData.Regenerate()
+			assert.Nil(t, err)
+			return ctx.Response().View().Make("csrf.tmpl")
+		})
+		req, err := http.NewRequest("GET", "/csrf", nil)
+		assert.Nil(t, err)
+		w := httptest.NewRecorder()
+		route.ServeHTTP(w, req)
+		assert.Regexp(t, `^\ncsrf_token=([A-Za-z0-9\-_]+)\n$`, w.Body.String())
+	})
 
 	assert.Nil(t, file.Remove("resources"))
 }
