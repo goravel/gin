@@ -10,7 +10,7 @@ require (
 	github.com/goravel/framework v1.16.1
 	github.com/rs/cors v1.11.1
 	github.com/spf13/cast v1.9.2
-	github.com/stretchr/testify v1.11.0
+	github.com/stretchr/testify v1.11.1
 	github.com/unrolled/secure v1.17.0
 )
 
