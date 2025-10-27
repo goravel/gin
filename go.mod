@@ -7,7 +7,7 @@ toolchain go1.25.3
 require (
 	github.com/gin-gonic/gin v1.11.0
 	github.com/gookit/validate v1.5.6
-	github.com/goravel/framework v1.16.3
+	github.com/goravel/framework v1.16.4
 	github.com/rs/cors v1.11.1
 	github.com/spf13/cast v1.10.0
 	github.com/stretchr/testify v1.11.1
@@ -69,6 +69,7 @@ require (
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.3.0 // indirect
+	github.com/urfave/cli/v3 v3.3.8 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	go.uber.org/mock v0.5.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
