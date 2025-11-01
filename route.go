@@ -18,6 +18,7 @@ import (
 	"github.com/goravel/framework/support"
 	"github.com/goravel/framework/support/color"
 	"github.com/goravel/framework/support/str"
+	"github.com/spf13/cast"
 )
 
 // map[path]map[method]info
@@ -30,63 +31,30 @@ var globalRecoverCallback func(ctx contractshttp.Context, err any) = func(ctx co
 
 type Route struct {
 	route.Router
-	config    config.Config
-	instance  *gin.Engine
-	server    *http.Server
-	tlsServer *http.Server
+	config           config.Config
+	driver           string
+	globalMiddleware []contractshttp.Middleware
+	instance         *gin.Engine
+	server           *http.Server
+	tlsServer        *http.Server
 }
 
 func NewRoute(config config.Config, parameters map[string]any) (*Route, error) {
-	gin.SetMode(gin.ReleaseMode)
-	gin.DisableBindValidation()
-	engine := gin.New()
-	engine.MaxMultipartMemory = int64(config.GetInt("http.drivers.gin.body_limit", 4096)) << 10
-	engine.Use(gin.Recovery()) // recovery middleware
-
-	if debugLog := getDebugLog(config); debugLog != nil {
-		engine.Use(debugLog)
+	route := &Route{
+		config: config,
+		driver: cast.ToString(parameters["driver"]),
 	}
+	route.init(nil)
 
-	if driver, exist := parameters["driver"]; exist {
-		htmlRender, ok := config.Get("http.drivers." + driver.(string) + ".template").(render.HTMLRender)
-		if ok {
-			engine.HTMLRender = htmlRender
-		} else {
-			htmlRenderCallback, ok := config.Get("http.drivers." + driver.(string) + ".template").(func() (render.HTMLRender, error))
-			if ok {
-				htmlRender, err := htmlRenderCallback()
-				if err != nil {
-					return nil, err
-				}
-
-				engine.HTMLRender = htmlRender
-			}
-		}
-	}
-
-	if engine.HTMLRender == nil {
-		var err error
-		engine.HTMLRender, err = DefaultTemplate()
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return &Route{
-		Router: NewGroup(
-			config,
-			engine.Group("/"),
-			"",
-			[]contractshttp.Middleware{},
-			[]contractshttp.Middleware{ResponseMiddleware()},
-		),
-		config:   config,
-		instance: engine,
-	}, nil
+	return route, nil
 }
 
 func (r *Route) Fallback(handler contractshttp.HandlerFunc) {
 	r.instance.NoRoute(handlerToGinHandler(handler))
+}
+
+func (r *Route) GetGlobalMiddleware() []contractshttp.Middleware {
+	return r.globalMiddleware
 }
 
 func (r *Route) GetRoutes() []contractshttp.Info {
@@ -110,28 +78,16 @@ func (r *Route) GetRoutes() []contractshttp.Info {
 	return infos
 }
 
-func (r *Route) GlobalMiddleware(middlewares ...contractshttp.Middleware) {
-	defaultMiddlewares := []contractshttp.Middleware{Cors(), Tls()}
+func (r *Route) GlobalMiddleware(middleware ...contractshttp.Middleware) {
 	timeout := time.Duration(r.config.GetInt("http.request_timeout", 3)) * time.Second
-	if timeout > 0 {
-		defaultMiddlewares = append(defaultMiddlewares, Timeout(timeout))
-	}
-	middlewares = append(defaultMiddlewares, middlewares...)
-	r.setMiddlewares(middlewares)
+	globalMiddleware := append([]contractshttp.Middleware{Timeout(timeout), Cors(), Tls()}, middleware...)
+
+	r.init(globalMiddleware)
 }
 
 func (r *Route) Recover(callback func(ctx contractshttp.Context, err any)) {
 	globalRecoverCallback = callback
-	r.setMiddlewares([]contractshttp.Middleware{
-		func(ctx contractshttp.Context) {
-			defer func() {
-				if err := recover(); err != nil {
-					callback(ctx, err)
-				}
-			}()
-			ctx.Request().Next()
-		},
-	})
+	r.init(r.globalMiddleware)
 }
 
 func (r *Route) Listen(l net.Listener) error {
@@ -256,6 +212,10 @@ func (r *Route) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	r.instance.ServeHTTP(writer, request)
 }
 
+func (r *Route) SetGlobalMiddleware(middlewares []contractshttp.Middleware) {
+	r.globalMiddleware = middlewares
+}
+
 func (r *Route) Shutdown(ctx ...context.Context) error {
 	c := context.Background()
 	if len(ctx) > 0 {
@@ -277,6 +237,65 @@ func (r *Route) Test(request *http.Request) (*http.Response, error) {
 	r.ServeHTTP(recorder, request)
 
 	return recorder.Result(), nil
+}
+
+func (r *Route) init(globalMiddleware []contractshttp.Middleware) error {
+	gin.SetMode(gin.ReleaseMode)
+	gin.DisableBindValidation()
+	engine := gin.New()
+	engine.MaxMultipartMemory = int64(r.config.GetInt("http.drivers.gin.body_limit", 4096)) << 10
+
+	recoverMiddleware := func(ctx contractshttp.Context) {
+		defer func() {
+			if err := recover(); err != nil {
+				globalRecoverCallback(ctx, err)
+			}
+		}()
+		ctx.Request().Next()
+	}
+	globalMiddleware = append([]contractshttp.Middleware{recoverMiddleware}, globalMiddleware...)
+	engine.Use(middlewaresToGinHandlers(globalMiddleware)...)
+
+	if debugLog := getDebugLog(r.config); debugLog != nil {
+		engine.Use(debugLog)
+	}
+
+	if r.driver != "" {
+		htmlRender, ok := r.config.Get("http.drivers." + r.driver + ".template").(render.HTMLRender)
+		if ok {
+			engine.HTMLRender = htmlRender
+		} else {
+			htmlRenderCallback, ok := r.config.Get("http.drivers." + r.driver + ".template").(func() (render.HTMLRender, error))
+			if ok {
+				htmlRender, err := htmlRenderCallback()
+				if err != nil {
+					return err
+				}
+
+				engine.HTMLRender = htmlRender
+			}
+		}
+	}
+
+	if engine.HTMLRender == nil {
+		var err error
+		engine.HTMLRender, err = DefaultTemplate()
+		if err != nil {
+			return err
+		}
+	}
+
+	r.Router = NewGroup(
+		r.config,
+		engine.Group("/"),
+		"",
+		[]contractshttp.Middleware{},
+		[]contractshttp.Middleware{ResponseMiddleware()},
+	)
+	r.instance = engine
+	r.globalMiddleware = globalMiddleware
+
+	return nil
 }
 
 func (r *Route) outputRoutes() {

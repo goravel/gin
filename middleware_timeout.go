@@ -11,6 +11,11 @@ import (
 // Timeout creates middleware to set a timeout for a request
 func Timeout(timeout time.Duration) contractshttp.Middleware {
 	return func(ctx contractshttp.Context) {
+		if timeout <= 0 {
+			ctx.Request().Next()
+			return
+		}
+
 		timeoutCtx, cancel := context.WithTimeout(ctx.Context(), timeout)
 		defer cancel()
 

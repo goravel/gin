@@ -8,7 +8,7 @@ import (
 	contractshttp "github.com/goravel/framework/contracts/http"
 	foundationjson "github.com/goravel/framework/foundation/json"
 	configmocks "github.com/goravel/framework/mocks/config"
-	httpmocks "github.com/goravel/framework/mocks/http"
+	mocksview "github.com/goravel/framework/mocks/view"
 	"github.com/goravel/framework/session"
 	"github.com/goravel/framework/support/file"
 	"github.com/goravel/framework/support/path"
@@ -21,7 +21,7 @@ func TestView_Make(t *testing.T) {
 		route      *Route
 		req        *http.Request
 		mockConfig *configmocks.Config
-		mockView   *httpmocks.View
+		mockView   *mocksview.View
 	)
 
 	assert.Nil(t, file.PutContent(path.Resource("views", "empty.tmpl"), `{{ define "empty.tmpl" }}
@@ -40,7 +40,7 @@ func TestView_Make(t *testing.T) {
 		mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4096).Return(4096).Once()
 		ConfigFacade = mockConfig
 
-		mockView = &httpmocks.View{}
+		mockView = &mocksview.View{}
 		ViewFacade = mockView
 	}
 	tests := []struct {
@@ -241,7 +241,7 @@ func TestView_First(t *testing.T) {
 		route      *Route
 		req        *http.Request
 		mockConfig *configmocks.Config
-		mockView   *httpmocks.View
+		mockView   *mocksview.View
 	)
 
 	assert.Nil(t, file.PutContent(path.Resource("views", "empty.tmpl"), `{{ define "empty.tmpl" }}
@@ -260,7 +260,7 @@ func TestView_First(t *testing.T) {
 		mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4096).Return(4096).Once()
 		ConfigFacade = mockConfig
 
-		mockView = &httpmocks.View{}
+		mockView = &mocksview.View{}
 		ViewFacade = mockView
 	}
 	tests := []struct {
@@ -390,7 +390,7 @@ csrf_token={{ .csrf_token }}
 	mockConfig.EXPECT().GetInt("http.drivers.gin.body_limit", 4096).Return(4096).Once()
 	ConfigFacade = mockConfig
 
-	mockView := httpmocks.NewView(t)
+	mockView := mocksview.NewView(t)
 	ViewFacade = mockView
 	mockView.EXPECT().GetShared().Return(map[string]any{}).Once()
 
