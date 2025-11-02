@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/goravel/framework/contracts/config"
 	httpcontract "github.com/goravel/framework/contracts/http"
 )
 
@@ -56,7 +55,7 @@ func middlewareToGinHandler(middleware httpcontract.Middleware) gin.HandlerFunc 
 	}
 }
 
-func getDebugLog(config config.Config) gin.HandlerFunc {
+func logMiddleware() gin.HandlerFunc {
 	logFormatter := func(param gin.LogFormatterParams) string {
 		var statusColor, methodColor, resetColor string
 		if param.IsOutputColor() {
@@ -80,11 +79,7 @@ func getDebugLog(config config.Config) gin.HandlerFunc {
 		)
 	}
 
-	if config.GetBool("app.debug") {
-		return gin.LoggerWithFormatter(logFormatter)
-	}
-
-	return nil
+	return gin.LoggerWithFormatter(logFormatter)
 }
 
 func colonToBracket(relativePath string) string {
