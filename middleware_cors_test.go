@@ -8,6 +8,7 @@ import (
 	contractshttp "github.com/goravel/framework/contracts/http"
 	configmocks "github.com/goravel/framework/mocks/config"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCors(t *testing.T) {
@@ -202,10 +203,14 @@ func TestCors(t *testing.T) {
 			beforeEach()
 			test.setup()
 
-			route, err := NewRoute(mockConfig, nil)
-			assert.Nil(t, err)
+			mockConfig.EXPECT().Get("http.drivers.gin.template").Return(nil).Once()
 
-			route.setMiddlewares([]contractshttp.Middleware{Cors()})
+			route := &Route{
+				config: mockConfig,
+				driver: "gin",
+			}
+			err := route.init([]contractshttp.Middleware{Cors()})
+			require.Nil(t, err)
 
 			route.Post("/any/{id}", func(ctx contractshttp.Context) contractshttp.Response {
 				return ctx.Response().Success().Json(contractshttp.Json{

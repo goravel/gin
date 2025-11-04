@@ -7,17 +7,18 @@ import (
 	"testing"
 
 	contractshttp "github.com/goravel/framework/contracts/http"
-	configmocks "github.com/goravel/framework/mocks/config"
+	mocksconfig "github.com/goravel/framework/mocks/config"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestTls(t *testing.T) {
 	var (
-		mockConfig       *configmocks.Config
+		mockConfig       *mocksconfig.Config
 		responseRecorder *httptest.ResponseRecorder
 	)
 	beforeEach := func() {
-		mockConfig = &configmocks.Config{}
+		mockConfig = mocksconfig.NewConfig(t)
 	}
 
 	tests := []struct {
@@ -27,8 +28,6 @@ func TestTls(t *testing.T) {
 		{
 			name: "not use tls",
 			setup: func() {
-				mockConfig.On("GetBool", "app.debug").Return(true).Once()
-				mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4096).Return(4096).Once()
 				mockConfig.On("GetString", "http.tls.host").Return("").Once()
 				mockConfig.On("GetString", "http.tls.port").Return("").Once()
 				mockConfig.On("GetString", "http.tls.ssl.cert").Return("").Once()
@@ -39,8 +38,6 @@ func TestTls(t *testing.T) {
 		{
 			name: "use tls",
 			setup: func() {
-				mockConfig.On("GetBool", "app.debug").Return(true).Once()
-				mockConfig.On("GetInt", "http.drivers.gin.body_limit", 4096).Return(4096).Once()
 				mockConfig.On("GetString", "http.tls.host").Return("127.0.0.1").Once()
 				mockConfig.On("GetString", "http.tls.port").Return("3000").Once()
 				mockConfig.On("GetString", "http.tls.ssl.cert").Return("test_ca.crt").Once()
@@ -55,10 +52,17 @@ func TestTls(t *testing.T) {
 			beforeEach()
 			test.setup()
 
-			route, err := NewRoute(mockConfig, nil)
-			assert.Nil(t, err)
+			mockConfig.EXPECT().GetInt("http.drivers.gin.body_limit", 4096).Return(4096).Once()
+			mockConfig.EXPECT().GetBool("app.debug").Return(true).Once()
+			mockConfig.EXPECT().Get("http.drivers.gin.template").Return(nil).Once()
 
-			route.setMiddlewares([]contractshttp.Middleware{Tls()})
+			route := &Route{
+				config: mockConfig,
+				driver: "gin",
+			}
+			err := route.init([]contractshttp.Middleware{Tls()})
+			require.Nil(t, err)
+
 			route.Any("/any/{id}", func(ctx contractshttp.Context) contractshttp.Response {
 				return ctx.Response().Success().Json(contractshttp.Json{
 					"id": ctx.Request().Input("id"),
@@ -72,8 +76,6 @@ func TestTls(t *testing.T) {
 
 			route.ServeHTTP(responseRecorder, req)
 			assert.Equal(t, http.StatusOK, responseRecorder.Code)
-
-			mockConfig.AssertExpectations(t)
 		})
 	}
 }

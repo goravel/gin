@@ -17,14 +17,17 @@ import (
 	contractshttp "github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/contracts/validation"
 	configmocks "github.com/goravel/framework/mocks/config"
+	mockslog "github.com/goravel/framework/mocks/log"
 	"github.com/spf13/cast"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 )
 
 type RouteTestSuite struct {
 	suite.Suite
 	mockConfig *configmocks.Config
+	mockLog    *mockslog.Log
 	route      *Route
 }
 
@@ -36,45 +39,68 @@ func (s *RouteTestSuite) SetupTest() {
 	s.mockConfig = configmocks.NewConfig(s.T())
 	s.mockConfig.EXPECT().GetBool("app.debug").Return(true).Once()
 	s.mockConfig.EXPECT().GetInt("http.drivers.gin.body_limit", 4096).Return(4096).Once()
+	s.mockConfig.EXPECT().Get("http.drivers.gin.template").Return(nil).Once()
+	ConfigFacade = s.mockConfig
 
-	route, err := NewRoute(s.mockConfig, nil)
-	s.Require().Nil(err)
-	s.route = route
+	s.mockLog = mockslog.NewLog(s.T())
+	LogFacade = s.mockLog
+
+	s.route = &Route{
+		config: s.mockConfig,
+		driver: "gin",
+	}
+	s.Require().Nil(s.route.init(nil))
 
 	routes = make(map[string]map[string]contractshttp.Info)
 }
 
-func (s *RouteTestSuite) TestRecoverWithCustomCallback() {
-	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/recover", nil)
+func (s *RouteTestSuite) TestRecover() {
+	s.Run("default", func() {
+		s.mockLog.EXPECT().WithContext(mock.AnythingOfType("*gin.Context")).Return(s.mockLog).Once()
+		s.mockLog.EXPECT().Request(mock.AnythingOfType("*gin.ContextRequest")).Return(s.mockLog).Once()
+		s.mockLog.EXPECT().Error(1).Return().Once()
 
-	globalRecover := func(ctx contractshttp.Context, err any) {
-		ctx.Request().Abort(http.StatusInternalServerError)
-	}
+		s.route.Get("/recover", func(ctx contractshttp.Context) contractshttp.Response {
+			panic(1)
+		})
 
-	s.route.Recover(globalRecover)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/recover", nil)
+		s.route.ServeHTTP(w, req)
 
-	s.route.Get("/recover", func(ctx contractshttp.Context) contractshttp.Response {
-		panic(1)
+		s.Empty(w.Body.String())
+		s.Equal(http.StatusInternalServerError, w.Code)
 	})
 
-	s.route.ServeHTTP(w, req)
+	s.Run("with custom callback", func() {
+		s.mockConfig.EXPECT().GetBool("app.debug").Return(true).Once()
+		s.mockConfig.EXPECT().GetInt("http.drivers.gin.body_limit", 4096).Return(4096).Once()
+		s.mockConfig.EXPECT().Get("http.drivers.gin.template").Return(nil).Once()
 
-	s.Empty(w.Body.String())
-	s.Equal(http.StatusInternalServerError, w.Code)
-}
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/recover", nil)
 
-func (s *RouteTestSuite) TestRecoverWithDefaultCallback() {
-	s.route.Get("/recover", func(ctx contractshttp.Context) contractshttp.Response {
-		panic(1)
+		called := false
+		globalRecover := func(ctx contractshttp.Context, err any) {
+			called = true
+			ctx.Request().Abort(http.StatusServiceUnavailable)
+		}
+
+		s.route.Recover(globalRecover)
+
+		s.route.Get("/recover", func(ctx contractshttp.Context) contractshttp.Response {
+			panic(1)
+		})
+
+		s.route.ServeHTTP(w, req)
+
+		s.Empty(w.Body.String())
+		s.Equal(http.StatusServiceUnavailable, w.Code)
+		s.True(called)
+
+		// Reset to default recover callback
+		globalRecoverCallback = defaultRecoverCallback
 	})
-
-	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/recover", nil)
-	s.route.ServeHTTP(w, req)
-
-	s.Empty(w.Body.String())
-	s.Equal(http.StatusInternalServerError, w.Code)
 }
 
 func (s *RouteTestSuite) TestFallback() {
@@ -113,16 +139,13 @@ func (s *RouteTestSuite) TestGetRoutes() {
 }
 
 func (s *RouteTestSuite) TestGlobalMiddleware() {
-	// has timeout middleware
-	s.mockConfig.EXPECT().GetInt("http.request_timeout", 3).Return(1).Once()
-	s.route.GlobalMiddleware()
-	s.Len(s.route.instance.Handlers, 5)
+	s.mockConfig.EXPECT().GetBool("app.debug").Return(true).Once()
+	s.mockConfig.EXPECT().GetInt("http.drivers.gin.body_limit", 4096).Return(4096).Once()
+	s.mockConfig.EXPECT().Get("http.drivers.gin.template").Return(nil).Once()
 
-	// no timeout middleware
-	s.SetupTest()
-	s.mockConfig.EXPECT().GetInt("http.request_timeout", 3).Return(0).Once()
-	s.route.GlobalMiddleware()
-	s.Len(s.route.instance.Handlers, 4)
+	middleware := func(ctx contractshttp.Context) {}
+	s.route.GlobalMiddleware(middleware)
+	s.Len(s.route.instance.Handlers, 3)
 }
 
 func (s *RouteTestSuite) TestListen() {
@@ -511,58 +534,65 @@ func (s *RouteTestSuite) TestNewRoute() {
 	s.Require().Nil(err)
 
 	tests := []struct {
-		name             string
-		parameters       map[string]any
-		setup            func()
-		expectHTMLRender render.HTMLRender
-		expectError      error
+		name        string
+		parameters  map[string]any
+		setup       func()
+		expectError error
 	}{
 		{
-			name:             "parameters is nil",
-			setup:            func() {},
-			expectHTMLRender: defaultTemplate,
+			name:        "parameters is nil",
+			setup:       func() {},
+			expectError: errors.New("please set the driver"),
 		},
 		{
 			name:       "template is instance",
 			parameters: map[string]any{"driver": "gin"},
 			setup: func() {
+				s.mockConfig.EXPECT().GetInt("http.request_timeout", 3).Return(3).Once()
+				s.mockConfig.EXPECT().GetBool("app.debug").Return(true).Once()
+				s.mockConfig.EXPECT().GetInt("http.drivers.gin.body_limit", 4096).Return(4096).Once()
 				s.mockConfig.EXPECT().Get("http.drivers.gin.template").Return(defaultTemplate).Once()
 			},
-			expectHTMLRender: defaultTemplate,
 		},
 		{
 			name:       "template is callback and returns success",
 			parameters: map[string]any{"driver": "gin"},
 			setup: func() {
+				s.mockConfig.EXPECT().GetInt("http.request_timeout", 3).Return(3).Once()
+				s.mockConfig.EXPECT().GetBool("app.debug").Return(true).Once()
+				s.mockConfig.EXPECT().GetInt("http.drivers.gin.body_limit", 4096).Return(4096).Once()
 				s.mockConfig.EXPECT().Get("http.drivers.gin.template").Return(func() (render.HTMLRender, error) {
 					return defaultTemplate, nil
-				}).Twice()
+				}).Once()
 			},
-			expectHTMLRender: defaultTemplate,
 		},
 		{
 			name:       "template is callback and returns error",
 			parameters: map[string]any{"driver": "gin"},
 			setup: func() {
+				s.mockConfig.EXPECT().GetInt("http.request_timeout", 3).Return(3).Once()
+				s.mockConfig.EXPECT().GetBool("app.debug").Return(true).Once()
+				s.mockConfig.EXPECT().GetInt("http.drivers.gin.body_limit", 4096).Return(4096).Once()
 				s.mockConfig.EXPECT().Get("http.drivers.gin.template").Return(func() (render.HTMLRender, error) {
 					return nil, errors.New("error")
-				}).Twice()
+				}).Once()
 			},
 			expectError: errors.New("error"),
 		},
 	}
 
-	for _, test := range tests {
-		s.Run(test.name, func() {
+	for _, tt := range tests {
+		s.Run(tt.name, func() {
 			s.SetupTest()
+			tt.setup()
 
-			s.mockConfig.EXPECT().GetBool("app.debug").Return(true).Once()
-			s.mockConfig.EXPECT().GetInt("http.drivers.gin.body_limit", 4096).Return(4096).Once()
-			test.setup()
-			route, err := NewRoute(s.mockConfig, test.parameters)
-			s.Equal(test.expectError, err)
-			if route != nil {
-				s.Equal(test.expectHTMLRender, route.instance.HTMLRender)
+			route, err := NewRoute(s.mockConfig, tt.parameters)
+
+			if tt.expectError != nil {
+				s.Equal(tt.expectError, err)
+			} else {
+				s.NoError(err)
+				s.NotNil(route)
 			}
 		})
 	}

@@ -18,75 +18,51 @@ import (
 	"github.com/goravel/framework/support"
 	"github.com/goravel/framework/support/color"
 	"github.com/goravel/framework/support/str"
+	"github.com/spf13/cast"
 )
 
 // map[path]map[method]info
 var routes = make(map[string]map[string]contractshttp.Info)
 
-var globalRecoverCallback func(ctx contractshttp.Context, err any) = func(ctx contractshttp.Context, err any) {
-	LogFacade.WithContext(ctx).Request(ctx.Request()).Error(err)
-	ctx.Request().Abort(http.StatusInternalServerError)
-}
+var globalRecoverCallback func(ctx contractshttp.Context, err any) = defaultRecoverCallback
 
 type Route struct {
 	route.Router
-	config    config.Config
-	instance  *gin.Engine
-	server    *http.Server
-	tlsServer *http.Server
+	config           config.Config
+	driver           string
+	globalMiddleware []contractshttp.Middleware
+	instance         *gin.Engine
+	server           *http.Server
+	tlsServer        *http.Server
 }
 
 func NewRoute(config config.Config, parameters map[string]any) (*Route, error) {
-	gin.SetMode(gin.ReleaseMode)
-	gin.DisableBindValidation()
-	engine := gin.New()
-	engine.MaxMultipartMemory = int64(config.GetInt("http.drivers.gin.body_limit", 4096)) << 10
-	engine.Use(gin.Recovery()) // recovery middleware
-
-	if debugLog := getDebugLog(config); debugLog != nil {
-		engine.Use(debugLog)
+	driver := cast.ToString(parameters["driver"])
+	if driver == "" {
+		return nil, errors.New("please set the driver")
 	}
 
-	if driver, exist := parameters["driver"]; exist {
-		htmlRender, ok := config.Get("http.drivers." + driver.(string) + ".template").(render.HTMLRender)
-		if ok {
-			engine.HTMLRender = htmlRender
-		} else {
-			htmlRenderCallback, ok := config.Get("http.drivers." + driver.(string) + ".template").(func() (render.HTMLRender, error))
-			if ok {
-				htmlRender, err := htmlRenderCallback()
-				if err != nil {
-					return nil, err
-				}
+	timeout := time.Duration(config.GetInt("http.request_timeout", 3)) * time.Second
+	globalMiddleware := []contractshttp.Middleware{Timeout(timeout), Cors(), Tls()}
 
-				engine.HTMLRender = htmlRender
-			}
-		}
+	route := &Route{
+		config:           config,
+		driver:           cast.ToString(parameters["driver"]),
+		globalMiddleware: globalMiddleware,
+	}
+	if err := route.init(globalMiddleware); err != nil {
+		return nil, err
 	}
 
-	if engine.HTMLRender == nil {
-		var err error
-		engine.HTMLRender, err = DefaultTemplate()
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return &Route{
-		Router: NewGroup(
-			config,
-			engine.Group("/"),
-			"",
-			[]contractshttp.Middleware{},
-			[]contractshttp.Middleware{ResponseMiddleware()},
-		),
-		config:   config,
-		instance: engine,
-	}, nil
+	return route, nil
 }
 
 func (r *Route) Fallback(handler contractshttp.HandlerFunc) {
 	r.instance.NoRoute(handlerToGinHandler(handler))
+}
+
+func (r *Route) GetGlobalMiddleware() []contractshttp.Middleware {
+	return r.globalMiddleware
 }
 
 func (r *Route) GetRoutes() []contractshttp.Info {
@@ -110,28 +86,11 @@ func (r *Route) GetRoutes() []contractshttp.Info {
 	return infos
 }
 
-func (r *Route) GlobalMiddleware(middlewares ...contractshttp.Middleware) {
-	defaultMiddlewares := []contractshttp.Middleware{Cors(), Tls()}
-	timeout := time.Duration(r.config.GetInt("http.request_timeout", 3)) * time.Second
-	if timeout > 0 {
-		defaultMiddlewares = append(defaultMiddlewares, Timeout(timeout))
+func (r *Route) GlobalMiddleware(middleware ...contractshttp.Middleware) {
+	r.globalMiddleware = append(r.globalMiddleware, middleware...)
+	if err := r.init(r.globalMiddleware); err != nil {
+		panic(err)
 	}
-	middlewares = append(defaultMiddlewares, middlewares...)
-	r.setMiddlewares(middlewares)
-}
-
-func (r *Route) Recover(callback func(ctx contractshttp.Context, err any)) {
-	globalRecoverCallback = callback
-	r.setMiddlewares([]contractshttp.Middleware{
-		func(ctx contractshttp.Context) {
-			defer func() {
-				if err := recover(); err != nil {
-					callback(ctx, err)
-				}
-			}()
-			ctx.Request().Next()
-		},
-	})
 }
 
 func (r *Route) Listen(l net.Listener) error {
@@ -141,7 +100,7 @@ func (r *Route) Listen(l net.Listener) error {
 	r.server = &http.Server{
 		Addr:           l.Addr().String(),
 		Handler:        http.AllowQuerySemicolons(r.instance),
-		MaxHeaderBytes: r.config.GetInt("http.drivers.gin.header_limit", 4096) << 10,
+		MaxHeaderBytes: r.config.GetInt(fmt.Sprintf("http.drivers.%s.header_limit", r.driver), 4096) << 10,
 	}
 
 	if err := r.server.Serve(l); !errors.Is(err, http.ErrServerClosed) {
@@ -162,7 +121,7 @@ func (r *Route) ListenTLSWithCert(l net.Listener, certFile, keyFile string) erro
 	r.tlsServer = &http.Server{
 		Addr:           l.Addr().String(),
 		Handler:        http.AllowQuerySemicolons(r.instance),
-		MaxHeaderBytes: r.config.GetInt("http.drivers.gin.header_limit", 4096) << 10,
+		MaxHeaderBytes: r.config.GetInt(fmt.Sprintf("http.drivers.%s.header_limit", r.driver), 4096) << 10,
 	}
 
 	if err := r.tlsServer.ServeTLS(l, certFile, keyFile); !errors.Is(err, http.ErrServerClosed) {
@@ -184,6 +143,13 @@ func (r *Route) Info(name string) contractshttp.Info {
 	return contractshttp.Info{}
 }
 
+func (r *Route) Recover(callback func(ctx contractshttp.Context, err any)) {
+	globalRecoverCallback = callback
+	if err := r.init(r.globalMiddleware); err != nil {
+		panic(err)
+	}
+}
+
 func (r *Route) Run(host ...string) error {
 	if len(host) == 0 {
 		defaultHost := r.config.GetString("http.host")
@@ -201,7 +167,7 @@ func (r *Route) Run(host ...string) error {
 	r.server = &http.Server{
 		Addr:           host[0],
 		Handler:        http.AllowQuerySemicolons(r.instance),
-		MaxHeaderBytes: r.config.GetInt("http.drivers.gin.header_limit", 4096) << 10,
+		MaxHeaderBytes: r.config.GetInt(fmt.Sprintf("http.drivers.%s.header_limit", r.driver), 4096) << 10,
 	}
 
 	if err := r.server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
@@ -242,7 +208,7 @@ func (r *Route) RunTLSWithCert(host, certFile, keyFile string) error {
 	r.tlsServer = &http.Server{
 		Addr:           host,
 		Handler:        http.AllowQuerySemicolons(r.instance),
-		MaxHeaderBytes: r.config.GetInt("http.drivers.gin.header_limit", 4096) << 10,
+		MaxHeaderBytes: r.config.GetInt(fmt.Sprintf("http.drivers.%s.header_limit", r.driver), 4096) << 10,
 	}
 
 	if err := r.tlsServer.ListenAndServeTLS(certFile, keyFile); !errors.Is(err, http.ErrServerClosed) {
@@ -254,6 +220,13 @@ func (r *Route) RunTLSWithCert(host, certFile, keyFile string) error {
 
 func (r *Route) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	r.instance.ServeHTTP(writer, request)
+}
+
+func (r *Route) SetGlobalMiddleware(middlewares []contractshttp.Middleware) {
+	r.globalMiddleware = middlewares
+	if err := r.init(r.globalMiddleware); err != nil {
+		panic(err)
+	}
 }
 
 func (r *Route) Shutdown(ctx ...context.Context) error {
@@ -279,6 +252,61 @@ func (r *Route) Test(request *http.Request) (*http.Response, error) {
 	return recorder.Result(), nil
 }
 
+func (r *Route) init(globalMiddleware []contractshttp.Middleware) error {
+	gin.SetMode(gin.ReleaseMode)
+	gin.DisableBindValidation()
+	engine := gin.New()
+	engine.MaxMultipartMemory = int64(r.config.GetInt(fmt.Sprintf("http.drivers.%s.body_limit", r.driver), 4096)) << 10
+
+	ginMiddleware := []gin.HandlerFunc{}
+	if r.config.GetBool("app.debug") {
+		ginMiddleware = append(ginMiddleware, logMiddleware())
+	}
+
+	recoverMiddleware := func(ctx contractshttp.Context) {
+		defer func() {
+			if err := recover(); err != nil {
+				globalRecoverCallback(ctx, err)
+			}
+		}()
+		ctx.Request().Next()
+	}
+	globalMiddleware = append([]contractshttp.Middleware{recoverMiddleware}, globalMiddleware...)
+	engine.Use(append(ginMiddleware, middlewaresToGinHandlers(globalMiddleware)...)...)
+
+	template := r.config.Get("http.drivers." + r.driver + ".template")
+	switch t := template.(type) {
+	case render.HTMLRender:
+		engine.HTMLRender = t
+	case func() (render.HTMLRender, error):
+		htmlRender, err := t()
+		if err != nil {
+			return err
+		}
+
+		engine.HTMLRender = htmlRender
+	}
+
+	if engine.HTMLRender == nil {
+		var err error
+		engine.HTMLRender, err = DefaultTemplate()
+		if err != nil {
+			return err
+		}
+	}
+
+	r.Router = NewGroup(
+		r.config,
+		engine.Group("/"),
+		"",
+		[]contractshttp.Middleware{},
+		[]contractshttp.Middleware{ResponseMiddleware()},
+	)
+	r.instance = engine
+
+	return nil
+}
+
 func (r *Route) outputRoutes() {
 	if r.config.GetBool("app.debug") && support.RuntimeMode != support.RuntimeArtisan && support.RuntimeMode != support.RuntimeTest {
 		if err := App.MakeArtisan().Call("route:list"); err != nil {
@@ -296,4 +324,9 @@ func (r *Route) setMiddlewares(middlewares []contractshttp.Middleware) {
 		[]contractshttp.Middleware{},
 		[]contractshttp.Middleware{ResponseMiddleware()},
 	)
+}
+
+func defaultRecoverCallback(ctx contractshttp.Context, err any) {
+	LogFacade.WithContext(ctx).Request(ctx.Request()).Error(err)
+	ctx.Request().Abort(http.StatusInternalServerError)
 }

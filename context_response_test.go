@@ -24,17 +24,17 @@ func TestContextResponseSuite(t *testing.T) {
 }
 
 func (s *ContextResponseSuite) SetupTest() {
-	s.mockConfig = &mocksconfig.Config{}
-	s.mockConfig.EXPECT().GetBool("app.debug").Return(true).Once()
+	s.mockConfig = mocksconfig.NewConfig(s.T())
 	s.mockConfig.EXPECT().GetInt("http.drivers.gin.body_limit", 4096).Return(4096).Once()
+	s.mockConfig.EXPECT().GetBool("app.debug").Return(true).Once()
+	s.mockConfig.EXPECT().Get("http.drivers.gin.template").Return(nil).Once()
 
-	var err error
-	s.route, err = NewRoute(s.mockConfig, nil)
+	s.route = &Route{
+		config: s.mockConfig,
+		driver: "gin",
+	}
+	err := s.route.init(nil)
 	s.Require().Nil(err)
-}
-
-func (s *ContextResponseSuite) TearDownTest() {
-	s.mockConfig.AssertExpectations(s.T())
 }
 
 func (s *ContextResponseSuite) TestCookie() {
@@ -141,13 +141,9 @@ func (s *ContextResponseSuite) TestNoContent_WithCode() {
 }
 
 func (s *ContextResponseSuite) TestOrigin() {
-	s.mockConfig.EXPECT().Get("cors.paths").Return([]string{}).Once()
-	s.mockConfig.EXPECT().GetString("http.tls.host").Return("").Once()
-	s.mockConfig.EXPECT().GetString("http.tls.port").Return("").Once()
-	s.mockConfig.EXPECT().GetString("http.tls.ssl.cert").Return("").Once()
-	s.mockConfig.EXPECT().GetString("http.tls.ssl.key").Return("").Once()
-	s.mockConfig.EXPECT().GetInt("http.request_timeout", 3).Return(1).Once()
-	ConfigFacade = s.mockConfig
+	s.mockConfig.EXPECT().GetInt("http.drivers.gin.body_limit", 4096).Return(4096).Once()
+	s.mockConfig.EXPECT().GetBool("app.debug").Return(true).Once()
+	s.mockConfig.EXPECT().Get("http.drivers.gin.template").Return(nil).Once()
 
 	s.route.GlobalMiddleware(func(ctx contractshttp.Context) {
 		ctx.Response().Header("global", "goravel")
