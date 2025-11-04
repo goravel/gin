@@ -7,7 +7,7 @@ toolchain go1.25.3
 require (
 	github.com/gin-gonic/gin v1.11.0
 	github.com/gookit/validate v1.5.6
-	github.com/goravel/framework v1.16.1-0.20251103030832-4d83f33435f0
+	github.com/goravel/framework v1.16.1-0.20251104151004-3c7c0d634ebd
 	github.com/rs/cors v1.11.1
 	github.com/spf13/cast v1.10.0
 	github.com/stretchr/testify v1.11.1
