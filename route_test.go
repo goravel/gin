@@ -97,6 +97,9 @@ func (s *RouteTestSuite) TestRecover() {
 		s.Empty(w.Body.String())
 		s.Equal(http.StatusServiceUnavailable, w.Code)
 		s.True(called)
+
+		// Reset to default recover callback
+		globalRecoverCallback = defaultRecoverCallback
 	})
 }
 

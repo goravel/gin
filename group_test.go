@@ -25,12 +25,18 @@ func (s *GroupTestSuite) SetupTest() {
 	routes = make(map[string]map[string]contractshttp.Info)
 
 	s.mockConfig = configmocks.NewConfig(s.T())
-	s.mockConfig.EXPECT().GetBool("app.debug").Return(true).Once()
 	s.mockConfig.EXPECT().GetInt("http.drivers.gin.body_limit", 4096).Return(4096).Once()
+	s.mockConfig.EXPECT().GetBool("app.debug").Return(true).Once()
+	s.mockConfig.EXPECT().Get("http.drivers.gin.template").Return(nil).Once()
+
 	ConfigFacade = s.mockConfig
 
-	route, err := NewRoute(s.mockConfig, nil)
-	s.NoError(err)
+	route := &Route{
+		config: s.mockConfig,
+		driver: "gin",
+	}
+	err := route.init(nil)
+	s.Require().Nil(err)
 
 	s.route = route
 }
@@ -272,12 +278,9 @@ func (s *GroupTestSuite) TestMultiplePrefixGroupMiddleware() {
 }
 
 func (s *GroupTestSuite) TestGlobalMiddleware() {
-	s.mockConfig.On("Get", "cors.paths").Return([]string{}).Once()
-	s.mockConfig.On("GetString", "http.tls.host").Return("").Once()
-	s.mockConfig.On("GetString", "http.tls.port").Return("").Once()
-	s.mockConfig.On("GetString", "http.tls.ssl.cert").Return("").Once()
-	s.mockConfig.On("GetString", "http.tls.ssl.key").Return("").Once()
-	s.mockConfig.On("GetInt", "http.request_timeout", 3).Return(1).Once()
+	s.mockConfig.EXPECT().GetInt("http.drivers.gin.body_limit", 4096).Return(4096).Once()
+	s.mockConfig.EXPECT().GetBool("app.debug").Return(true).Once()
+	s.mockConfig.EXPECT().Get("http.drivers.gin.template").Return(nil).Once()
 
 	s.route.GlobalMiddleware(func(ctx contractshttp.Context) {
 		ctx.WithValue("global", "goravel")

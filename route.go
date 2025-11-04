@@ -24,10 +24,7 @@ import (
 // map[path]map[method]info
 var routes = make(map[string]map[string]contractshttp.Info)
 
-var globalRecoverCallback func(ctx contractshttp.Context, err any) = func(ctx contractshttp.Context, err any) {
-	LogFacade.WithContext(ctx).Request(ctx.Request()).Error(err)
-	ctx.Request().Abort(http.StatusInternalServerError)
-}
+var globalRecoverCallback func(ctx contractshttp.Context, err any) = defaultRecoverCallback
 
 type Route struct {
 	route.Router
@@ -327,4 +324,9 @@ func (r *Route) setMiddlewares(middlewares []contractshttp.Middleware) {
 		[]contractshttp.Middleware{},
 		[]contractshttp.Middleware{ResponseMiddleware()},
 	)
+}
+
+func defaultRecoverCallback(ctx contractshttp.Context, err any) {
+	LogFacade.WithContext(ctx).Request(ctx.Request()).Error(err)
+	ctx.Request().Abort(http.StatusInternalServerError)
 }

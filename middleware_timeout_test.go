@@ -100,5 +100,8 @@ func TestTimeoutMiddleware(t *testing.T) {
 		assert.Equal(t, http.StatusInternalServerError, w.Code)
 		assert.Empty(t, w.Body.String())
 		assert.True(t, called)
+
+		// Reset to default recover callback
+		globalRecoverCallback = defaultRecoverCallback
 	})
 }

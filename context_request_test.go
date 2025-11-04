@@ -38,20 +38,19 @@ func TestContextRequestSuite(t *testing.T) {
 }
 
 func (s *ContextRequestSuite) SetupTest() {
-	s.mockConfig = &mocksconfig.Config{}
-	s.mockConfig.EXPECT().GetBool("app.debug").Return(true).Once()
+	s.mockConfig = mocksconfig.NewConfig(s.T())
 	s.mockConfig.EXPECT().GetInt("http.drivers.gin.body_limit", 4096).Return(4096).Once()
+	s.mockConfig.EXPECT().GetBool("app.debug").Return(true).Once()
+	s.mockConfig.EXPECT().Get("http.drivers.gin.template").Return(nil).Once()
+
 	ValidationFacade = validation.NewValidation()
 
-	var err error
-	route, err := NewRoute(s.mockConfig, nil)
-	s.Require().NotNil(route)
-	s.Require().NoError(err)
-	s.route = route
-}
-
-func (s *ContextRequestSuite) TearDownTest() {
-	s.mockConfig.AssertExpectations(s.T())
+	s.route = &Route{
+		config: s.mockConfig,
+		driver: "gin",
+	}
+	err := s.route.init(nil)
+	s.Require().Nil(err)
 }
 
 func (s *ContextRequestSuite) TestAll() {
