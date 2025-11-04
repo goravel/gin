@@ -102,6 +102,9 @@ func (r *ContextResponse) Stream(code int, step func(w contractshttp.StreamWrite
 }
 
 func (r *ContextResponse) View() contractshttp.ResponseView {
+	if ViewFacade == nil {
+		panic("view facade is not initialized, please setup github.com/goravel/framework/view package first")
+	}
 	return NewView(r.instance)
 }
 
