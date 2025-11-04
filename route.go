@@ -40,6 +40,11 @@ type Route struct {
 }
 
 func NewRoute(config config.Config, parameters map[string]any) (*Route, error) {
+	driver := cast.ToString(parameters["driver"])
+	if driver == "" {
+		return nil, errors.New("please set the driver")
+	}
+
 	timeout := time.Duration(config.GetInt("http.request_timeout", 3)) * time.Second
 	globalMiddleware := []contractshttp.Middleware{Timeout(timeout), Cors(), Tls()}
 
@@ -48,7 +53,9 @@ func NewRoute(config config.Config, parameters map[string]any) (*Route, error) {
 		driver:           cast.ToString(parameters["driver"]),
 		globalMiddleware: globalMiddleware,
 	}
-	route.init(globalMiddleware)
+	if err := route.init(globalMiddleware); err != nil {
+		return nil, err
+	}
 
 	return route, nil
 }
@@ -84,7 +91,9 @@ func (r *Route) GetRoutes() []contractshttp.Info {
 
 func (r *Route) GlobalMiddleware(middleware ...contractshttp.Middleware) {
 	r.globalMiddleware = append(r.globalMiddleware, middleware...)
-	r.init(r.globalMiddleware)
+	if err := r.init(r.globalMiddleware); err != nil {
+		panic(err)
+	}
 }
 
 func (r *Route) Listen(l net.Listener) error {
@@ -94,7 +103,7 @@ func (r *Route) Listen(l net.Listener) error {
 	r.server = &http.Server{
 		Addr:           l.Addr().String(),
 		Handler:        http.AllowQuerySemicolons(r.instance),
-		MaxHeaderBytes: r.config.GetInt("http.drivers.gin.header_limit", 4096) << 10,
+		MaxHeaderBytes: r.config.GetInt(fmt.Sprintf("http.drivers.%s.header_limit", r.driver), 4096) << 10,
 	}
 
 	if err := r.server.Serve(l); !errors.Is(err, http.ErrServerClosed) {
@@ -115,7 +124,7 @@ func (r *Route) ListenTLSWithCert(l net.Listener, certFile, keyFile string) erro
 	r.tlsServer = &http.Server{
 		Addr:           l.Addr().String(),
 		Handler:        http.AllowQuerySemicolons(r.instance),
-		MaxHeaderBytes: r.config.GetInt("http.drivers.gin.header_limit", 4096) << 10,
+		MaxHeaderBytes: r.config.GetInt(fmt.Sprintf("http.drivers.%s.header_limit", r.driver), 4096) << 10,
 	}
 
 	if err := r.tlsServer.ServeTLS(l, certFile, keyFile); !errors.Is(err, http.ErrServerClosed) {
@@ -139,7 +148,9 @@ func (r *Route) Info(name string) contractshttp.Info {
 
 func (r *Route) Recover(callback func(ctx contractshttp.Context, err any)) {
 	globalRecoverCallback = callback
-	r.init(r.globalMiddleware)
+	if err := r.init(r.globalMiddleware); err != nil {
+		panic(err)
+	}
 }
 
 func (r *Route) Run(host ...string) error {
@@ -159,7 +170,7 @@ func (r *Route) Run(host ...string) error {
 	r.server = &http.Server{
 		Addr:           host[0],
 		Handler:        http.AllowQuerySemicolons(r.instance),
-		MaxHeaderBytes: r.config.GetInt("http.drivers.gin.header_limit", 4096) << 10,
+		MaxHeaderBytes: r.config.GetInt(fmt.Sprintf("http.drivers.%s.header_limit", r.driver), 4096) << 10,
 	}
 
 	if err := r.server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
@@ -200,7 +211,7 @@ func (r *Route) RunTLSWithCert(host, certFile, keyFile string) error {
 	r.tlsServer = &http.Server{
 		Addr:           host,
 		Handler:        http.AllowQuerySemicolons(r.instance),
-		MaxHeaderBytes: r.config.GetInt("http.drivers.gin.header_limit", 4096) << 10,
+		MaxHeaderBytes: r.config.GetInt(fmt.Sprintf("http.drivers.%s.header_limit", r.driver), 4096) << 10,
 	}
 
 	if err := r.tlsServer.ListenAndServeTLS(certFile, keyFile); !errors.Is(err, http.ErrServerClosed) {
@@ -216,7 +227,9 @@ func (r *Route) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 
 func (r *Route) SetGlobalMiddleware(middlewares []contractshttp.Middleware) {
 	r.globalMiddleware = middlewares
-	r.init(r.globalMiddleware)
+	if err := r.init(r.globalMiddleware); err != nil {
+		panic(err)
+	}
 }
 
 func (r *Route) Shutdown(ctx ...context.Context) error {
@@ -246,7 +259,7 @@ func (r *Route) init(globalMiddleware []contractshttp.Middleware) error {
 	gin.SetMode(gin.ReleaseMode)
 	gin.DisableBindValidation()
 	engine := gin.New()
-	engine.MaxMultipartMemory = int64(r.config.GetInt("http.drivers.gin.body_limit", 4096)) << 10
+	engine.MaxMultipartMemory = int64(r.config.GetInt(fmt.Sprintf("http.drivers.%s.body_limit", r.driver), 4096)) << 10
 
 	ginMiddleware := []gin.HandlerFunc{}
 	if r.config.GetBool("app.debug") {
@@ -264,21 +277,17 @@ func (r *Route) init(globalMiddleware []contractshttp.Middleware) error {
 	globalMiddleware = append([]contractshttp.Middleware{recoverMiddleware}, globalMiddleware...)
 	engine.Use(append(ginMiddleware, middlewaresToGinHandlers(globalMiddleware)...)...)
 
-	if r.driver != "" {
-		htmlRender, ok := r.config.Get("http.drivers." + r.driver + ".template").(render.HTMLRender)
-		if ok {
-			engine.HTMLRender = htmlRender
-		} else {
-			htmlRenderCallback, ok := r.config.Get("http.drivers." + r.driver + ".template").(func() (render.HTMLRender, error))
-			if ok {
-				htmlRender, err := htmlRenderCallback()
-				if err != nil {
-					return err
-				}
-
-				engine.HTMLRender = htmlRender
-			}
+	template := r.config.Get("http.drivers." + r.driver + ".template")
+	switch t := template.(type) {
+	case render.HTMLRender:
+		engine.HTMLRender = t
+	case func() (render.HTMLRender, error):
+		htmlRender, err := t()
+		if err != nil {
+			return err
 		}
+
+		engine.HTMLRender = htmlRender
 	}
 
 	if engine.HTMLRender == nil {

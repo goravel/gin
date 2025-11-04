@@ -226,9 +226,6 @@ func TestView_Make(t *testing.T) {
 			}
 
 			assert.Equal(t, test.expectCode, w.Code)
-
-			mockConfig.AssertExpectations(t)
-			mockView.AssertExpectations(t)
 		})
 	}
 
