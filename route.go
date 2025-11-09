@@ -315,17 +315,6 @@ func (r *Route) outputRoutes() {
 	}
 }
 
-func (r *Route) setMiddlewares(middlewares []contractshttp.Middleware) {
-	r.instance.Use(middlewaresToGinHandlers(middlewares)...)
-	r.Router = NewGroup(
-		r.config,
-		r.instance.Group("/"),
-		"",
-		[]contractshttp.Middleware{},
-		[]contractshttp.Middleware{ResponseMiddleware()},
-	)
-}
-
 func defaultRecoverCallback(ctx contractshttp.Context, err any) {
 	LogFacade.WithContext(ctx).Request(ctx.Request()).Error(err)
 	ctx.Request().Abort(http.StatusInternalServerError)
