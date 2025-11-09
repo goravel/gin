@@ -164,18 +164,14 @@ func (s *GroupTestSuite) TestAny() {
 }
 
 func (s *GroupTestSuite) TestResource() {
-	s.route.setMiddlewares([]contractshttp.Middleware{func(ctx contractshttp.Context) {
-		ctx.WithValue("action", ctx.Request().Origin().Method)
-		ctx.Request().Next()
-	}})
 	s.route.Resource("/resource", resourceController{}).Name("resource")
 
-	s.assert("GET", "/resource", http.StatusOK, "{\"action\":\"GET\"}")
-	s.assert("GET", "/resource/1", http.StatusOK, "{\"action\":\"GET\",\"id\":\"1\"}")
-	s.assert("POST", "/resource", http.StatusOK, "{\"action\":\"POST\"}")
-	s.assert("PUT", "/resource/1", http.StatusOK, "{\"action\":\"PUT\",\"id\":\"1\"}")
-	s.assert("PATCH", "/resource/1", http.StatusOK, "{\"action\":\"PATCH\",\"id\":\"1\"}")
-	s.assert("DELETE", "/resource/1", http.StatusOK, "{\"action\":\"DELETE\",\"id\":\"1\"}")
+	s.assert("GET", "/resource", http.StatusOK, "{\"action\":\"Index\"}")
+	s.assert("GET", "/resource/1", http.StatusOK, "{\"action\":\"Show\",\"id\":\"1\"}")
+	s.assert("POST", "/resource", http.StatusOK, "{\"action\":\"Store\"}")
+	s.assert("PUT", "/resource/1", http.StatusOK, "{\"action\":\"Update\",\"id\":\"1\"}")
+	s.assert("PATCH", "/resource/1", http.StatusOK, "{\"action\":\"Update\",\"id\":\"1\"}")
+	s.assert("DELETE", "/resource/1", http.StatusOK, "{\"action\":\"Destroy\",\"id\":\"1\"}")
 
 	s.Equal(contractshttp.Info{
 		Handler: "github.com/goravel/gin.(resourceController)",
@@ -385,47 +381,40 @@ func contextMiddleware2() contractshttp.Middleware {
 type resourceController struct{}
 
 func (c resourceController) Index(ctx contractshttp.Context) contractshttp.Response {
-	action := ctx.Value("action")
-
 	return ctx.Response().Json(http.StatusOK, contractshttp.Json{
-		"action": action,
+		"action": "Index",
 	})
 }
 
 func (c resourceController) Show(ctx contractshttp.Context) contractshttp.Response {
-	action := ctx.Value("action")
 	id := ctx.Request().Input("id")
 
 	return ctx.Response().Json(http.StatusOK, contractshttp.Json{
-		"action": action,
+		"action": "Show",
 		"id":     id,
 	})
 }
 
 func (c resourceController) Store(ctx contractshttp.Context) contractshttp.Response {
-	action := ctx.Value("action")
-
 	return ctx.Response().Json(http.StatusOK, contractshttp.Json{
-		"action": action,
+		"action": "Store",
 	})
 }
 
 func (c resourceController) Update(ctx contractshttp.Context) contractshttp.Response {
-	action := ctx.Value("action")
 	id := ctx.Request().Input("id")
 
 	return ctx.Response().Json(http.StatusOK, contractshttp.Json{
-		"action": action,
+		"action": "Update",
 		"id":     id,
 	})
 }
 
 func (c resourceController) Destroy(ctx contractshttp.Context) contractshttp.Response {
-	action := ctx.Value("action")
 	id := ctx.Request().Input("id")
 
 	return ctx.Response().Json(http.StatusOK, contractshttp.Json{
-		"action": action,
+		"action": "Destroy",
 		"id":     id,
 	})
 }
