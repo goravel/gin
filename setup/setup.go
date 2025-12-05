@@ -69,14 +69,14 @@ func main() {
 					modify.RemoveImport(ginFacade, "ginfacades"), modify.RemoveImport(ginRender),
 				),
 
-			// Remove gin service provider to app.go if not using bootstrap setup
+			// Remove gin service provider from app.go if not using bootstrap setup
 			modify.When(func(_ map[string]any) bool {
 				return !env.IsBootstrapSetup()
 			}, modify.GoFile(appConfigPath).
 				Find(match.Providers()).Modify(modify.Unregister(ginServiceProvider)).
 				Find(match.Imports()).Modify(modify.RemoveImport(modulePath))),
 
-			// Remove gin service provider to providers.go if using bootstrap setup
+			// Remove gin service provider from providers.go if using bootstrap setup
 			modify.When(func(_ map[string]any) bool {
 				return env.IsBootstrapSetup()
 			}, modify.RemoveProviderApply(modulePath, ginServiceProvider)),
