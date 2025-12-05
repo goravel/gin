@@ -26,13 +26,20 @@ func main() {
     }`
 	ginServiceProvider := "&gin.ServiceProvider{}"
 	modulePath := packages.GetModulePath()
+	httpConfigPath := path.Config("http.go")
+	appConfigPath := path.Config("app.go")
+	httpDriversConfig := match.Config("http.drivers")
+	httpConfig := match.Config("http")
+	routeContract := "github.com/goravel/framework/contracts/route"
+	ginFacade := "github.com/goravel/gin/facades"
+	ginRender := "github.com/gin-gonic/gin/render"
 
 	packages.Setup(os.Args).
 		Install(
 			// Add gin service provider to app.go if not using bootstrap setup
 			modify.When(func(_ map[string]any) bool {
 				return !env.IsBootstrapSetup()
-			}, modify.GoFile(path.Config("app.go")).
+			}, modify.GoFile(appConfigPath).
 				Find(match.Imports()).Modify(modify.AddImport(modulePath)).
 				Find(match.Providers()).Modify(modify.Register(ginServiceProvider))),
 
@@ -42,30 +49,30 @@ func main() {
 			}, modify.AddProviderApply(modulePath, ginServiceProvider)),
 
 			// Add gin config to http.go
-			modify.GoFile(path.Config("http.go")).
+			modify.GoFile(httpConfigPath).
 				Find(match.Imports()).
 				Modify(
-					modify.AddImport("github.com/goravel/framework/contracts/route"), modify.AddImport(modulePath),
-					modify.AddImport("github.com/goravel/gin/facades", "ginfacades"), modify.AddImport("github.com/gin-gonic/gin/render"),
+					modify.AddImport(routeContract), modify.AddImport(modulePath),
+					modify.AddImport(ginFacade, "ginfacades"), modify.AddImport(ginRender),
 				).
-				Find(match.Config("http.drivers")).Modify(modify.AddConfig("gin", config)).
-				Find(match.Config("http")).Modify(modify.AddConfig("default", `"gin"`)),
+				Find(httpDriversConfig).Modify(modify.AddConfig("gin", config)).
+				Find(httpConfig).Modify(modify.AddConfig("default", `"gin"`)),
 		).
 		Uninstall(
 			// Remove gin config from http.go
-			modify.GoFile(path.Config("http.go")).
-				Find(match.Config("http.drivers")).Modify(modify.RemoveConfig("gin")).
-				Find(match.Config("http")).Modify(modify.AddConfig("default", `""`)).
+			modify.GoFile(httpConfigPath).
+				Find(httpDriversConfig).Modify(modify.RemoveConfig("gin")).
+				Find(httpConfig).Modify(modify.AddConfig("default", `""`)).
 				Find(match.Imports()).
 				Modify(
-					modify.RemoveImport("github.com/goravel/framework/contracts/route"), modify.RemoveImport(packages.GetModulePath()),
-					modify.RemoveImport("github.com/goravel/gin/facades", "ginfacades"), modify.RemoveImport("github.com/gin-gonic/gin/render"),
+					modify.RemoveImport(routeContract), modify.RemoveImport(modulePath),
+					modify.RemoveImport(ginFacade, "ginfacades"), modify.RemoveImport(ginRender),
 				),
 
 			// Remove gin service provider to app.go if not using bootstrap setup
 			modify.When(func(_ map[string]any) bool {
 				return !env.IsBootstrapSetup()
-			}, modify.GoFile(path.Config("app.go")).
+			}, modify.GoFile(appConfigPath).
 				Find(match.Providers()).Modify(modify.Unregister(ginServiceProvider)).
 				Find(match.Imports()).Modify(modify.RemoveImport(modulePath))),
 
