@@ -11,7 +11,7 @@ import (
 )
 
 func main() {
-
+	setup := packages.Setup(os.Args)
 	config := `map[string]any{
         // Optional, default is 4096 KB
         "body_limit": 4096,
@@ -25,7 +25,7 @@ func main() {
         },
     }`
 	ginServiceProvider := "&gin.ServiceProvider{}"
-	modulePath := packages.GetModulePath()
+	moduleImport := setup.Paths().Module().Import()
 	httpConfigPath := path.Config("http.go")
 	appConfigPath := path.Config("app.go")
 	httpDriversConfig := match.Config("http.drivers")
@@ -34,52 +34,49 @@ func main() {
 	ginFacade := "github.com/goravel/gin/facades"
 	ginRender := "github.com/gin-gonic/gin/render"
 
-	packages.Setup(os.Args).
-		Install(
-			// Add gin service provider to app.go if not using bootstrap setup
-			modify.When(func(_ map[string]any) bool {
-				return !env.IsBootstrapSetup()
-			}, modify.GoFile(appConfigPath).
-				Find(match.Imports()).Modify(modify.AddImport(modulePath)).
-				Find(match.Providers()).Modify(modify.Register(ginServiceProvider))),
+	setup.Install(
+		// Add gin service provider to app.go if not using bootstrap setup
+		modify.When(func(_ map[string]any) bool {
+			return !env.IsBootstrapSetup()
+		}, modify.GoFile(appConfigPath).
+			Find(match.Imports()).Modify(modify.AddImport(moduleImport)).
+			Find(match.Providers()).Modify(modify.Register(ginServiceProvider))),
 
-			// Add gin service provider to providers.go if using bootstrap setup
-			modify.When(func(_ map[string]any) bool {
-				return env.IsBootstrapSetup()
-			}, modify.AddProviderApply(modulePath, ginServiceProvider)),
+		// Add gin service provider to providers.go if using bootstrap setup
+		modify.When(func(_ map[string]any) bool {
+			return env.IsBootstrapSetup()
+		}, modify.AddProviderApply(moduleImport, ginServiceProvider)),
 
-			// Add gin config to http.go
-			modify.GoFile(httpConfigPath).
-				Find(match.Imports()).
-				Modify(
-					modify.AddImport(routeContract), modify.AddImport(modulePath),
-					modify.AddImport(ginFacade, "ginfacades"), modify.AddImport(ginRender),
-				).
-				Find(httpDriversConfig).Modify(modify.AddConfig("gin", config)).
-				Find(httpConfig).Modify(modify.AddConfig("default", `"gin"`)),
-		).
-		Uninstall(
-			// Remove gin config from http.go
-			modify.GoFile(httpConfigPath).
-				Find(httpDriversConfig).Modify(modify.RemoveConfig("gin")).
-				Find(httpConfig).Modify(modify.AddConfig("default", `""`)).
-				Find(match.Imports()).
-				Modify(
-					modify.RemoveImport(routeContract), modify.RemoveImport(modulePath),
-					modify.RemoveImport(ginFacade, "ginfacades"), modify.RemoveImport(ginRender),
-				),
+		// Add gin config to http.go
+		modify.GoFile(httpConfigPath).
+			Find(match.Imports()).
+			Modify(
+				modify.AddImport(routeContract), modify.AddImport(moduleImport),
+				modify.AddImport(ginFacade, "ginfacades"), modify.AddImport(ginRender),
+			).
+			Find(httpDriversConfig).Modify(modify.AddConfig("gin", config)).
+			Find(httpConfig).Modify(modify.AddConfig("default", `"gin"`)),
+	).Uninstall(
+		// Remove gin config from http.go
+		modify.GoFile(httpConfigPath).
+			Find(httpDriversConfig).Modify(modify.RemoveConfig("gin")).
+			Find(httpConfig).Modify(modify.AddConfig("default", `""`)).
+			Find(match.Imports()).
+			Modify(
+				modify.RemoveImport(routeContract), modify.RemoveImport(moduleImport),
+				modify.RemoveImport(ginFacade, "ginfacades"), modify.RemoveImport(ginRender),
+			),
 
-			// Remove gin service provider from app.go if not using bootstrap setup
-			modify.When(func(_ map[string]any) bool {
-				return !env.IsBootstrapSetup()
-			}, modify.GoFile(appConfigPath).
-				Find(match.Providers()).Modify(modify.Unregister(ginServiceProvider)).
-				Find(match.Imports()).Modify(modify.RemoveImport(modulePath))),
+		// Remove gin service provider from app.go if not using bootstrap setup
+		modify.When(func(_ map[string]any) bool {
+			return !env.IsBootstrapSetup()
+		}, modify.GoFile(appConfigPath).
+			Find(match.Providers()).Modify(modify.Unregister(ginServiceProvider)).
+			Find(match.Imports()).Modify(modify.RemoveImport(moduleImport))),
 
-			// Remove gin service provider from providers.go if using bootstrap setup
-			modify.When(func(_ map[string]any) bool {
-				return env.IsBootstrapSetup()
-			}, modify.RemoveProviderApply(modulePath, ginServiceProvider)),
-		).
-		Execute()
+		// Remove gin service provider from providers.go if using bootstrap setup
+		modify.When(func(_ map[string]any) bool {
+			return env.IsBootstrapSetup()
+		}, modify.RemoveProviderApply(moduleImport, ginServiceProvider)),
+	).Execute()
 }

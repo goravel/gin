@@ -7,7 +7,7 @@ toolchain go1.25.5
 require (
 	github.com/gin-gonic/gin v1.11.0
 	github.com/gookit/validate v1.5.6
-	github.com/goravel/framework v1.16.1-0.20251204091854-4dcf6db5af43
+	github.com/goravel/framework v1.16.1-0.20251212104833-b0502efd8482
 	github.com/rs/cors v1.11.1
 	github.com/spf13/cast v1.10.0
 	github.com/stretchr/testify v1.11.1
@@ -51,7 +51,7 @@ require (
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
 	github.com/goccy/go-yaml v1.18.0 // indirect
-	github.com/goforj/godump v1.6.0 // indirect
+	github.com/goforj/godump v1.7.1 // indirect
 	github.com/gookit/color v1.5.4 // indirect
 	github.com/gookit/filter v1.2.3 // indirect
 	github.com/gookit/goutil v0.7.1 // indirect
