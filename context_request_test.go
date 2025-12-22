@@ -1491,6 +1491,57 @@ func (s *ContextRequestSuite) TestRoute() {
 	s.Equal(http.StatusOK, code)
 }
 
+func (s *ContextRequestSuite) TestRoute_HasSuffix() {
+	s.route.Get("/route/profile/{user}/{username}.json", func(ctx contractshttp.Context) contractshttp.Response {
+		return ctx.Response().Success().Json(contractshttp.Json{
+			"user":     ctx.Request().Route("user"),
+			"username": ctx.Request().Route("username"),
+		})
+	})
+
+	req, err := http.NewRequest("GET", "/route/profile/123/john-doe.json", nil)
+	s.Require().Nil(err)
+
+	code, body, _, _ := s.request(req)
+
+	s.Equal("{\"user\":\"123\",\"username\":\"john-doe\"}", body)
+	s.Equal(http.StatusOK, code)
+}
+
+func (s *ContextRequestSuite) TestRoute_MultipleSuffixes() {
+	s.route.Get("/route/download/{filename}.zip/version/{version}.json", func(ctx contractshttp.Context) contractshttp.Response {
+		return ctx.Response().Success().Json(contractshttp.Json{
+			"filename": ctx.Request().Route("filename"),
+			"version":  ctx.Request().Route("version"),
+		})
+	})
+
+	req, err := http.NewRequest("GET", "/route/download/document.zip/version/1.0.json", nil)
+	s.Require().Nil(err)
+
+	code, body, _, _ := s.request(req)
+
+	s.Equal("{\"filename\":\"document\",\"version\":\"1.0\"}", body)
+	s.Equal(http.StatusOK, code)
+}
+
+func (s *ContextRequestSuite) TestRoute_NoSuffixRegression() {
+	s.route.Get("/route/standard/{id}/{name}", func(ctx contractshttp.Context) contractshttp.Response {
+		return ctx.Response().Success().Json(contractshttp.Json{
+			"id":   ctx.Request().Route("id"),
+			"name": ctx.Request().Route("name"),
+		})
+	})
+
+	req, err := http.NewRequest("GET", "/route/standard/456/jane", nil)
+	s.Require().Nil(err)
+
+	code, body, _, _ := s.request(req)
+
+	s.Equal("{\"id\":\"456\",\"name\":\"jane\"}", body)
+	s.Equal(http.StatusOK, code)
+}
+
 func (s *ContextRequestSuite) TestSession() {
 	s.route.Get("/session", func(ctx contractshttp.Context) contractshttp.Response {
 		ctx.Request().SetSession(session.NewSession("goravel_session", nil, foundationjson.New()))

@@ -480,17 +480,17 @@ func (r *ContextRequest) Ip() string {
 }
 
 func (r *ContextRequest) Route(key string) string {
-	return r.instance.Param(key)
+	return r.param(key)
 }
 
 func (r *ContextRequest) RouteInt(key string) int {
-	val := r.instance.Param(key)
+	val := r.param(key)
 
 	return cast.ToInt(val)
 }
 
 func (r *ContextRequest) RouteInt64(key string) int64 {
-	val := r.instance.Param(key)
+	val := r.param(key)
 
 	return cast.ToInt64(val)
 }
@@ -599,13 +599,28 @@ func (r *ContextRequest) getValueFromHttpBody(key string) any {
 		case reflect.Slice:
 			if number, err := strconv.Atoi(k); err == nil {
 				return cast.ToStringSlice(current)[number]
-			} else {
-				return nil
 			}
+
+			return nil
+		default:
 		}
 	}
 
 	return current
+}
+
+func (r *ContextRequest) param(key string) string {
+	if val := r.instance.Param(key); val != "" {
+		return val
+	}
+
+	for _, param := range r.instance.Params {
+		if suffix, exist := strings.CutPrefix(param.Key, key); exist && strings.HasSuffix(param.Value, suffix) {
+			return strings.TrimSuffix(param.Value, suffix)
+		}
+	}
+
+	return ""
 }
 
 func getHttpBody(ctx *Context) (map[string]any, error) {
