@@ -1491,6 +1491,22 @@ func (s *ContextRequestSuite) TestRoute() {
 	s.Equal(http.StatusOK, code)
 }
 
+func (s *ContextRequestSuite) TestRoute_HasSuffix() {
+	s.route.Get("/route/user/{username}.json", func(ctx contractshttp.Context) contractshttp.Response {
+		return ctx.Response().Success().Json(contractshttp.Json{
+			"username": ctx.Request().Route("username"),
+		})
+	})
+
+	req, err := http.NewRequest("GET", "/route/user/test-user.json", nil)
+	s.Require().Nil(err)
+
+	code, body, _, _ := s.request(req)
+
+	s.Equal("{\"username\":\"test-user\"}", body)
+	s.Equal(http.StatusOK, code)
+}
+
 func (s *ContextRequestSuite) TestSession() {
 	s.route.Get("/session", func(ctx contractshttp.Context) contractshttp.Response {
 		ctx.Request().SetSession(session.NewSession("goravel_session", nil, foundationjson.New()))
