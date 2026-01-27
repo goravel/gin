@@ -3,6 +3,7 @@ package gin
 import (
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"testing"
 
 	contractshttp "github.com/goravel/framework/contracts/http"
@@ -11,7 +12,6 @@ import (
 	mocksview "github.com/goravel/framework/mocks/view"
 	"github.com/goravel/framework/session"
 	"github.com/goravel/framework/support/file"
-	"github.com/goravel/framework/support/path"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -25,15 +25,18 @@ func TestView_Make(t *testing.T) {
 		mockView   *mocksview.View
 	)
 
-	assert.Nil(t, file.PutContent(path.Resource("views", "empty.tmpl"), `{{ define "empty.tmpl" }}
+	assert.Nil(t, file.PutContent(filepath.Join("resources", "views", "empty.tmpl"), `{{ define "empty.tmpl" }}
 1
 {{ end }}
 `))
-	assert.Nil(t, file.PutContent(path.Resource("views", "data.tmpl"), `{{ define "data.tmpl" }}
+	assert.Nil(t, file.PutContent(filepath.Join("resources", "views", "data.tmpl"), `{{ define "data.tmpl" }}
 {{ .Name }}
 {{ .Age }}
 {{ end }}
 `))
+	defer func() {
+		assert.Nil(t, file.Remove("resources"))
+	}()
 
 	beforeEach := func() {
 		mockConfig = mocksconfig.NewConfig(t)
@@ -236,8 +239,6 @@ func TestView_Make(t *testing.T) {
 			assert.Equal(t, test.expectCode, w.Code)
 		})
 	}
-
-	assert.Nil(t, file.Remove("resources"))
 }
 
 func TestView_First(t *testing.T) {
@@ -249,15 +250,19 @@ func TestView_First(t *testing.T) {
 		mockView   *mocksview.View
 	)
 
-	assert.Nil(t, file.PutContent(path.Resource("views", "empty.tmpl"), `{{ define "empty.tmpl" }}
+	assert.Nil(t, file.PutContent(filepath.Join("resources", "views", "empty.tmpl"), `{{ define "empty.tmpl" }}
 1
 {{ end }}
 `))
-	assert.Nil(t, file.PutContent(path.Resource("views", "data.tmpl"), `{{ define "data.tmpl" }}
+	assert.Nil(t, file.PutContent(filepath.Join("resources", "views", "data.tmpl"), `{{ define "data.tmpl" }}
 {{ .Name }}
 {{ .Age }}
 {{ end }}
 `))
+
+	defer func() {
+		assert.Nil(t, file.Remove("resources"))
+	}()
 
 	beforeEach := func() {
 		mockConfig = mocksconfig.NewConfig(t)
@@ -384,15 +389,18 @@ func TestView_First(t *testing.T) {
 			assert.Equal(t, test.expectCode, w.Code)
 		})
 	}
-
-	assert.Nil(t, file.Remove("resources"))
 }
 
 func TestView_CSRFToken(t *testing.T) {
-	assert.Nil(t, file.PutContent(path.Resource("views", "csrf.tmpl"), `{{ define "csrf.tmpl" }}
+	assert.Nil(t, file.PutContent(filepath.Join("resources", "views", "csrf.tmpl"), `{{ define "csrf.tmpl" }}
 csrf_token={{ .csrf_token }}
 {{ end }}
 `))
+
+	defer func() {
+		assert.Nil(t, file.Remove("resources"))
+	}()
+
 	mockConfig := mocksconfig.NewConfig(t)
 	mockConfig.EXPECT().GetBool("app.debug").Return(false).Once()
 	mockConfig.EXPECT().GetInt("http.drivers.gin.body_limit", 4096).Return(4096).Once()
@@ -427,8 +435,6 @@ csrf_token={{ .csrf_token }}
 		route.ServeHTTP(w, req)
 		assert.Regexp(t, `^\ncsrf_token=([A-Za-z0-9\-_]+)\n$`, w.Body.String())
 	})
-
-	assert.Nil(t, file.Remove("resources"))
 }
 
 func TestStructToMap(t *testing.T) {
