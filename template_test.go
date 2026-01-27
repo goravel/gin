@@ -2,10 +2,10 @@ package gin
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/goravel/framework/support/file"
-	"github.com/goravel/framework/support/path"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -23,13 +23,13 @@ func TestNewTemplate(t *testing.T) {
 		{
 			name: "resources/views directory is empty",
 			setup: func() {
-				assert.Nil(t, os.MkdirAll(path.Resource("views"), os.ModePerm))
+				assert.Nil(t, os.MkdirAll(filepath.Join("resources", "views"), os.ModePerm))
 			},
 		},
 		{
 			name: "resources/views directory is not empty",
 			setup: func() {
-				assert.Nil(t, file.PutContent(path.Resource("views", "index.html"), "Hello, World!"))
+				assert.Nil(t, file.PutContent(filepath.Join("resources", "views", "index.html"), "Hello, World!"))
 			},
 			expectRender: true,
 		},
