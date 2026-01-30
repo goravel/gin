@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/goravel/framework/support/file"
+	"github.com/goravel/framework/support/path"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -29,7 +30,7 @@ func TestNewTemplate(t *testing.T) {
 		{
 			name: "resources/views directory is not empty",
 			setup: func() {
-				assert.Nil(t, file.PutContent(filepath.Join("resources", "views", "index.html"), "Hello, World!"))
+				assert.Nil(t, file.PutContent(path.Resource("views", "index.html"), "Hello, World!"))
 			},
 			expectRender: true,
 		},
@@ -41,7 +42,7 @@ func TestNewTemplate(t *testing.T) {
 			r, err := NewTemplate(RenderOptions{})
 			assert.Equal(t, test.expectRender, r != nil)
 			assert.Equal(t, test.expectError, err)
-			assert.Nil(t, file.Remove("resources"))
+			assert.Nil(t, file.Remove(path.Resource()))
 		})
 	}
 }
