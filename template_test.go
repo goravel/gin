@@ -2,7 +2,6 @@ package gin
 
 import (
 	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/goravel/framework/support/file"
@@ -24,7 +23,7 @@ func TestNewTemplate(t *testing.T) {
 		{
 			name: "resources/views directory is empty",
 			setup: func() {
-				assert.Nil(t, os.MkdirAll(filepath.Join("resources", "views"), os.ModePerm))
+				assert.Nil(t, os.MkdirAll(path.Resource("views"), os.ModePerm))
 			},
 		},
 		{
