@@ -45,7 +45,7 @@ func main() {
 		// Add gin service provider to providers.go if using bootstrap setup
 		modify.When(func(_ map[string]any) bool {
 			return env.IsBootstrapSetup()
-		}, modify.AddProviderApply(moduleImport, ginServiceProvider)),
+		}, modify.RegisterProvider(moduleImport, ginServiceProvider)),
 
 		// Add gin config to http.go
 		modify.GoFile(httpConfigPath).
@@ -77,6 +77,6 @@ func main() {
 		// Remove gin service provider from providers.go if using bootstrap setup
 		modify.When(func(_ map[string]any) bool {
 			return env.IsBootstrapSetup()
-		}, modify.RemoveProviderApply(moduleImport, ginServiceProvider)),
+		}, modify.UnregisterProvider(moduleImport, ginServiceProvider)),
 	).Execute()
 }
