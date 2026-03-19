@@ -6,7 +6,7 @@ toolchain go1.26.1
 
 require (
 	github.com/gin-gonic/gin v1.12.0
-	github.com/goravel/framework v1.17.2-0.20260316054201-c0f099ac0a2b
+	github.com/goravel/framework v1.17.2-0.20260319074756-7cd523f5f1a5
 	github.com/rs/cors v1.11.1
 	github.com/spf13/cast v1.10.0
 	github.com/stretchr/testify v1.11.1
