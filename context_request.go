@@ -13,7 +13,6 @@ import (
 	"sync"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gookit/validate"
 	contractsfilesystem "github.com/goravel/framework/contracts/filesystem"
 	contractshttp "github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/contracts/log"
@@ -514,35 +513,12 @@ func (r *ContextRequest) Url() string {
 	return r.instance.Request.RequestURI
 }
 
-func (r *ContextRequest) Validate(rules map[string]string, options ...contractsvalidate.Option) (contractsvalidate.Validator, error) {
+func (r *ContextRequest) Validate(rules map[string]any, options ...contractsvalidate.Option) (contractsvalidate.Validator, error) {
 	if len(rules) == 0 {
 		return nil, errors.New("rules can't be empty")
 	}
 
-	options = append(options, validation.Rules(rules), validation.CustomRules(r.validation.Rules()), validation.CustomFilters(r.validation.Filters()))
-
-	dataFace, err := validate.FromRequest(r.ctx.Request().Origin())
-	if err != nil {
-		return nil, err
-	}
-
-	for key, query := range r.instance.Request.URL.Query() {
-		if _, exist := dataFace.Get(key); !exist {
-			if _, err := dataFace.Set(key, strings.Join(query, ",")); err != nil {
-				return nil, err
-			}
-		}
-	}
-
-	for _, param := range r.instance.Params {
-		if _, exist := dataFace.Get(param.Key); !exist {
-			if _, err := dataFace.Set(param.Key, param.Value); err != nil {
-				return nil, err
-			}
-		}
-	}
-
-	return r.validation.Make(r.ctx, dataFace, rules, options...)
+	return r.validation.Make(r.ctx, r.All(), rules, options...)
 }
 
 func (r *ContextRequest) ValidateRequest(request contractshttp.FormRequest) (contractsvalidate.Errors, error) {
