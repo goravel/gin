@@ -80,7 +80,11 @@ func (r *ContextRequest) All() map[string]any {
 	)
 
 	for key, query := range r.instance.Request.URL.Query() {
-		queryMap[key] = strings.Join(query, ",")
+		if len(query) > 1 {
+			queryMap[key] = query
+		} else if len(query) == 1 {
+			queryMap[key] = query[0]
+		}
 	}
 
 	for _, param := range r.instance.Params {
