@@ -79,7 +79,7 @@ func (s *ContextRequestSuite) TestAll_GetWithQuery() {
 	s.Require().Nil(err)
 	code, body, _, _ := s.request(req)
 
-	s.Equal("{\"all\":{\"a\":\"1,2\",\"b\":\"3\"}}", body)
+	s.Equal("{\"all\":{\"a\":[\"1\",\"2\"],\"b\":\"3\"}}", body)
 	s.Equal(http.StatusOK, code)
 }
 
@@ -108,7 +108,7 @@ func (s *ContextRequestSuite) TestAll_PostWithQueryAndForm() {
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	code, body, _, _ := s.request(req)
 
-	s.Equal("{\"all\":{\"a\":\"1,2\",\"b\":\"4\",\"e\":\"e\"}}", body)
+	s.Equal("{\"all\":{\"a\":[\"1\",\"2\"],\"b\":\"4\",\"e\":\"e\"}}", body)
 	s.Equal(http.StatusOK, code)
 }
 
@@ -125,7 +125,7 @@ func (s *ContextRequestSuite) TestAll_PostWithQuery() {
 	req.Header.Set("Content-Type", "multipart/form-data;boundary=0")
 	code, body, _, _ := s.request(req)
 
-	s.Equal("{\"all\":{\"a\":\"1,2\",\"b\":\"3\"}}", body)
+	s.Equal("{\"all\":{\"a\":[\"1\",\"2\"],\"b\":\"3\"}}", body)
 	s.Equal(http.StatusOK, code)
 }
 
@@ -156,7 +156,7 @@ func (s *ContextRequestSuite) TestAll_PostWithJson() {
 	req.Header.Set("Content-Type", "application/json")
 	code, body, _, _ := s.request(req)
 
-	s.Equal("{\"age\":1,\"all\":{\"Age\":1,\"Name\":\"goravel\",\"a\":\"1,2\",\"name\":\"3\"},\"name\":\"goravel\"}", body)
+	s.Equal("{\"age\":1,\"all\":{\"Age\":1,\"Name\":\"goravel\",\"a\":[\"1\",\"2\"],\"name\":\"3\"},\"name\":\"goravel\"}", body)
 	s.Equal(http.StatusOK, code)
 }
 
@@ -191,7 +191,7 @@ func (s *ContextRequestSuite) TestAll_PostWithErrorJson() {
 	req.Header.Set("Content-Type", "application/json")
 	code, body, _, _ := s.request(req)
 
-	s.Equal("{\"age\":0,\"all\":{\"a\":\"1,2\",\"name\":\"3\"},\"name\":\"\"}", body)
+	s.Equal("{\"age\":0,\"all\":{\"a\":[\"1\",\"2\"],\"name\":\"3\"},\"name\":\"\"}", body)
 	s.Equal(http.StatusOK, code)
 }
 
@@ -208,7 +208,7 @@ func (s *ContextRequestSuite) TestAll_PostWithEmptyJson() {
 	req.Header.Set("Content-Type", "application/json")
 	code, body, _, _ := s.request(req)
 
-	s.Equal("{\"all\":{\"a\":\"1,2\",\"name\":\"3\"}}", body)
+	s.Equal("{\"all\":{\"a\":[\"1\",\"2\"],\"name\":\"3\"}}", body)
 	s.Equal(http.StatusOK, code)
 }
 
@@ -230,7 +230,7 @@ func (s *ContextRequestSuite) TestAll_PostWithMiddleware() {
 	req.Header.Set("Content-Type", "application/json")
 	code, body, _, _ := s.request(req)
 
-	s.Equal("{\"all\":{\"Age\":1,\"Name\":\"goravel\",\"a\":\"1,2\",\"name\":\"3\"},\"middleware\":{\"Age\":1,\"Name\":\"goravel\",\"a\":\"1,2\",\"name\":\"3\"}}", body)
+	s.Equal("{\"all\":{\"Age\":1,\"Name\":\"goravel\",\"a\":[\"1\",\"2\"],\"name\":\"3\"},\"middleware\":{\"Age\":1,\"Name\":\"goravel\",\"a\":[\"1\",\"2\"],\"name\":\"3\"}}", body)
 	s.Equal(http.StatusOK, code)
 }
 
@@ -251,7 +251,7 @@ func (s *ContextRequestSuite) TestAll_PutWithJson() {
 	req.Header.Set("Content-Type", "application/json")
 	code, body, _, _ := s.request(req)
 
-	s.Equal("{\"all\":{\"a\":\"1,2\",\"b\":4,\"e\":\"e\"}}", body)
+	s.Equal("{\"all\":{\"a\":[\"1\",\"2\"],\"b\":4,\"e\":\"e\"}}", body)
 	s.Equal(http.StatusOK, code)
 }
 
@@ -272,7 +272,7 @@ func (s *ContextRequestSuite) TestAll_DeleteWithJson() {
 	req.Header.Set("Content-Type", "application/json")
 	code, body, _, _ := s.request(req)
 
-	s.Equal("{\"all\":{\"a\":\"1,2\",\"b\":4,\"e\":\"e\"}}", body)
+	s.Equal("{\"all\":{\"a\":[\"1\",\"2\"],\"b\":4,\"e\":\"e\"}}", body)
 	s.Equal(http.StatusOK, code)
 }
 
@@ -1584,10 +1584,10 @@ func (s *ContextRequestSuite) TestSession_NotSet() {
 
 func (s *ContextRequestSuite) TestValidate_GetSuccess() {
 	s.route.Get("/validate/get-success/{uuid}", func(ctx contractshttp.Context) contractshttp.Response {
-		validator, err := ctx.Request().Validate(map[string]string{
+		validator, err := ctx.Request().Validate(map[string]any{
 			"uuid": "min_len:2",
 			"name": "required",
-		}, validation.Filters(map[string]string{
+		}, validation.Filters(map[string]any{
 			"uuid": "trim",
 			"name": "trim",
 		}))
@@ -1624,10 +1624,10 @@ func (s *ContextRequestSuite) TestValidate_GetSuccess() {
 
 func (s *ContextRequestSuite) TestValidate_GetFail() {
 	s.route.Get("/validate/get-fail/{uuid}", func(ctx contractshttp.Context) contractshttp.Response {
-		validator, err := ctx.Request().Validate(map[string]string{
+		validator, err := ctx.Request().Validate(map[string]any{
 			"uuid": "min_len:4",
 			"name": "required",
-		}, validation.Filters(map[string]string{
+		}, validation.Filters(map[string]any{
 			"uuid": "trim",
 			"name": "trim",
 		}))
@@ -1646,18 +1646,18 @@ func (s *ContextRequestSuite) TestValidate_GetFail() {
 
 	code, body, _, _ := s.request(req)
 
-	s.Equal("Validate fail: map[uuid:map[min_len:uuid min length is 4]]", body)
+	s.Equal("Validate fail: map[uuid:map[min_len:The uuid field must be at least 4 characters.]]", body)
 	s.Equal(http.StatusBadRequest, code)
 }
 
 func (s *ContextRequestSuite) TestValidate_PostSuccess() {
 	s.route.Post("/validate/post-success/{id}/{uuid}", func(ctx contractshttp.Context) contractshttp.Response {
-		validator, err := ctx.Request().Validate(map[string]string{
+		validator, err := ctx.Request().Validate(map[string]any{
 			"id":   "required",
 			"uuid": "required",
 			"age":  "required",
 			"name": "required",
-		}, validation.Filters(map[string]string{
+		}, validation.Filters(map[string]any{
 			"id":   "trim",
 			"uuid": "trim",
 			"age":  "trim",
@@ -1705,9 +1705,9 @@ func (s *ContextRequestSuite) TestValidate_PostSuccess() {
 
 func (s *ContextRequestSuite) TestValidate_PostFail() {
 	s.route.Post("/validate/post-fail", func(ctx contractshttp.Context) contractshttp.Response {
-		validator, err := ctx.Request().Validate(map[string]string{
+		validator, err := ctx.Request().Validate(map[string]any{
 			"name1": "required",
-		}, validation.Filters(map[string]string{
+		}, validation.Filters(map[string]any{
 			"name1": "trim",
 		}))
 		if err != nil {
@@ -1731,7 +1731,7 @@ func (s *ContextRequestSuite) TestValidate_PostFail() {
 	req.Header.Set("Content-Type", "application/json")
 	code, body, _, _ := s.request(req)
 
-	s.Equal("Validate fail: map[name1:map[required:name1 is required to not be empty]]", body)
+	s.Equal("Validate fail: map[name1:map[required:The name1 field is required.]]", body)
 	s.Equal(http.StatusBadRequest, code)
 }
 
@@ -1809,7 +1809,7 @@ func (s *ContextRequestSuite) TestValidateRequest_GetFail() {
 
 	code, body, _, _ := s.request(req)
 
-	s.Equal("Validate fail: map[name:map[required:name is required to not be empty]]", body)
+	s.Equal("Validate fail: map[name:map[required:The name field is required.]]", body)
 	s.Equal(http.StatusBadRequest, code)
 }
 
@@ -1953,7 +1953,7 @@ func (s *ContextRequestSuite) TestValidateRequest_FormFail() {
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	code, body, _, _ := s.request(req)
 
-	s.Equal("Validate fail: map[image:map[image:image value must be an image] json:map[json:json value should be a json string]]", body)
+	s.Equal("Validate fail: map[image:map[image:The image field must be an image.] json:map[json:The json field must be a valid JSON string.]]", body)
 	s.Equal(http.StatusBadRequest, code)
 }
 
@@ -2011,7 +2011,7 @@ func (s *ContextRequestSuite) TestValidateRequest_JsonFail() {
 	req.Header.Set("Content-Type", "application/json")
 	code, body, _, _ := s.request(req)
 
-	s.Equal("Validate fail: map[name:map[required:name is required to not be empty]]", body)
+	s.Equal("Validate fail: map[name:map[required:The name field is required.]]", body)
 	s.Equal(http.StatusBadRequest, code)
 }
 
