@@ -27,18 +27,50 @@ func TestTimeoutMiddleware(t *testing.T) {
 	err := route.init(nil)
 	require.Nil(t, err)
 
-	t.Run("timeout request", func(t *testing.T) {
-		route.Middleware(Timeout(1*time.Second)).Get("/timeout", func(ctx contractshttp.Context) contractshttp.Response {
-			time.Sleep(2 * time.Second)
-			return nil
+	t.Run("timeout waits for handler completion", func(t *testing.T) {
+		timedOut := make(chan struct{})
+		allowReturn := make(chan struct{})
+
+		route.Middleware(Timeout(20*time.Millisecond)).Get("/timeout", func(ctx contractshttp.Context) contractshttp.Response {
+			<-ctx.Done()
+			close(timedOut)
+			<-allowReturn
+
+			return ctx.Response().Status(contractshttp.StatusRequestTimeout).String("timeout")
 		})
 
 		w := httptest.NewRecorder()
 		req, err := http.NewRequest("GET", "/timeout", nil)
 		require.NoError(t, err)
+		done := make(chan struct{})
 
-		route.ServeHTTP(w, req)
+		go func() {
+			route.ServeHTTP(w, req)
+			close(done)
+		}()
+
+		select {
+		case <-timedOut:
+		case <-time.After(time.Second):
+			t.Fatal("request context deadline was not observed")
+		}
+
+		select {
+		case <-done:
+			t.Fatal("request returned before the handler completed")
+		default:
+		}
+
+		close(allowReturn)
+
+		select {
+		case <-done:
+		case <-time.After(time.Second):
+			t.Fatal("request did not complete after the handler returned")
+		}
+
 		assert.Equal(t, contractshttp.StatusRequestTimeout, w.Code)
+		assert.Equal(t, "timeout", w.Body.String())
 	})
 
 	t.Run("normal request", func(t *testing.T) {
@@ -53,6 +85,62 @@ func TestTimeoutMiddleware(t *testing.T) {
 		route.ServeHTTP(w, req)
 		assert.Equal(t, http.StatusOK, w.Code)
 		assert.Equal(t, "normal", w.Body.String())
+	})
+
+	t.Run("timed out request does not affect later responses", func(t *testing.T) {
+		timedOut := make(chan struct{})
+		allowReturn := make(chan struct{})
+		firstDone := make(chan struct{})
+
+		route.Middleware(Timeout(20*time.Millisecond)).Get("/timeout-isolated", func(ctx contractshttp.Context) contractshttp.Response {
+			<-ctx.Done()
+			close(timedOut)
+			<-allowReturn
+
+			return ctx.Response().Success().String("stale")
+		})
+		route.Middleware(Timeout(time.Second)).Get("/after-timeout", func(ctx contractshttp.Context) contractshttp.Response {
+			return ctx.Response().Success().String("fresh")
+		})
+
+		firstWriter := httptest.NewRecorder()
+		firstReq, err := http.NewRequest("GET", "/timeout-isolated", nil)
+		require.NoError(t, err)
+
+		go func() {
+			route.ServeHTTP(firstWriter, firstReq)
+			close(firstDone)
+		}()
+
+		select {
+		case <-timedOut:
+		case <-time.After(time.Second):
+			t.Fatal("request context deadline was not observed")
+		}
+
+		secondWriter := httptest.NewRecorder()
+		secondReq, err := http.NewRequest("GET", "/after-timeout", nil)
+		require.NoError(t, err)
+		route.ServeHTTP(secondWriter, secondReq)
+
+		select {
+		case <-firstDone:
+			t.Fatal("timed out request returned before its handler completed")
+		default:
+		}
+
+		close(allowReturn)
+
+		select {
+		case <-firstDone:
+		case <-time.After(time.Second):
+			t.Fatal("timed out request did not complete after the handler returned")
+		}
+
+		assert.Equal(t, http.StatusOK, firstWriter.Code)
+		assert.Equal(t, "stale", firstWriter.Body.String())
+		assert.Equal(t, http.StatusOK, secondWriter.Code)
+		assert.Equal(t, "fresh", secondWriter.Body.String())
 	})
 
 	t.Run("panic with default recover", func(t *testing.T) {

@@ -5,7 +5,6 @@ import (
 	"time"
 
 	contractshttp "github.com/goravel/framework/contracts/http"
-	"github.com/goravel/framework/errors"
 )
 
 // Timeout creates middleware to set a timeout for a request
@@ -21,25 +20,8 @@ func Timeout(timeout time.Duration) contractshttp.Middleware {
 
 		ctx.WithContext(timeoutCtx)
 
-		done := make(chan struct{})
-
-		go func() {
-			defer func() {
-				if err := recover(); err != nil {
-					globalRecoverCallback(ctx, err)
-				}
-
-				close(done)
-			}()
-			ctx.Request().Next()
-		}()
-
-		select {
-		case <-done:
-		case <-timeoutCtx.Done():
-			if errors.Is(timeoutCtx.Err(), context.DeadlineExceeded) {
-				ctx.Request().Abort(contractshttp.StatusRequestTimeout)
-			}
-		}
+		// Run the request chain synchronously so pooled request wrappers are not
+		// returned while downstream handlers are still using them.
+		ctx.Request().Next()
 	}
 }

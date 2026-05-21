@@ -99,15 +99,15 @@ func (c *Context) Context() context.Context {
 }
 
 func (c *Context) Deadline() (deadline time.Time, ok bool) {
-	return c.instance.Deadline()
+	return c.instance.Request.Context().Deadline()
 }
 
 func (c *Context) Done() <-chan struct{} {
-	return c.instance.Done()
+	return c.instance.Request.Context().Done()
 }
 
 func (c *Context) Err() error {
-	return c.instance.Err()
+	return c.instance.Request.Context().Err()
 }
 
 func (c *Context) Value(key any) any {
