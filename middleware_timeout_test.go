@@ -70,7 +70,7 @@ func TestTimeoutMiddleware(t *testing.T) {
 		}
 
 		assert.Equal(t, contractshttp.StatusRequestTimeout, w.Code)
-		assert.Equal(t, "timeout", w.Body.String())
+		assert.Empty(t, w.Body.String())
 	})
 
 	t.Run("normal request", func(t *testing.T) {
@@ -137,8 +137,8 @@ func TestTimeoutMiddleware(t *testing.T) {
 			t.Fatal("timed out request did not complete after the handler returned")
 		}
 
-		assert.Equal(t, http.StatusOK, firstWriter.Code)
-		assert.Equal(t, "stale", firstWriter.Body.String())
+		assert.Equal(t, contractshttp.StatusRequestTimeout, firstWriter.Code)
+		assert.Empty(t, firstWriter.Body.String())
 		assert.Equal(t, http.StatusOK, secondWriter.Code)
 		assert.Equal(t, "fresh", secondWriter.Body.String())
 	})
