@@ -5,20 +5,12 @@ import (
 	"time"
 
 	gintimeout "github.com/gin-contrib/timeout"
-	"github.com/gin-gonic/gin"
 	contractshttp "github.com/goravel/framework/contracts/http"
 )
 
 // Timeout creates middleware to set a timeout for a request
 func Timeout(timeout time.Duration) contractshttp.Middleware {
-	timeoutResponse := func(c *gin.Context) {
-		c.Status(contractshttp.StatusRequestTimeout)
-	}
-
-	timeoutMiddleware := gintimeout.New(
-		gintimeout.WithTimeout(timeout),
-		gintimeout.WithResponse(timeoutResponse),
-	)
+	timeoutMiddleware := gintimeout.New(gintimeout.WithTimeout(timeout))
 
 	return func(ctx contractshttp.Context) {
 		if timeout <= 0 {
