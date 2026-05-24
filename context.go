@@ -43,6 +43,8 @@ type Context struct {
 
 func NewContext(c *gin.Context) *Context {
 	ctx := contextPool.Get().(*Context)
+	// Some test-created gin contexts do not carry a request, but Goravel's
+	// context accessors always read through Request.Context().
 	if c.Request == nil {
 		c.Request = httptest.NewRequest(nethttp.MethodGet, "/", nil)
 	}
