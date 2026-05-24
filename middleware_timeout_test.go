@@ -1,6 +1,7 @@
 package gin
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -28,11 +29,18 @@ func TestTimeoutMiddleware(t *testing.T) {
 	require.Nil(t, err)
 
 	t.Run("timeout waits for handler completion", func(t *testing.T) {
+		var (
+			err         error
+			deadline    time.Time
+			hasDeadline bool
+		)
 		timedOut := make(chan struct{})
 		allowReturn := make(chan struct{})
 
 		route.Middleware(Timeout(20*time.Millisecond)).Get("/timeout", func(ctx contractshttp.Context) contractshttp.Response {
 			<-ctx.Done()
+			err = ctx.Err()
+			deadline, hasDeadline = ctx.Deadline()
 			close(timedOut)
 			<-allowReturn
 
@@ -71,6 +79,9 @@ func TestTimeoutMiddleware(t *testing.T) {
 
 		assert.Equal(t, contractshttp.StatusRequestTimeout, w.Code)
 		assert.Equal(t, http.StatusText(contractshttp.StatusRequestTimeout), w.Body.String())
+		assert.ErrorIs(t, err, context.DeadlineExceeded)
+		assert.True(t, hasDeadline)
+		assert.False(t, deadline.IsZero())
 	})
 
 	t.Run("normal request", func(t *testing.T) {

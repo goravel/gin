@@ -2,12 +2,13 @@ package gin
 
 import (
 	"context"
+	nethttp "net/http"
 	"net/http/httptest"
 	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/goravel/framework/contracts/http"
+	contractshttp "github.com/goravel/framework/contracts/http"
 )
 
 const (
@@ -24,8 +25,9 @@ var (
 	}
 )
 
-func Background() http.Context {
+func Background() contractshttp.Context {
 	ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
+	ctx.Request = httptest.NewRequest(nethttp.MethodGet, "/", nil)
 	return NewContext(ctx)
 }
 
@@ -35,8 +37,8 @@ var contextPool = sync.Pool{New: func() any {
 
 type Context struct {
 	instance *gin.Context
-	request  http.ContextRequest
-	response http.ContextResponse
+	request  contractshttp.ContextRequest
+	response contractshttp.ContextResponse
 }
 
 func NewContext(c *gin.Context) *Context {
@@ -45,7 +47,7 @@ func NewContext(c *gin.Context) *Context {
 	return ctx
 }
 
-func (c *Context) Request() http.ContextRequest {
+func (c *Context) Request() contractshttp.ContextRequest {
 	if c.request == nil {
 		request := NewContextRequest(c, LogFacade, ValidationFacade)
 		c.request = request
@@ -54,7 +56,7 @@ func (c *Context) Request() http.ContextRequest {
 	return c.request
 }
 
-func (c *Context) Response() http.ContextResponse {
+func (c *Context) Response() contractshttp.ContextResponse {
 	if c.response == nil {
 		response := NewContextResponse(c.instance, &BodyWriter{ResponseWriter: c.instance.Writer})
 		c.response = response
@@ -62,7 +64,7 @@ func (c *Context) Response() http.ContextResponse {
 
 	responseOrigin := c.Value(responseOriginKey)
 	if responseOrigin != nil {
-		c.response.(*ContextResponse).origin = responseOrigin.(http.ResponseOrigin)
+		c.response.(*ContextResponse).origin = responseOrigin.(contractshttp.ResponseOrigin)
 	}
 
 	return c.response
@@ -76,10 +78,12 @@ func (c *Context) WithValue(key any, value any) {
 
 func (c *Context) WithContext(ctx context.Context) {
 	// Changing the request context to a new context
+	c.ensureRequest()
 	c.instance.Request = c.instance.Request.WithContext(ctx)
 }
 
 func (c *Context) Context() context.Context {
+	c.ensureRequest()
 	ctx := c.instance.Request.Context()
 	values := c.getGoravelContextValues()
 	for key, value := range values {
@@ -99,14 +103,17 @@ func (c *Context) Context() context.Context {
 }
 
 func (c *Context) Deadline() (deadline time.Time, ok bool) {
+	c.ensureRequest()
 	return c.instance.Request.Context().Deadline()
 }
 
 func (c *Context) Done() <-chan struct{} {
+	c.ensureRequest()
 	return c.instance.Request.Context().Done()
 }
 
 func (c *Context) Err() error {
+	c.ensureRequest()
 	return c.instance.Request.Context().Err()
 }
 
@@ -115,6 +122,7 @@ func (c *Context) Value(key any) any {
 		return value
 	}
 
+	c.ensureRequest()
 	return c.instance.Request.Context().Value(key)
 }
 
@@ -129,4 +137,10 @@ func (c *Context) getGoravelContextValues() map[any]any {
 		}
 	}
 	return make(map[any]any)
+}
+
+func (c *Context) ensureRequest() {
+	if c.instance.Request == nil {
+		c.instance.Request = httptest.NewRequest(nethttp.MethodGet, "/", nil)
+	}
 }

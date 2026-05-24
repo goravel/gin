@@ -1,7 +1,6 @@
 package gin
 
 import (
-	"context"
 	"time"
 
 	gintimeout "github.com/gin-contrib/timeout"
@@ -18,16 +17,6 @@ func Timeout(timeout time.Duration) contractshttp.Middleware {
 			return
 		}
 
-		goravelCtx, ok := ctx.(*Context)
-		if !ok {
-			timeoutCtx, cancel := context.WithTimeout(ctx.Context(), timeout)
-			defer cancel()
-
-			ctx.WithContext(timeoutCtx)
-			ctx.Request().Next()
-			return
-		}
-
-		timeoutMiddleware(goravelCtx.Instance())
+		timeoutMiddleware(ctx.(*Context).Instance())
 	}
 }
