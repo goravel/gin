@@ -15,6 +15,7 @@ import (
 	"github.com/goravel/framework/contracts/config"
 	contractshttp "github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/contracts/route"
+	"github.com/goravel/framework/http/middleware"
 	"github.com/goravel/framework/support"
 	"github.com/goravel/framework/support/color"
 	"github.com/goravel/framework/support/str"
@@ -43,7 +44,7 @@ func NewRoute(config config.Config, parameters map[string]any) (*Route, error) {
 	}
 
 	timeout := time.Duration(config.GetInt("http.request_timeout", 3)) * time.Second
-	globalMiddleware := []contractshttp.Middleware{Timeout(timeout), Cors(), Tls()}
+	globalMiddleware := []contractshttp.Middleware{Timeout(timeout), Cors(), Tls(), middleware.CheckForMaintenanceMode()}
 
 	route := &Route{
 		config:           config,
