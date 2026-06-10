@@ -3,7 +3,6 @@ package gin
 import (
 	"bytes"
 	"net/http"
-	"strings"
 	"sync"
 
 	"github.com/gin-gonic/gin"
@@ -115,28 +114,30 @@ func (r *ContextResponse) WithoutCookie(name string) contractshttp.ContextRespon
 }
 
 // removeSetCookie drops Set-Cookie headers already written for name, so the
-// response carries a single value per cookie (RFC 6265 section 4.1.1).
+// response carries a single value per cookie (RFC 6265 section 4.1.1), the
+// same replace semantics fasthttp applies in ResponseHeader.SetCookie.
 func removeSetCookie(header http.Header, name string) {
 	values := header.Values("Set-Cookie")
 	if len(values) == 0 {
 		return
 	}
 
-	prefix := name + "="
 	kept := make([]string, 0, len(values))
 	for _, value := range values {
-		if !strings.HasPrefix(value, prefix) {
-			kept = append(kept, value)
+		if cookie, err := http.ParseSetCookie(value); err == nil && cookie.Name == name {
+			continue
 		}
+		kept = append(kept, value)
 	}
 	if len(kept) == len(values) {
 		return
 	}
 
-	header.Del("Set-Cookie")
-	for _, value := range kept {
-		header.Add("Set-Cookie", value)
+	if len(kept) == 0 {
+		header.Del("Set-Cookie")
+		return
 	}
+	header["Set-Cookie"] = kept
 }
 
 func (r *ContextResponse) Writer() http.ResponseWriter {
