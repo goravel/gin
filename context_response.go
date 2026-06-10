@@ -133,11 +133,10 @@ func removeSetCookie(header http.Header, name string) {
 		return
 	}
 
-	if len(kept) == 0 {
-		header.Del("Set-Cookie")
-		return
+	header.Del("Set-Cookie")
+	for _, value := range kept {
+		header.Add("Set-Cookie", value)
 	}
-	header["Set-Cookie"] = kept
 }
 
 func (r *ContextResponse) Writer() http.ResponseWriter {
