@@ -10,6 +10,7 @@ import (
 
 	contractshttp "github.com/goravel/framework/contracts/http"
 	mocksconfig "github.com/goravel/framework/mocks/config"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -91,6 +92,30 @@ func (s *ContextResponseSuite) TestCookie_SameNameReplaced() {
 	}
 	s.Equal([]string{"rotated"}, values)
 	s.True(otherKept)
+}
+
+func (s *ContextResponseSuite) TestWithoutCookie_AfterCookie() {
+	cookieName := "goravel"
+	s.route.Get("/cookie-clear", func(ctx contractshttp.Context) contractshttp.Response {
+		return ctx.Response().Cookie(contractshttp.Cookie{
+			Name:  cookieName,
+			Value: "Goravel",
+		}).WithoutCookie(cookieName).String(http.StatusOK, "Goravel")
+	})
+
+	code, _, _, cookies := s.request("GET", "/cookie-clear", nil)
+
+	s.Equal(http.StatusOK, code)
+
+	var matched []*http.Cookie
+	for _, cookie := range cookies {
+		if cookie.Name == cookieName {
+			matched = append(matched, cookie)
+		}
+	}
+	s.Require().Len(matched, 1)
+	s.Empty(matched[0].Value)
+	s.Equal(-1, matched[0].MaxAge)
 }
 
 func (s *ContextResponseSuite) TestData() {
@@ -390,5 +415,61 @@ func testRedirect() contractshttp.Middleware {
 			panic(err)
 		}
 		ctx.Request().Next()
+	}
+}
+
+func TestRemoveSetCookie(t *testing.T) {
+	tests := []struct {
+		name       string
+		existing   []string
+		cookieName string
+		expect     []string
+	}{
+		{
+			name:       "no headers",
+			cookieName: "session",
+		},
+		{
+			name:       "removes only the matching name",
+			existing:   []string{"session=old; Path=/", "other=kept; Path=/"},
+			cookieName: "session",
+			expect:     []string{"other=kept; Path=/"},
+		},
+		{
+			name:       "keeps names sharing a prefix",
+			existing:   []string{"session=old", "session2=kept", "xsession=kept"},
+			cookieName: "session",
+			expect:     []string{"session2=kept", "xsession=kept"},
+		},
+		{
+			name:       "removes every occurrence",
+			existing:   []string{"session=a", "session=b"},
+			cookieName: "session",
+		},
+		{
+			name:       "keeps values that fail to parse",
+			existing:   []string{"not a set-cookie", "session=old"},
+			cookieName: "session",
+			expect:     []string{"not a set-cookie"},
+		},
+		{
+			name:       "no match leaves headers untouched",
+			existing:   []string{"other=kept"},
+			cookieName: "session",
+			expect:     []string{"other=kept"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			header := http.Header{}
+			for _, value := range tt.existing {
+				header.Add("Set-Cookie", value)
+			}
+
+			removeSetCookie(header, tt.cookieName)
+
+			assert.Equal(t, tt.expect, header.Values("Set-Cookie"))
+		})
 	}
 }
