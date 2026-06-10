@@ -3,6 +3,7 @@ package gin
 import (
 	"bytes"
 	"net/http"
+	"strings"
 	"sync"
 
 	"github.com/gin-gonic/gin"
@@ -42,6 +43,7 @@ func (r *ContextResponse) Cookie(cookie contractshttp.Cookie) contractshttp.Cont
 		r.instance.SetSameSite(sameSite)
 	}
 
+	removeSetCookie(r.instance.Writer.Header(), cookie.Name)
 	r.instance.SetCookie(cookie.Name, cookie.Value, cookie.MaxAge, cookie.Path, cookie.Domain, cookie.Secure, cookie.HttpOnly)
 
 	return r
@@ -106,9 +108,35 @@ func (r *ContextResponse) View() contractshttp.ResponseView {
 }
 
 func (r *ContextResponse) WithoutCookie(name string) contractshttp.ContextResponse {
+	removeSetCookie(r.instance.Writer.Header(), name)
 	r.instance.SetCookie(name, "", -1, "", "", false, false)
 
 	return r
+}
+
+// removeSetCookie drops Set-Cookie headers already written for name, so the
+// response carries a single value per cookie (RFC 6265 section 4.1.1).
+func removeSetCookie(header http.Header, name string) {
+	values := header.Values("Set-Cookie")
+	if len(values) == 0 {
+		return
+	}
+
+	prefix := name + "="
+	kept := make([]string, 0, len(values))
+	for _, value := range values {
+		if !strings.HasPrefix(value, prefix) {
+			kept = append(kept, value)
+		}
+	}
+	if len(kept) == len(values) {
+		return
+	}
+
+	header.Del("Set-Cookie")
+	for _, value := range kept {
+		header.Add("Set-Cookie", value)
+	}
 }
 
 func (r *ContextResponse) Writer() http.ResponseWriter {

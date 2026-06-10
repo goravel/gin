@@ -60,6 +60,39 @@ func (s *ContextResponseSuite) TestCookie() {
 	s.True(exist)
 }
 
+func (s *ContextResponseSuite) TestCookie_SameNameReplaced() {
+	cookieName := "goravel"
+	s.route.Get("/cookie-replace", func(ctx contractshttp.Context) contractshttp.Response {
+		return ctx.Response().Cookie(contractshttp.Cookie{
+			Name:  cookieName,
+			Value: "stale",
+		}).Cookie(contractshttp.Cookie{
+			Name:  "other",
+			Value: "kept",
+		}).Cookie(contractshttp.Cookie{
+			Name:  cookieName,
+			Value: "rotated",
+		}).String(http.StatusOK, "Goravel")
+	})
+
+	code, _, _, cookies := s.request("GET", "/cookie-replace", nil)
+
+	s.Equal(http.StatusOK, code)
+
+	var values []string
+	otherKept := false
+	for _, cookie := range cookies {
+		if cookie.Name == cookieName {
+			values = append(values, cookie.Value)
+		}
+		if cookie.Name == "other" {
+			otherKept = true
+		}
+	}
+	s.Equal([]string{"rotated"}, values)
+	s.True(otherKept)
+}
+
 func (s *ContextResponseSuite) TestData() {
 	s.route.Get("/data", func(ctx contractshttp.Context) contractshttp.Response {
 		return ctx.Response().Data(http.StatusOK, "text/html; charset=utf-8", []byte("<b>Goravel</b>"))
