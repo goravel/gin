@@ -113,32 +113,6 @@ func (r *ContextResponse) WithoutCookie(name string) contractshttp.ContextRespon
 	return r
 }
 
-// removeSetCookie drops Set-Cookie headers already written for name, so the
-// response carries a single value per cookie (RFC 6265 section 4.1.1), the
-// same replace semantics fasthttp applies in ResponseHeader.SetCookie.
-func removeSetCookie(header http.Header, name string) {
-	values := header.Values("Set-Cookie")
-	if len(values) == 0 {
-		return
-	}
-
-	kept := make([]string, 0, len(values))
-	for _, value := range values {
-		if cookie, err := http.ParseSetCookie(value); err == nil && cookie.Name == name {
-			continue
-		}
-		kept = append(kept, value)
-	}
-	if len(kept) == len(values) {
-		return
-	}
-
-	header.Del("Set-Cookie")
-	for _, value := range kept {
-		header.Add("Set-Cookie", value)
-	}
-}
-
 func (r *ContextResponse) Writer() http.ResponseWriter {
 	return r.instance.Writer
 }
@@ -209,4 +183,30 @@ func (w *BodyWriter) Body() *bytes.Buffer {
 
 func (w *BodyWriter) Header() http.Header {
 	return w.ResponseWriter.Header()
+}
+
+// removeSetCookie drops Set-Cookie headers already written for name, so the
+// response carries a single value per cookie (RFC 6265 section 4.1.1), the
+// same replace semantics fasthttp applies in ResponseHeader.SetCookie.
+func removeSetCookie(header http.Header, name string) {
+	values := header.Values("Set-Cookie")
+	if len(values) == 0 {
+		return
+	}
+
+	kept := make([]string, 0, len(values))
+	for _, value := range values {
+		if cookie, err := http.ParseSetCookie(value); err == nil && cookie.Name == name {
+			continue
+		}
+		kept = append(kept, value)
+	}
+	if len(kept) == len(values) {
+		return
+	}
+
+	header.Del("Set-Cookie")
+	for _, value := range kept {
+		header.Add("Set-Cookie", value)
+	}
 }
