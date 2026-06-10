@@ -593,6 +593,7 @@ func (s *RouteTestSuite) TestNewRoute() {
 			} else {
 				s.NoError(err)
 				s.NotNil(route)
+				s.Len(route.GetGlobalMiddleware(), 4)
 			}
 		})
 	}
