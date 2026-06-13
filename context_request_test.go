@@ -1112,6 +1112,35 @@ func (s *ContextRequestSuite) TestInputArray_FormWithSingleValue() {
 	s.Equal(http.StatusOK, code)
 }
 
+func (s *ContextRequestSuite) TestInputArray_FormWithMultipleValuesContainingSpaces() {
+	s.route.Post("/input-array/form-multiple/{id}", func(ctx contractshttp.Context) contractshttp.Response {
+		return ctx.Response().Success().Json(contractshttp.Json{
+			"InputArray":  ctx.Request().InputArray("arr[]"),
+			"InputArray1": ctx.Request().InputArray("arr"),
+		})
+	})
+
+	payload := &bytes.Buffer{}
+	writer := multipart.NewWriter(payload)
+	err := writer.WriteField("arr[]", "123 456")
+	s.Require().Nil(err)
+
+	err = writer.WriteField("arr[]", "789 012")
+	s.Require().Nil(err)
+
+	err = writer.Close()
+	s.Require().Nil(err)
+
+	req, err := http.NewRequest("POST", "/input-array/form-multiple/1?id=2", payload)
+	s.Require().Nil(err)
+
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	code, body, _, _ := s.request(req)
+
+	s.Equal("{\"InputArray\":[\"123 456\",\"789 012\"],\"InputArray1\":[\"123 456\",\"789 012\"]}", body)
+	s.Equal(http.StatusOK, code)
+}
+
 func (s *ContextRequestSuite) TestInputArray_Url() {
 	s.route.Post("/input-array/url/{id}", func(ctx contractshttp.Context) contractshttp.Response {
 		return ctx.Response().Success().Json(contractshttp.Json{
