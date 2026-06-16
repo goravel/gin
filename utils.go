@@ -2,6 +2,7 @@ package gin
 
 import (
 	"fmt"
+	"reflect"
 	"regexp"
 	"strings"
 	"time"
@@ -51,8 +52,26 @@ func middlewareToGinHandler(middleware httpcontract.Middleware) gin.HandlerFunc 
 			contextPool.Put(context)
 		}()
 
+		// Check if this middleware is excluded for the current route
+		routeInfo := context.Request().Info()
+		if routeInfo.ExcludedMiddleware != nil {
+			for _, excluded := range routeInfo.ExcludedMiddleware {
+				// Compare middleware by function pointer
+				if getFunctionPointer(excluded) == getFunctionPointer(middleware) {
+					// This middleware is excluded, skip it
+					c.Next()
+					return
+				}
+			}
+		}
+
 		middleware(context)
 	}
+}
+
+// getFunctionPointer gets the pointer of a function for comparison
+func getFunctionPointer(f interface{}) uintptr {
+	return reflect.ValueOf(f).Pointer()
 }
 
 func logMiddleware() gin.HandlerFunc {
