@@ -55,8 +55,8 @@ func TestMiddlewareToGinHandler_Filtering(t *testing.T) {
 		routes["/test"] = map[string]contractshttp.Info{
 			"GET": {
 				Handler:            "handler.Test",
-				Method:              "GET",
-				Path:                "/test",
+				Method:             "GET",
+				Path:               "/test",
 				ExcludedMiddleware: excludedList,
 			},
 		}
@@ -113,8 +113,8 @@ func TestMiddlewareToGinHandler_EmptyExcludedList(t *testing.T) {
 		routes["/test"] = map[string]contractshttp.Info{
 			"GET": {
 				Handler:            "handler.Test",
-				Method:              "GET",
-				Path:                "/test",
+				Method:             "GET",
+				Path:               "/test",
 				ExcludedMiddleware: []contractshttp.Middleware{},
 			},
 		}

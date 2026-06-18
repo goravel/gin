@@ -155,4 +155,3 @@ func TestAction_WithoutMiddleware_Integration(t *testing.T) {
 	assert.True(t, exists)
 	assert.Len(t, routeInfo.ExcludedMiddleware, 1)
 }
-

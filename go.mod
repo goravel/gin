@@ -14,6 +14,10 @@ require (
 	github.com/unrolled/secure v1.17.0
 )
 
+// TODO: remove this replace directive after the framework PR is merged.
+// https://github.com/goravel/framework/pull/1497
+replace github.com/goravel/framework => github.com/u-wlkjyy/framework v1.17.2-0.20260618122746-4780e4bf79f2
+
 require (
 	atomicgo.dev/cursor v0.2.0 // indirect
 	atomicgo.dev/keyboard v0.2.9 // indirect

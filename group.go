@@ -14,11 +14,12 @@ import (
 )
 
 type Group struct {
-	config          config.Config
-	instance        gin.IRouter
-	prefix          string
-	middlewares     []contractshttp.Middleware
-	lastMiddlewares []contractshttp.Middleware
+	config              config.Config
+	instance            gin.IRouter
+	prefix              string
+	middlewares         []contractshttp.Middleware
+	lastMiddlewares     []contractshttp.Middleware
+	excludedMiddlewares []contractshttp.Middleware
 }
 
 func NewGroup(config config.Config, instance gin.IRouter, prefix string, middlewares []contractshttp.Middleware, lastMiddlewares []contractshttp.Middleware) contractsroute.Router {
@@ -32,15 +33,52 @@ func NewGroup(config config.Config, instance gin.IRouter, prefix string, middlew
 }
 
 func (r *Group) Group(handler contractsroute.GroupFunc) {
-	handler(NewGroup(r.config, r.instance, r.getFullPath(""), r.middlewares, r.lastMiddlewares))
+	handler(r.newChildGroup(r.excludedMiddlewares))
 }
 
 func (r *Group) Prefix(path string) contractsroute.Router {
-	return NewGroup(r.config, r.instance, r.getFullPath(path), r.middlewares, r.lastMiddlewares)
+	return r.newChildGroupWithPrefix(path, r.excludedMiddlewares)
 }
 
 func (r *Group) Middleware(middlewares ...contractshttp.Middleware) contractsroute.Router {
-	return NewGroup(r.config, r.instance, r.getFullPath(""), append(r.middlewares, middlewares...), r.lastMiddlewares)
+	return r.newChildGroupWithMiddlewares(middlewares, r.excludedMiddlewares)
+}
+
+func (r *Group) WithoutMiddleware(middlewares ...contractshttp.Middleware) contractsroute.Router {
+	return r.newChildGroupWithMiddlewares(nil, append(r.excludedMiddlewares, middlewares...))
+}
+
+func (r *Group) newChildGroup(excludedMiddlewares []contractshttp.Middleware) *Group {
+	return &Group{
+		config:              r.config,
+		instance:            r.instance,
+		prefix:              r.getFullPath(""),
+		middlewares:         r.middlewares,
+		lastMiddlewares:     r.lastMiddlewares,
+		excludedMiddlewares: excludedMiddlewares,
+	}
+}
+
+func (r *Group) newChildGroupWithPrefix(path string, excludedMiddlewares []contractshttp.Middleware) *Group {
+	return &Group{
+		config:              r.config,
+		instance:            r.instance,
+		prefix:              r.getFullPath(path),
+		middlewares:         r.middlewares,
+		lastMiddlewares:     r.lastMiddlewares,
+		excludedMiddlewares: excludedMiddlewares,
+	}
+}
+
+func (r *Group) newChildGroupWithMiddlewares(middlewares []contractshttp.Middleware, excludedMiddlewares []contractshttp.Middleware) *Group {
+	return &Group{
+		config:              r.config,
+		instance:            r.instance,
+		prefix:              r.getFullPath(""),
+		middlewares:         append(r.middlewares, middlewares...),
+		lastMiddlewares:     r.lastMiddlewares,
+		excludedMiddlewares: excludedMiddlewares,
+	}
 }
 
 func (r *Group) Any(path string, handler contractshttp.HandlerFunc) contractsroute.Action {
@@ -134,13 +172,34 @@ func (r *Group) getGinFullPath(path string) string {
 
 func (r *Group) WithMiddlewares() gin.IRoutes {
 	ginGroup := r.instance.Group("")
-	ginMiddlewares := middlewaresToGinHandlers(append(r.middlewares, r.lastMiddlewares...))
+	ginMiddlewares := middlewaresToGinHandlers(r.excludeMiddlewares(append(r.middlewares, r.lastMiddlewares...)))
 
 	if len(ginMiddlewares) > 0 {
 		return ginGroup.Use(ginMiddlewares...)
 	}
 
 	return ginGroup
+}
+
+// excludeMiddlewares filters out the middlewares that have been excluded via WithoutMiddleware.
+func (r *Group) excludeMiddlewares(middlewares []contractshttp.Middleware) []contractshttp.Middleware {
+	if len(r.excludedMiddlewares) == 0 {
+		return middlewares
+	}
+
+	excludedPointers := make(map[uintptr]bool, len(r.excludedMiddlewares))
+	for _, excluded := range r.excludedMiddlewares {
+		excludedPointers[getFunctionPointer(excluded)] = true
+	}
+
+	var result []contractshttp.Middleware
+	for _, middleware := range middlewares {
+		if !excludedPointers[getFunctionPointer(middleware)] {
+			result = append(result, middleware)
+		}
+	}
+
+	return result
 }
 
 func (r *Group) getHandlerName(handler any) string {
