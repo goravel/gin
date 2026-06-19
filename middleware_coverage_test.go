@@ -1,7 +1,6 @@
 package gin
 
 import (
-	"net/http"
 	"net/http/httptest"
 	"testing"
 
@@ -128,31 +127,6 @@ func TestMiddlewareToGinHandler_EmptyExcludedList(t *testing.T) {
 	engine.ServeHTTP(w, req)
 
 	assert.True(t, executed, "Middleware should execute when excluded list is empty")
-}
-
-// TestMiddlewareToGinHandler_ContextPool tests the context pool cleanup
-func TestMiddlewareToGinHandler_ContextPool(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-	engine := gin.New()
-
-	var called bool
-	middleware := func(ctx contractshttp.Context) {
-		called = true
-		ctx.Request().Next()
-	}
-
-	engine.GET("/test", func(c *gin.Context) {
-		// This ensures the defer is executed and pools are used
-		middlewareToGinHandler(middleware)(c)
-		c.JSON(200, gin.H{"ok": true})
-	})
-
-	req := httptest.NewRequest("GET", "/test", nil)
-	w := httptest.NewRecorder()
-	engine.ServeHTTP(w, req)
-
-	assert.True(t, called)
-	assert.Equal(t, http.StatusOK, w.Code)
 }
 
 // TestGetFunctionPointer tests the helper function

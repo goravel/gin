@@ -33,51 +33,46 @@ func NewGroup(config config.Config, instance gin.IRouter, prefix string, middlew
 }
 
 func (r *Group) Group(handler contractsroute.GroupFunc) {
-	handler(r.newChildGroup(r.excludedMiddlewares))
-}
-
-func (r *Group) Prefix(path string) contractsroute.Router {
-	return r.newChildGroupWithPrefix(path, r.excludedMiddlewares)
-}
-
-func (r *Group) Middleware(middlewares ...contractshttp.Middleware) contractsroute.Router {
-	return r.newChildGroupWithMiddlewares(middlewares, r.excludedMiddlewares)
-}
-
-func (r *Group) WithoutMiddleware(middlewares ...contractshttp.Middleware) contractsroute.Router {
-	return r.newChildGroupWithMiddlewares(nil, append(r.excludedMiddlewares, middlewares...))
-}
-
-func (r *Group) newChildGroup(excludedMiddlewares []contractshttp.Middleware) *Group {
-	return &Group{
+	handler(&Group{
 		config:              r.config,
 		instance:            r.instance,
 		prefix:              r.getFullPath(""),
 		middlewares:         r.middlewares,
 		lastMiddlewares:     r.lastMiddlewares,
-		excludedMiddlewares: excludedMiddlewares,
-	}
+		excludedMiddlewares: r.excludedMiddlewares,
+	})
 }
 
-func (r *Group) newChildGroupWithPrefix(path string, excludedMiddlewares []contractshttp.Middleware) *Group {
+func (r *Group) Prefix(path string) contractsroute.Router {
 	return &Group{
 		config:              r.config,
 		instance:            r.instance,
 		prefix:              r.getFullPath(path),
 		middlewares:         r.middlewares,
 		lastMiddlewares:     r.lastMiddlewares,
-		excludedMiddlewares: excludedMiddlewares,
+		excludedMiddlewares: r.excludedMiddlewares,
 	}
 }
 
-func (r *Group) newChildGroupWithMiddlewares(middlewares []contractshttp.Middleware, excludedMiddlewares []contractshttp.Middleware) *Group {
+func (r *Group) Middleware(middlewares ...contractshttp.Middleware) contractsroute.Router {
 	return &Group{
 		config:              r.config,
 		instance:            r.instance,
 		prefix:              r.getFullPath(""),
 		middlewares:         append(r.middlewares, middlewares...),
 		lastMiddlewares:     r.lastMiddlewares,
-		excludedMiddlewares: excludedMiddlewares,
+		excludedMiddlewares: r.excludedMiddlewares,
+	}
+}
+
+func (r *Group) WithoutMiddleware(middlewares ...contractshttp.Middleware) contractsroute.Router {
+	return &Group{
+		config:              r.config,
+		instance:            r.instance,
+		prefix:              r.getFullPath(""),
+		middlewares:         r.middlewares,
+		lastMiddlewares:     r.lastMiddlewares,
+		excludedMiddlewares: append(r.excludedMiddlewares, middlewares...),
 	}
 }
 
