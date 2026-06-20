@@ -56,9 +56,7 @@ func middlewareToGinHandler(middleware httpcontract.Middleware) gin.HandlerFunc 
 		routeInfo := context.Request().Info()
 		if routeInfo.ExcludedMiddleware != nil {
 			for _, excluded := range routeInfo.ExcludedMiddleware {
-				// Compare middleware by function pointer
-				if getFunctionPointer(excluded) == getFunctionPointer(middleware) {
-					// This middleware is excluded, skip it
+				if isSameMiddleware(excluded, middleware) {
 					c.Next()
 					return
 				}
@@ -69,9 +67,24 @@ func middlewareToGinHandler(middleware httpcontract.Middleware) gin.HandlerFunc 
 	}
 }
 
-// getFunctionPointer gets the pointer of a function for comparison
-func getFunctionPointer(f interface{}) uintptr {
-	return reflect.ValueOf(f).Pointer()
+// isSameMiddleware reports whether two middleware values have the same
+// concrete type (dereferencing pointers). This lets WithoutMiddleware match
+// struct-based middleware even across different instances. Closure-based
+// middleware (func(Context)) share a single reflect.Type and cannot be told
+// apart — that case is a documented limitation.
+func isSameMiddleware(a, b any) bool {
+	tA := reflect.TypeOf(a)
+	tB := reflect.TypeOf(b)
+	if tA == nil || tB == nil {
+		return false
+	}
+	if tA.Kind() == reflect.Ptr {
+		tA = tA.Elem()
+	}
+	if tB.Kind() == reflect.Ptr {
+		tB = tB.Elem()
+	}
+	return tA == tB
 }
 
 func logMiddleware() gin.HandlerFunc {

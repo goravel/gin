@@ -176,20 +176,23 @@ func (r *Group) WithMiddlewares() gin.IRoutes {
 	return ginGroup
 }
 
-// excludeMiddlewares filters out the middlewares that have been excluded via WithoutMiddleware.
+// excludeMiddlewares filters out the middlewares that have been excluded via
+// WithoutMiddleware, comparing by reflect.Type (see isSameMiddleware).
 func (r *Group) excludeMiddlewares(middlewares []contractshttp.Middleware) []contractshttp.Middleware {
 	if len(r.excludedMiddlewares) == 0 {
 		return middlewares
 	}
 
-	excludedPointers := make(map[uintptr]bool, len(r.excludedMiddlewares))
-	for _, excluded := range r.excludedMiddlewares {
-		excludedPointers[getFunctionPointer(excluded)] = true
-	}
-
 	var result []contractshttp.Middleware
 	for _, middleware := range middlewares {
-		if !excludedPointers[getFunctionPointer(middleware)] {
+		excluded := false
+		for _, ex := range r.excludedMiddlewares {
+			if isSameMiddleware(ex, middleware) {
+				excluded = true
+				break
+			}
+		}
+		if !excluded {
 			result = append(result, middleware)
 		}
 	}

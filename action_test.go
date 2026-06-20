@@ -130,9 +130,7 @@ func TestAction_WithoutMiddleware_Integration(t *testing.T) {
 		if exists && routeInfo.ExcludedMiddleware != nil {
 			// Check if throttleMiddleware is excluded
 			for _, excluded := range routeInfo.ExcludedMiddleware {
-				// Compare by function pointer
-				if getFunctionPointer(excluded) == getFunctionPointer(throttleMiddleware) {
-					// Skip throttleMiddleware
+				if isSameMiddleware(excluded, throttleMiddleware) {
 					c.Next()
 					return
 				}
