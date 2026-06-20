@@ -14,6 +14,7 @@ Gin http driver for Goravel.
 
 | goravel/gin | goravel/framework |
 |-------------|-------------------|
+| v1.18.x     | v1.18.x           |
 | v1.17.x     | v1.17.x           |
 | v1.4.x      | v1.16.x           |
 | v1.3.x      | v1.15.x           |
@@ -29,6 +30,35 @@ Run the command below in your project to install the package automatically:
 ```
 
 Or check [the setup file](./setup/setup.go) to install the package manually.
+
+## Configuration
+
+You can define the `template` configuration. If omitted, `DefaultTemplate()` is used automatically as a fallback, which loads views from `resources/views` and any registered package views.
+
+You can provide a custom template configuration in two forms:
+
+- **`func() (render.HTMLRender, error)`** — a callback that returns a custom HTML renderer (e.g. to configure custom delimiters or a FuncMap).
+- **`render.HTMLRender`** — a pre-built renderer instance.
+
+**Custom example:**
+
+```go
+import (
+    "html/template"
+
+    "github.com/gin-gonic/gin/render"
+    "github.com/goravel/gin"
+)
+
+"template": func() (render.HTMLRender, error) {
+    return gin.NewTemplate(gin.RenderOptions{
+        Delims:  &gin.Delims{Left: "{[", Right: "]}"},
+        FuncMap: template.FuncMap{
+            "upper": strings.ToUpper,
+        },
+    })
+},
+```
 
 ## Testing
 

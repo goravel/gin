@@ -13,15 +13,10 @@ import (
 func main() {
 	setup := packages.Setup(os.Args)
 	config := `map[string]any{
-        // Optional, default is 4096 KB
         "body_limit": 4096,
         "header_limit": 4096,
         "route": func() (route.Route, error) {
             return ginfacades.Route("gin"), nil
-        },
-        // Optional, default is http/template
-        "template": func() (render.HTMLRender, error) {
-            return gin.DefaultTemplate()
         },
     }`
 	ginServiceProvider := "&gin.ServiceProvider{}"
@@ -32,7 +27,6 @@ func main() {
 	httpConfig := match.Config("http")
 	routeContract := "github.com/goravel/framework/contracts/route"
 	ginFacade := "github.com/goravel/gin/facades"
-	ginRender := "github.com/gin-gonic/gin/render"
 
 	setup.Install(
 		// Add gin service provider to app.go if not using bootstrap setup
@@ -51,8 +45,8 @@ func main() {
 		modify.GoFile(httpConfigPath).
 			Find(match.Imports()).
 			Modify(
-				modify.AddImport(routeContract), modify.AddImport(moduleImport),
-				modify.AddImport(ginFacade, "ginfacades"), modify.AddImport(ginRender),
+				modify.AddImport(routeContract),
+				modify.AddImport(ginFacade, "ginfacades"),
 			).
 			Find(httpDriversConfig).Modify(modify.AddConfig("gin", config)).
 			Find(httpConfig).Modify(modify.AddConfig("default", `"gin"`)),
@@ -63,8 +57,8 @@ func main() {
 			Find(httpConfig).Modify(modify.AddConfig("default", `""`)).
 			Find(match.Imports()).
 			Modify(
-				modify.RemoveImport(routeContract), modify.RemoveImport(moduleImport),
-				modify.RemoveImport(ginFacade, "ginfacades"), modify.RemoveImport(ginRender),
+				modify.RemoveImport(routeContract),
+				modify.RemoveImport(ginFacade, "ginfacades"),
 			),
 
 		// Remove gin service provider from app.go if not using bootstrap setup
