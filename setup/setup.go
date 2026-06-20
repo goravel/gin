@@ -21,7 +21,7 @@ func main() {
         },
         // Optional, default is http/template
         "template": func() (render.HTMLRender, error) {
-            return gin.DefaultTemplate()
+            return gin.DefaultTemplate(nil)
         },
     }`
 	ginServiceProvider := "&gin.ServiceProvider{}"
