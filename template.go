@@ -93,7 +93,9 @@ func NewTemplate(options RenderOptions) (*render.HTMLProduction, error) {
 					return nil
 				}
 				if prevFile, ok := pkgDefines[name]; ok {
-					LogFacade.Warningf("view collision: %q defined in %q and %q, using first", name, prevFile, fullPath)
+					if LogFacade != nil {
+						LogFacade.Warningf("view collision: %q defined in %q and %q, using first", name, prevFile, fullPath)
+					}
 					return nil
 				}
 				pkgDefines[name] = fullPath

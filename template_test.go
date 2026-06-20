@@ -11,7 +11,6 @@ import (
 	"github.com/goravel/framework/support/file"
 	"github.com/goravel/framework/support/path"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 )
 
 func TestNewTemplate(t *testing.T) {
@@ -102,13 +101,18 @@ func TestNewTemplate_AppOverridesPackage(t *testing.T) {
 }
 
 func TestNewTemplate_PackageCollision(t *testing.T) {
+	dir1 := path.Resource("pkg1")
+	dir2 := path.Resource("pkg2")
+
+	collisionTemplate := "layout.tmpl"
+	prevFile := path.Resource("pkg1", collisionTemplate)
+	fullPath := path.Resource("pkg2", collisionTemplate)
+
 	mockLog := mockslog.NewLog(t)
 	LogFacade = mockLog
 
-	mockLog.EXPECT().Warningf("view collision: %q defined in %q and %q, using first", mock.Anything, mock.Anything, mock.Anything).Return().Once()
+	mockLog.EXPECT().Warningf("view collision: %q defined in %q and %q, using first", collisionTemplate, prevFile, fullPath).Return().Once()
 
-	dir1 := path.Resource("pkg1")
-	dir2 := path.Resource("pkg2")
 	defer func() {
 		ViewFacade = nil
 		LogFacade = nil
@@ -118,8 +122,8 @@ func TestNewTemplate_PackageCollision(t *testing.T) {
 	assert.Nil(t, os.MkdirAll(dir1, os.ModePerm))
 	assert.Nil(t, os.MkdirAll(dir2, os.ModePerm))
 
-	assert.Nil(t, file.PutContent(path.Resource("pkg1", "layout.tmpl"), `{{ define "layout.tmpl" }}First{{ end }}`))
-	assert.Nil(t, file.PutContent(path.Resource("pkg2", "layout.tmpl"), `{{ define "layout.tmpl" }}Second{{ end }}`))
+	assert.Nil(t, file.PutContent(prevFile, `{{ define "layout.tmpl" }}First{{ end }}`))
+	assert.Nil(t, file.PutContent(fullPath, `{{ define "layout.tmpl" }}Second{{ end }}`))
 
 	mockView := mocksview.NewView(t)
 	mockView.EXPECT().RegisteredViews().Return([]string{dir1, dir2}).Once()
@@ -132,8 +136,6 @@ func TestNewTemplate_PackageCollision(t *testing.T) {
 	var buf bytes.Buffer
 	assert.Nil(t, r.Template.ExecuteTemplate(&buf, "layout.tmpl", nil))
 	assert.Equal(t, "First", buf.String())
-
-	mockLog.AssertExpectations(t)
 }
 
 func TestNewTemplate_ExtraViewsNilOrEmpty(t *testing.T) {
