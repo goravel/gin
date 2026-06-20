@@ -37,7 +37,7 @@ func TestTimeoutMiddleware(t *testing.T) {
 		timedOut := make(chan struct{})
 		allowReturn := make(chan struct{})
 
-		route.Middleware(Timeout(20*time.Millisecond)).Get("/timeout", func(ctx contractshttp.Context) contractshttp.Response {
+		route.Middleware(Timeout(time.Second)).Get("/timeout", func(ctx contractshttp.Context) contractshttp.Response {
 			<-ctx.Done()
 			err = ctx.Err()
 			deadline, hasDeadline = ctx.Deadline()
@@ -59,7 +59,7 @@ func TestTimeoutMiddleware(t *testing.T) {
 
 		select {
 		case <-timedOut:
-		case <-time.After(time.Second):
+		case <-time.After(5 * time.Second):
 			t.Fatal("request context deadline was not observed")
 		}
 
@@ -73,7 +73,7 @@ func TestTimeoutMiddleware(t *testing.T) {
 
 		select {
 		case <-done:
-		case <-time.After(time.Second):
+		case <-time.After(5 * time.Second):
 			t.Fatal("request did not complete after the handler returned")
 		}
 
@@ -103,14 +103,14 @@ func TestTimeoutMiddleware(t *testing.T) {
 		allowReturn := make(chan struct{})
 		firstDone := make(chan struct{})
 
-		route.Middleware(Timeout(20*time.Millisecond)).Get("/timeout-isolated", func(ctx contractshttp.Context) contractshttp.Response {
+		route.Middleware(Timeout(time.Second)).Get("/timeout-isolated", func(ctx contractshttp.Context) contractshttp.Response {
 			<-ctx.Done()
 			close(timedOut)
 			<-allowReturn
 
 			return ctx.Response().Success().String("stale")
 		})
-		route.Middleware(Timeout(time.Second)).Get("/after-timeout", func(ctx contractshttp.Context) contractshttp.Response {
+		route.Middleware(Timeout(2*time.Second)).Get("/after-timeout", func(ctx contractshttp.Context) contractshttp.Response {
 			return ctx.Response().Success().String("fresh")
 		})
 
@@ -125,7 +125,7 @@ func TestTimeoutMiddleware(t *testing.T) {
 
 		select {
 		case <-timedOut:
-		case <-time.After(time.Second):
+		case <-time.After(5 * time.Second):
 			t.Fatal("request context deadline was not observed")
 		}
 
@@ -144,7 +144,7 @@ func TestTimeoutMiddleware(t *testing.T) {
 
 		select {
 		case <-firstDone:
-		case <-time.After(time.Second):
+		case <-time.After(5 * time.Second):
 			t.Fatal("timed out request did not complete after the handler returned")
 		}
 

@@ -46,6 +46,8 @@ func TestView_Make(t *testing.T) {
 
 		mockView = mocksview.NewView(t)
 		ViewFacade = mockView
+
+		mockView.EXPECT().RegisteredViews().Return(nil).Once()
 	}
 	tests := []struct {
 		name        string
@@ -272,6 +274,8 @@ func TestView_First(t *testing.T) {
 
 		mockView = mocksview.NewView(t)
 		ViewFacade = mockView
+
+		mockView.EXPECT().RegisteredViews().Return(nil).Once()
 	}
 	tests := []struct {
 		name        string
@@ -408,6 +412,7 @@ csrf_token={{ .csrf_token }}
 
 	mockView := mocksview.NewView(t)
 	ViewFacade = mockView
+	mockView.EXPECT().RegisteredViews().Return(nil).Once()
 	mockView.EXPECT().GetShared().Return(map[string]any{}).Once()
 
 	t.Run("CSRF token", func(t *testing.T) {
