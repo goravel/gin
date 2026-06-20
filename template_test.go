@@ -225,6 +225,37 @@ func TestNewTemplate_CustomDelims(t *testing.T) {
 	assert.Equal(t, "Custom", buf.String())
 }
 
+func TestNewTemplate_CustomDelimsCollision(t *testing.T) {
+	pkg1 := path.Resource("pkg_cdelim1")
+	pkg2 := path.Resource("pkg_cdelim2")
+	defer func() {
+		ViewFacade = nil
+		assert.Nil(t, file.Remove(path.Resource()))
+	}()
+
+	assert.Nil(t, os.MkdirAll(pkg1, os.ModePerm))
+	assert.Nil(t, os.MkdirAll(pkg2, os.ModePerm))
+
+	assert.Nil(t, file.PutContent(path.Resource("pkg_cdelim1", "page.tmpl"), `{[ define "page.tmpl" ]}First{[ end ]}`))
+	assert.Nil(t, file.PutContent(path.Resource("pkg_cdelim2", "page.tmpl"), `{[ define "page.tmpl" ]}Second{[ end ]}`))
+
+	mockView := mocksview.NewView(t)
+	mockView.EXPECT().RegisteredViews().Return([]string{pkg1, pkg2}).Once()
+	ViewFacade = mockView
+
+	options := RenderOptions{
+		Delims: &Delims{Left: "{[", Right: "]}"},
+	}
+
+	r, err := NewTemplate(options)
+	assert.Nil(t, err)
+	assert.NotNil(t, r)
+
+	var buf bytes.Buffer
+	assert.Nil(t, r.Template.ExecuteTemplate(&buf, "page.tmpl", nil))
+	assert.Equal(t, "First", buf.String())
+}
+
 func TestNewTemplate_CustomFuncMap(t *testing.T) {
 	pkgDir := path.Resource("pkg_func")
 	defer func() {
@@ -259,6 +290,7 @@ func TestExtractDefineName(t *testing.T) {
 		name     string
 		content  string
 		expected string
+		left     string
 	}{
 		{
 			name:     "single line define",
@@ -280,11 +312,26 @@ func TestExtractDefineName(t *testing.T) {
 			content:  `{{ block "content" . }}{{ end }}`,
 			expected: "",
 		},
+		{
+			name:     "custom delimiter - no match with standard left",
+			content:  `{[ define "cm.tmpl" ]}Custom{[ end ]}`,
+			expected: "",
+		},
+		{
+			name:     "custom delimiter with matching left",
+			content:  `{[ define "cm.tmpl" ]}Custom{[ end ]}`,
+			expected: "cm.tmpl",
+			left:     "{[",
+		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			result := extractDefineName(test.content)
+			left := test.left
+			if left == "" {
+				left = "{{"
+			}
+			result := extractDefineName(test.content, left)
 			assert.Equal(t, test.expected, result)
 		})
 	}

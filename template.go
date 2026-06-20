@@ -21,10 +21,18 @@ type RenderOptions struct {
 	FuncMap template.FuncMap
 }
 
-var defineRe = regexp.MustCompile(`\{\{\s*define\s+"([^"]+)"`)
+var (
+	defineRe = regexp.MustCompile(`\{\{\s*define\s+"([^"]+)"`)
+)
 
-func extractDefineName(content string) string {
-	matches := defineRe.FindStringSubmatch(content)
+func extractDefineName(content string, leftDelim string) string {
+	var re *regexp.Regexp
+	if leftDelim == "" || leftDelim == "{{" {
+		re = defineRe
+	} else {
+		re = regexp.MustCompile(regexp.QuoteMeta(leftDelim) + `\s*define\s+"([^"]+)"`)
+	}
+	matches := re.FindStringSubmatch(content)
 	if len(matches) > 1 {
 		return matches[1]
 	}
@@ -38,6 +46,11 @@ func NewTemplate(options RenderOptions) (*render.HTMLProduction, error) {
 	}
 	if options.FuncMap != nil {
 		instance.Funcs(options.FuncMap)
+	}
+
+	leftDelim := "{{"
+	if options.Delims != nil {
+		leftDelim = options.Delims.Left
 	}
 
 	appDefines := make(map[string]string)
@@ -55,7 +68,7 @@ func NewTemplate(options RenderOptions) (*render.HTMLProduction, error) {
 				if readErr != nil {
 					return readErr
 				}
-				name := extractDefineName(string(content))
+				name := extractDefineName(string(content), leftDelim)
 				if name != "" {
 					appDefines[name] = fullPath
 				}
@@ -84,7 +97,7 @@ func NewTemplate(options RenderOptions) (*render.HTMLProduction, error) {
 				if readErr != nil {
 					return readErr
 				}
-				name := extractDefineName(string(content))
+				name := extractDefineName(string(content), leftDelim)
 				if name == "" {
 					files = append(files, fullPath)
 					return nil
@@ -111,7 +124,10 @@ func NewTemplate(options RenderOptions) (*render.HTMLProduction, error) {
 		return nil, nil
 	}
 
-	tmpl := template.Must(instance.ParseFiles(files...))
+	tmpl, err := instance.ParseFiles(files...)
+	if err != nil {
+		return nil, err
+	}
 
 	return &render.HTMLProduction{Template: tmpl}, nil
 }
