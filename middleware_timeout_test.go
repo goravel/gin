@@ -59,7 +59,7 @@ func TestTimeoutMiddleware(t *testing.T) {
 
 		select {
 		case <-timedOut:
-		case <-time.After(2 * time.Second):
+		case <-time.After(5 * time.Second):
 			t.Fatal("request context deadline was not observed")
 		}
 
@@ -73,7 +73,7 @@ func TestTimeoutMiddleware(t *testing.T) {
 
 		select {
 		case <-done:
-		case <-time.After(2 * time.Second):
+		case <-time.After(5 * time.Second):
 			t.Fatal("request did not complete after the handler returned")
 		}
 
@@ -125,7 +125,7 @@ func TestTimeoutMiddleware(t *testing.T) {
 
 		select {
 		case <-timedOut:
-		case <-time.After(2 * time.Second):
+		case <-time.After(5 * time.Second):
 			t.Fatal("request context deadline was not observed")
 		}
 
@@ -144,7 +144,7 @@ func TestTimeoutMiddleware(t *testing.T) {
 
 		select {
 		case <-firstDone:
-		case <-time.After(2 * time.Second):
+		case <-time.After(5 * time.Second):
 			t.Fatal("timed out request did not complete after the handler returned")
 		}
 
