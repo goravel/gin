@@ -290,11 +290,7 @@ func (r *Route) init(globalMiddleware []contractshttp.Middleware) error {
 
 	if engine.HTMLRender == nil {
 		var err error
-		var registeredViews []string
-		if ViewFacade != nil {
-			registeredViews = ViewFacade.RegisteredViews()
-		}
-		engine.HTMLRender, err = DefaultTemplate(registeredViews)
+		engine.HTMLRender, err = DefaultTemplate()
 		if err != nil {
 			return err
 		}

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	mockslog "github.com/goravel/framework/mocks/log"
+	mocksview "github.com/goravel/framework/mocks/view"
 	"github.com/goravel/framework/support/file"
 	"github.com/goravel/framework/support/path"
 	"github.com/stretchr/testify/assert"
@@ -42,7 +43,7 @@ func TestNewTemplate(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			test.setup()
-			r, err := NewTemplate(RenderOptions{}, nil)
+			r, err := NewTemplate(RenderOptions{})
 			assert.Equal(t, test.expectRender, r != nil)
 			assert.Equal(t, test.expectError, err)
 			assert.Nil(t, file.Remove(path.Resource()))
@@ -53,13 +54,18 @@ func TestNewTemplate(t *testing.T) {
 func TestNewTemplate_PackageViews(t *testing.T) {
 	pkgDir := path.Resource("pkg_custom")
 	defer func() {
+		ViewFacade = nil
 		assert.Nil(t, file.Remove(path.Resource()))
 	}()
 
 	assert.Nil(t, os.MkdirAll(pkgDir, os.ModePerm))
 	assert.Nil(t, file.PutContent(path.Resource("pkg_custom", "welcome.tmpl"), `{{ define "welcome.tmpl" }}Welcome!{{ end }}`))
 
-	r, err := NewTemplate(RenderOptions{}, []string{pkgDir})
+	mockView := mocksview.NewView(t)
+	mockView.EXPECT().RegisteredViews().Return([]string{pkgDir}).Once()
+	ViewFacade = mockView
+
+	r, err := NewTemplate(RenderOptions{})
 	assert.Nil(t, err)
 	assert.NotNil(t, r)
 
@@ -72,6 +78,7 @@ func TestNewTemplate_AppOverridesPackage(t *testing.T) {
 	viewsDir := path.Resource("views")
 	pkgDir := path.Resource("pkg_override")
 	defer func() {
+		ViewFacade = nil
 		assert.Nil(t, file.Remove(path.Resource()))
 	}()
 
@@ -81,7 +88,11 @@ func TestNewTemplate_AppOverridesPackage(t *testing.T) {
 	assert.Nil(t, file.PutContent(path.Resource("views", "page.tmpl"), `{{ define "page.tmpl" }}App Content{{ end }}`))
 	assert.Nil(t, file.PutContent(path.Resource("pkg_override", "page.tmpl"), `{{ define "page.tmpl" }}Package Content{{ end }}`))
 
-	r, err := NewTemplate(RenderOptions{}, []string{pkgDir})
+	mockView := mocksview.NewView(t)
+	mockView.EXPECT().RegisteredViews().Return([]string{pkgDir}).Once()
+	ViewFacade = mockView
+
+	r, err := NewTemplate(RenderOptions{})
 	assert.Nil(t, err)
 	assert.NotNil(t, r)
 
@@ -94,12 +105,12 @@ func TestNewTemplate_PackageCollision(t *testing.T) {
 	mockLog := mockslog.NewLog(t)
 	LogFacade = mockLog
 
-	// str has escape chars, so match on the format prefix only
 	mockLog.EXPECT().Warningf("view collision: %q defined in %q and %q, using first", mock.Anything, mock.Anything, mock.Anything).Return().Once()
 
 	dir1 := path.Resource("pkg1")
 	dir2 := path.Resource("pkg2")
 	defer func() {
+		ViewFacade = nil
 		LogFacade = nil
 		assert.Nil(t, file.Remove(path.Resource()))
 	}()
@@ -110,7 +121,11 @@ func TestNewTemplate_PackageCollision(t *testing.T) {
 	assert.Nil(t, file.PutContent(path.Resource("pkg1", "layout.tmpl"), `{{ define "layout.tmpl" }}First{{ end }}`))
 	assert.Nil(t, file.PutContent(path.Resource("pkg2", "layout.tmpl"), `{{ define "layout.tmpl" }}Second{{ end }}`))
 
-	r, err := NewTemplate(RenderOptions{}, []string{dir1, dir2})
+	mockView := mocksview.NewView(t)
+	mockView.EXPECT().RegisteredViews().Return([]string{dir1, dir2}).Once()
+	ViewFacade = mockView
+
+	r, err := NewTemplate(RenderOptions{})
 	assert.Nil(t, err)
 	assert.NotNil(t, r)
 
@@ -124,14 +139,15 @@ func TestNewTemplate_PackageCollision(t *testing.T) {
 func TestNewTemplate_ExtraViewsNilOrEmpty(t *testing.T) {
 	viewsDir := path.Resource("views")
 	defer func() {
+		ViewFacade = nil
 		assert.Nil(t, file.Remove(path.Resource()))
 	}()
 
 	assert.Nil(t, os.MkdirAll(viewsDir, os.ModePerm))
 	assert.Nil(t, file.PutContent(path.Resource("views", "hello.tmpl"), `{{ define "hello.tmpl" }}Hello{{ end }}`))
 
-	t.Run("nil extraViews", func(t *testing.T) {
-		r, err := NewTemplate(RenderOptions{}, nil)
+	t.Run("nil ViewFacade", func(t *testing.T) {
+		r, err := NewTemplate(RenderOptions{})
 		assert.Nil(t, err)
 		assert.NotNil(t, r)
 
@@ -140,8 +156,12 @@ func TestNewTemplate_ExtraViewsNilOrEmpty(t *testing.T) {
 		assert.Equal(t, "Hello", buf.String())
 	})
 
-	t.Run("empty extraViews", func(t *testing.T) {
-		r, err := NewTemplate(RenderOptions{}, []string{})
+	t.Run("empty registered views", func(t *testing.T) {
+		mockView := mocksview.NewView(t)
+		mockView.EXPECT().RegisteredViews().Return([]string{}).Once()
+		ViewFacade = mockView
+
+		r, err := NewTemplate(RenderOptions{})
 		assert.Nil(t, err)
 		assert.NotNil(t, r)
 
@@ -152,7 +172,7 @@ func TestNewTemplate_ExtraViewsNilOrEmpty(t *testing.T) {
 }
 
 func TestNewTemplate_NoViews(t *testing.T) {
-	r, err := NewTemplate(RenderOptions{}, nil)
+	r, err := NewTemplate(RenderOptions{})
 	assert.Nil(t, err)
 	assert.Nil(t, r)
 }
@@ -160,13 +180,14 @@ func TestNewTemplate_NoViews(t *testing.T) {
 func TestDefaultTemplate(t *testing.T) {
 	viewsDir := path.Resource("views")
 	defer func() {
+		ViewFacade = nil
 		assert.Nil(t, file.Remove(path.Resource()))
 	}()
 
 	assert.Nil(t, os.MkdirAll(viewsDir, os.ModePerm))
 	assert.Nil(t, file.PutContent(path.Resource("views", "home.tmpl"), `{{ define "home.tmpl" }}Home{{ end }}`))
 
-	r, err := DefaultTemplate(nil)
+	r, err := DefaultTemplate()
 	assert.Nil(t, err)
 	assert.NotNil(t, r)
 
@@ -178,17 +199,22 @@ func TestDefaultTemplate(t *testing.T) {
 func TestNewTemplate_CustomDelims(t *testing.T) {
 	pkgDir := path.Resource("pkg_custom")
 	defer func() {
+		ViewFacade = nil
 		assert.Nil(t, file.Remove(path.Resource()))
 	}()
 
 	assert.Nil(t, os.MkdirAll(pkgDir, os.ModePerm))
 	assert.Nil(t, file.PutContent(path.Resource("pkg_custom", "delim.tmpl"), `{[ define "delim.tmpl" ]}Custom{[ end ]}`))
 
+	mockView := mocksview.NewView(t)
+	mockView.EXPECT().RegisteredViews().Return([]string{pkgDir}).Once()
+	ViewFacade = mockView
+
 	options := RenderOptions{
 		Delims: &Delims{Left: "{[", Right: "]}"},
 	}
 
-	r, err := NewTemplate(options, []string{pkgDir})
+	r, err := NewTemplate(options)
 	assert.Nil(t, err)
 	assert.NotNil(t, r)
 
@@ -200,11 +226,16 @@ func TestNewTemplate_CustomDelims(t *testing.T) {
 func TestNewTemplate_CustomFuncMap(t *testing.T) {
 	pkgDir := path.Resource("pkg_func")
 	defer func() {
+		ViewFacade = nil
 		assert.Nil(t, file.Remove(path.Resource()))
 	}()
 
 	assert.Nil(t, os.MkdirAll(pkgDir, os.ModePerm))
 	assert.Nil(t, file.PutContent(path.Resource("pkg_func", "func.tmpl"), `{{ define "func.tmpl" }}{{ greet "User" }}{{ end }}`))
+
+	mockView := mocksview.NewView(t)
+	mockView.EXPECT().RegisteredViews().Return([]string{pkgDir}).Once()
+	ViewFacade = mockView
 
 	options := RenderOptions{
 		FuncMap: template.FuncMap{
@@ -212,7 +243,7 @@ func TestNewTemplate_CustomFuncMap(t *testing.T) {
 		},
 	}
 
-	r, err := NewTemplate(options, []string{pkgDir})
+	r, err := NewTemplate(options)
 	assert.Nil(t, err)
 	assert.NotNil(t, r)
 
@@ -272,7 +303,7 @@ func TestNewTemplate_AppFuncMapApplied(t *testing.T) {
 		},
 	}
 
-	r, err := NewTemplate(options, nil)
+	r, err := NewTemplate(options)
 	assert.Nil(t, err)
 	assert.NotNil(t, r)
 

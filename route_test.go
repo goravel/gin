@@ -530,7 +530,7 @@ func (s *RouteTestSuite) TestRunTLSWithCert() {
 }
 
 func (s *RouteTestSuite) TestNewRoute() {
-	defaultTemplate, err := DefaultTemplate(nil)
+	defaultTemplate, err := DefaultTemplate()
 	s.Require().Nil(err)
 
 	tests := []struct {

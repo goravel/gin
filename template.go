@@ -31,7 +31,7 @@ func extractDefineName(content string) string {
 	return ""
 }
 
-func NewTemplate(options RenderOptions, extraViews []string) (*render.HTMLProduction, error) {
+func NewTemplate(options RenderOptions) (*render.HTMLProduction, error) {
 	instance := template.New("")
 	if options.Delims != nil {
 		instance.Delims(options.Delims.Left, options.Delims.Right)
@@ -67,6 +67,10 @@ func NewTemplate(options RenderOptions, extraViews []string) (*render.HTMLProduc
 		}
 	}
 
+	var extraViews []string
+	if ViewFacade != nil {
+		extraViews = ViewFacade.RegisteredViews()
+	}
 	for _, dir := range extraViews {
 		if !file.Exists(dir) {
 			continue
@@ -110,6 +114,6 @@ func NewTemplate(options RenderOptions, extraViews []string) (*render.HTMLProduc
 	return &render.HTMLProduction{Template: tmpl}, nil
 }
 
-func DefaultTemplate(extraViews []string) (*render.HTMLProduction, error) {
-	return NewTemplate(RenderOptions{}, extraViews)
+func DefaultTemplate() (*render.HTMLProduction, error) {
+	return NewTemplate(RenderOptions{})
 }
