@@ -78,10 +78,10 @@ func isSameMiddleware(a, b any) bool {
 	if tA == nil || tB == nil {
 		return false
 	}
-	if tA.Kind() == reflect.Ptr {
+	if tA.Kind() == reflect.Pointer {
 		tA = tA.Elem()
 	}
-	if tB.Kind() == reflect.Ptr {
+	if tB.Kind() == reflect.Pointer {
 		tB = tB.Elem()
 	}
 	return tA == tB
