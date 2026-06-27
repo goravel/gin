@@ -146,18 +146,26 @@ func (r *Status) Stream(step func(w contractshttp.StreamWriter) error) contracts
 	return &StreamResponse{r.status, r.instance, step}
 }
 
-func ResponseMiddleware() contractshttp.Middleware {
-	return func(ctx contractshttp.Context) {
-		blw := &BodyWriter{body: bytes.NewBufferString("")}
-		switch ctx := ctx.(type) {
-		case *Context:
-			blw.ResponseWriter = ctx.Instance().Writer
-			ctx.Instance().Writer = blw
-		}
+type responseMiddleware struct{}
 
-		ctx.WithValue(responseOriginKey, blw)
-		ctx.Request().Next()
+func (r *responseMiddleware) Signature() string {
+	return "response"
+}
+
+func (r *responseMiddleware) Handle(ctx contractshttp.Context) {
+	blw := &BodyWriter{body: bytes.NewBufferString("")}
+	switch ctx := ctx.(type) {
+	case *Context:
+		blw.ResponseWriter = ctx.Instance().Writer
+		ctx.Instance().Writer = blw
 	}
+
+	ctx.WithValue(responseOriginKey, blw)
+	ctx.Request().Next()
+}
+
+func ResponseMiddleware() contractshttp.Middleware {
+	return &responseMiddleware{}
 }
 
 type BodyWriter struct {

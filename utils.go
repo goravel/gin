@@ -2,7 +2,6 @@ package gin
 
 import (
 	"fmt"
-	"reflect"
 	"regexp"
 	"strings"
 	"time"
@@ -64,23 +63,17 @@ func middlewareToGinHandler(middleware httpcontract.Middleware) gin.HandlerFunc 
 			}
 		}
 
-		middleware(context)
+		middleware.Handle(context)
 	}
 }
 
 func isSameMiddleware(a, b any) bool {
-	tA := reflect.TypeOf(a)
-	tB := reflect.TypeOf(b)
-	if tA == nil || tB == nil {
+	mwA, okA := a.(httpcontract.Middleware)
+	mwB, okB := b.(httpcontract.Middleware)
+	if !okA || !okB {
 		return false
 	}
-	if tA.Kind() == reflect.Pointer {
-		tA = tA.Elem()
-	}
-	if tB.Kind() == reflect.Pointer {
-		tB = tB.Elem()
-	}
-	return tA == tB
+	return mwA.Signature() == mwB.Signature()
 }
 
 func logMiddleware() gin.HandlerFunc {
