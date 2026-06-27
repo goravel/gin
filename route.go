@@ -30,7 +30,7 @@ var globalRecoverCallback func(ctx contractshttp.Context, err any) = defaultReco
 type recoverMiddleware struct{}
 
 func (r *recoverMiddleware) Signature() string {
-	return "recover"
+	return "goravel:recover"
 }
 
 func (r *recoverMiddleware) Handle(ctx contractshttp.Context) {

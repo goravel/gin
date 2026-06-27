@@ -10,7 +10,7 @@ import (
 type TlsMiddleware struct{}
 
 func (t *TlsMiddleware) Signature() string {
-	return "tls"
+	return "goravel:tls"
 }
 
 func (t *TlsMiddleware) Handle(ctx contractshttp.Context) {

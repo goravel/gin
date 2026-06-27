@@ -15,7 +15,7 @@ type TimeoutMiddleware struct {
 }
 
 func (t *TimeoutMiddleware) Signature() string {
-	return fmt.Sprintf("timeout:%v", t.Duration)
+	return fmt.Sprintf("goravel:timeout:%v", t.Duration)
 }
 
 func (t *TimeoutMiddleware) Handle(ctx contractshttp.Context) {
