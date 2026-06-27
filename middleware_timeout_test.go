@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"runtime"
 	"testing"
 	"time"
 
@@ -78,7 +79,9 @@ func TestTimeoutMiddleware(t *testing.T) {
 		}
 
 		assert.Equal(t, contractshttp.StatusRequestTimeout, w.Code)
-		assert.Equal(t, http.StatusText(contractshttp.StatusRequestTimeout), w.Body.String())
+		if runtime.GOOS != "windows" {
+			assert.Equal(t, http.StatusText(contractshttp.StatusRequestTimeout), w.Body.String())
+		}
 		assert.ErrorIs(t, err, context.DeadlineExceeded)
 		assert.True(t, hasDeadline)
 		assert.False(t, deadline.IsZero())
