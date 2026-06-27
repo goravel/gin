@@ -355,22 +355,16 @@ func (s *GroupTestSuite) assert(method, url string, expectCode int, expectBody s
 }
 
 type abortMiddlewareStruct struct{}
-type contextMiddlewareStruct struct{}
-type contextMiddleware1Struct struct{}
-type contextMiddleware2Struct struct{}
-type withoutMiddlewareStruct struct{}
-type globalMiddlewareStruct struct{}
 
-func (m *abortMiddlewareStruct) Signature() string      { return "abort" }
-func (m *contextMiddlewareStruct) Signature() string     { return "ctx" }
-func (m *contextMiddleware1Struct) Signature() string    { return "ctx1" }
-func (m *contextMiddleware2Struct) Signature() string    { return "ctx2" }
-func (m *withoutMiddlewareStruct) Signature() string     { return "without" }
-func (m *globalMiddlewareStruct) Signature() string     { return "global" }
+func (m *abortMiddlewareStruct) Signature() string { return "abort" }
 
 func (m *abortMiddlewareStruct) Handle(ctx contractshttp.Context) {
 	ctx.Request().Abort(http.StatusNonAuthoritativeInfo)
 }
+
+type contextMiddlewareStruct struct{}
+
+func (m *contextMiddlewareStruct) Signature() string { return "ctx" }
 
 func (m *contextMiddlewareStruct) Handle(ctx contractshttp.Context) {
 	type customKey struct{}
@@ -381,6 +375,10 @@ func (m *contextMiddlewareStruct) Handle(ctx contractshttp.Context) {
 	ctx.Request().Next()
 }
 
+type contextMiddleware1Struct struct{}
+
+func (m *contextMiddleware1Struct) Signature() string { return "ctx1" }
+
 func (m *contextMiddleware1Struct) Handle(ctx contractshttp.Context) {
 	ctx.WithValue(2.2, "two point two")
 	ctx.WithValue("ctx1", "Hello")
@@ -388,16 +386,28 @@ func (m *contextMiddleware1Struct) Handle(ctx contractshttp.Context) {
 	ctx.Request().Next()
 }
 
+type contextMiddleware2Struct struct{}
+
+func (m *contextMiddleware2Struct) Signature() string { return "ctx2" }
+
 func (m *contextMiddleware2Struct) Handle(ctx contractshttp.Context) {
 	ctx.WithValue("ctx2", "World")
 
 	ctx.Request().Next()
 }
 
+type withoutMiddlewareStruct struct{}
+
+func (m *withoutMiddlewareStruct) Signature() string { return "without" }
+
 func (m *withoutMiddlewareStruct) Handle(ctx contractshttp.Context) {
 	ctx.WithValue("mw", "applied")
 	ctx.Request().Next()
 }
+
+type globalMiddlewareStruct struct{}
+
+func (m *globalMiddlewareStruct) Signature() string { return "global" }
 
 func (m *globalMiddlewareStruct) Handle(ctx contractshttp.Context) {
 	ctx.WithValue("global", "goravel")
