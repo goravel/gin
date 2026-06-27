@@ -39,7 +39,6 @@ type Context struct {
 	instance *gin.Context
 	request  contractshttp.ContextRequest
 	response contractshttp.ContextResponse
-	origin   contractshttp.ResponseOrigin
 }
 
 func NewContext(c *gin.Context) *Context {
@@ -68,8 +67,9 @@ func (c *Context) Response() contractshttp.ContextResponse {
 		c.response = response
 	}
 
-	if raw := c.instance.Request.Context().Value(responseOriginKey); raw != nil {
-		c.response.(*ContextResponse).origin = raw.(contractshttp.ResponseOrigin)
+	responseOrigin := c.Value(responseOriginKey)
+	if responseOrigin != nil {
+		c.response.(*ContextResponse).origin = responseOrigin.(contractshttp.ResponseOrigin)
 	}
 
 	return c.response

@@ -389,8 +389,16 @@ func (s *ContextResponseSuite) request(method, url string, body io.Reader) (int,
 }
 
 type testJsonMiddleware struct{}
+type testRedirectMiddleware struct{}
+type contextResponseTestMiddleware struct {
+	s *ContextResponseSuite
+}
 
-func (m *testJsonMiddleware) Signature() string { return "testJson" }
+func (m *testJsonMiddleware) Signature() string     { return "testJson" }
+func (m *testRedirectMiddleware) Signature() string { return "testRedirect" }
+func (m *contextResponseTestMiddleware) Signature() string {
+	return "contextResponseTest"
+}
 
 func (m *testJsonMiddleware) Handle(ctx contractshttp.Context) {
 	err := ctx.Response().Json(contractshttp.StatusOK, map[string]any{
@@ -402,24 +410,12 @@ func (m *testJsonMiddleware) Handle(ctx contractshttp.Context) {
 	ctx.Request().Next()
 }
 
-type testRedirectMiddleware struct{}
-
-func (m *testRedirectMiddleware) Signature() string { return "testRedirect" }
-
 func (m *testRedirectMiddleware) Handle(ctx contractshttp.Context) {
 	err := ctx.Response().Redirect(contractshttp.StatusMovedPermanently, "/abort-redirected").Abort()
 	if err != nil {
 		panic(err)
 	}
 	ctx.Request().Next()
-}
-
-type contextResponseTestMiddleware struct {
-	s *ContextResponseSuite
-}
-
-func (m *contextResponseTestMiddleware) Signature() string {
-	return "contextResponseTest"
 }
 
 func (m *contextResponseTestMiddleware) Handle(ctx contractshttp.Context) {

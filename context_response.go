@@ -2,7 +2,6 @@ package gin
 
 import (
 	"bytes"
-	"context"
 	"net/http"
 	"sync"
 
@@ -155,15 +154,13 @@ func (r *responseMiddleware) Signature() string {
 
 func (r *responseMiddleware) Handle(ctx contractshttp.Context) {
 	blw := &BodyWriter{body: bytes.NewBufferString("")}
-	switch c := ctx.(type) {
+	switch ctx := ctx.(type) {
 	case *Context:
-		blw.ResponseWriter = c.Instance().Writer
-		c.Instance().Writer = blw
-		c.instance.Request = c.instance.Request.WithContext(
-			context.WithValue(c.instance.Request.Context(), responseOriginKey, blw),
-		)
+		blw.ResponseWriter = ctx.Instance().Writer
+		ctx.Instance().Writer = blw
 	}
 
+	ctx.WithValue(responseOriginKey, blw)
 	ctx.Request().Next()
 }
 

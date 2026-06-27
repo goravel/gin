@@ -49,17 +49,15 @@ func TestAction_Name(t *testing.T) {
 }
 
 type actionAuthMiddleware struct{}
+type actionThrottleMiddleware struct{}
 
-func (m *actionAuthMiddleware) Signature() string { return "actionAuth" }
+func (m *actionAuthMiddleware) Signature() string     { return "actionAuth" }
+func (m *actionThrottleMiddleware) Signature() string  { return "actionThrottle" }
 
 func (m *actionAuthMiddleware) Handle(ctx contractshttp.Context) {
 	ctx.Response().Json(http.StatusOK, map[string]string{"middleware": "auth"})
 	ctx.Request().Next()
 }
-
-type actionThrottleMiddleware struct{}
-
-func (m *actionThrottleMiddleware) Signature() string { return "actionThrottle" }
 
 func (m *actionThrottleMiddleware) Handle(ctx contractshttp.Context) {
 	ctx.Response().Json(http.StatusTooManyRequests, map[string]string{"error": "throttled"})
