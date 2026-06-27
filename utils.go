@@ -36,7 +36,9 @@ func handlerToGinHandler(handler httpcontract.HandlerFunc) gin.HandlerFunc {
 		}()
 
 		if response := handler(context); response != nil {
-			_ = response.Render()
+			if c.Request == nil || c.Request.Context().Err() == nil {
+				_ = response.Render()
+			}
 		}
 	}
 }
