@@ -79,6 +79,10 @@ func TestTimeoutMiddleware(t *testing.T) {
 		}
 
 		assert.Equal(t, contractshttp.StatusRequestTimeout, w.Code)
+		// Skip body assertion on Windows due to a known data race between
+		// gintimeout.Copy() and responseMiddleware.WithValue() accessing
+		// gin.Context.Keys concurrently. The status code assertion still
+		// verifies the timeout fires correctly.
 		if runtime.GOOS != "windows" {
 			assert.Equal(t, http.StatusText(contractshttp.StatusRequestTimeout), w.Body.String())
 		}
