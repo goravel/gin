@@ -11,15 +11,12 @@ import (
 )
 
 func TestNewAction(t *testing.T) {
-	// Clear routes map before test
 	routes = make(map[string]map[string]contractshttp.Info)
 
-	// Test creating a new action
 	action := NewAction("GET", "/test-path", "test.Action")
 	assert.NotNil(t, action)
 	assert.IsType(t, &Action{}, action)
 
-	// Verify route was added to routes map
 	routeInfo, exists := routes["/test-path"]["GET|HEAD"]
 	assert.True(t, exists)
 	assert.Equal(t, "GET|HEAD", routeInfo.Method)
@@ -29,45 +26,49 @@ func TestNewAction(t *testing.T) {
 }
 
 func TestAction_Name(t *testing.T) {
-	// Clear routes map before test
 	routes = make(map[string]map[string]contractshttp.Info)
 
-	// Create a new action
 	action := NewAction("GET", "/named-path", "")
 
-	// Test setting name
 	namedAction := action.Name("test-route")
 	assert.NotNil(t, namedAction)
 	assert.IsType(t, &Action{}, namedAction)
 
-	// Verify route info was updated
 	routeInfo, exists := routes["/named-path"]["GET|HEAD"]
 	assert.True(t, exists)
 	assert.Equal(t, "GET|HEAD", routeInfo.Method)
 	assert.Equal(t, "/named-path", routeInfo.Path)
 	assert.Equal(t, "test-route", routeInfo.Name)
 
-	// Test method chaining
 	chainedAction := action.Name("new-name").Name("final-name")
 	assert.NotNil(t, chainedAction)
 
-	// Verify final route info
 	routeInfo, exists = routes["/named-path"]["GET|HEAD"]
 	assert.True(t, exists)
 	assert.Equal(t, "final-name", routeInfo.Name)
 }
 
+type actionAuthMiddleware struct{}
+type actionThrottleMiddleware struct{}
+
+func (m *actionAuthMiddleware) Signature() string     { return "actionAuth" }
+func (m *actionThrottleMiddleware) Signature() string  { return "actionThrottle" }
+
+func (m *actionAuthMiddleware) Handle(ctx contractshttp.Context) {
+	ctx.Response().Json(http.StatusOK, map[string]string{"middleware": "auth"})
+	ctx.Request().Next()
+}
+
+func (m *actionThrottleMiddleware) Handle(ctx contractshttp.Context) {
+	ctx.Response().Json(http.StatusTooManyRequests, map[string]string{"error": "throttled"})
+	ctx.Request().Abort()
+}
+
 func TestAction_WithoutMiddleware(t *testing.T) {
 	routes = make(map[string]map[string]contractshttp.Info)
 
-	authMiddleware := func(ctx contractshttp.Context) {
-		ctx.Response().Json(http.StatusOK, map[string]string{"middleware": "auth"})
-		ctx.Request().Next()
-	}
-	throttleMiddleware := func(ctx contractshttp.Context) {
-		ctx.Response().Json(http.StatusTooManyRequests, map[string]string{"error": "throttled"})
-		ctx.Request().Abort()
-	}
+	authMiddleware := &actionAuthMiddleware{}
+	throttleMiddleware := &actionThrottleMiddleware{}
 
 	action := NewAction("GET", "/test-path", "test.Action")
 
@@ -98,12 +99,17 @@ func TestAction_WithoutMiddleware(t *testing.T) {
 	assert.Len(t, routeInfo3.ExcludedMiddleware, 1)
 }
 
+type actionIntegrationMw struct{}
+
+func (m *actionIntegrationMw) Signature() string { return "actionIntegration" }
+func (m *actionIntegrationMw) Handle(ctx contractshttp.Context) {
+	ctx.Request().Next()
+}
+
 func TestAction_WithoutMiddleware_Integration(t *testing.T) {
 	routes = make(map[string]map[string]contractshttp.Info)
 
-	throttleMiddleware := func(ctx contractshttp.Context) {
-		ctx.Request().Next()
-	}
+	throttleMiddleware := &actionIntegrationMw{}
 
 	NewAction("GET", "/protected", "handler.Protected").
 		WithoutMiddleware(throttleMiddleware)

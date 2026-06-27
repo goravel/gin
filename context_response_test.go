@@ -203,15 +203,7 @@ func (s *ContextResponseSuite) TestOrigin() {
 	s.mockConfig.EXPECT().GetBool("app.debug").Return(true).Once()
 	s.mockConfig.EXPECT().Get("http.drivers.gin.template").Return(nil).Once()
 
-	s.route.GlobalMiddleware(func(ctx contractshttp.Context) {
-		ctx.Response().Header("global", "goravel")
-		ctx.Request().Next()
-
-		s.Equal("Goravel", ctx.Response().Origin().Body().String())
-		s.Equal("goravel", ctx.Response().Origin().Header().Get("global"))
-		s.Equal(7, ctx.Response().Origin().Size())
-		s.Equal(http.StatusOK, ctx.Response().Origin().Status())
-	})
+	s.route.GlobalMiddleware(&contextResponseTestMiddleware{s: s})
 	s.route.Get("/origin", func(ctx contractshttp.Context) contractshttp.Response {
 		return ctx.Response().String(http.StatusOK, "Goravel")
 	})
@@ -396,26 +388,52 @@ func (s *ContextResponseSuite) request(method, url string, body io.Reader) (int,
 	return w.Code, w.Body.String(), w.Header(), w.Result().Cookies()
 }
 
-func testJson() contractshttp.Middleware {
-	return func(ctx contractshttp.Context) {
-		err := ctx.Response().Json(contractshttp.StatusOK, map[string]any{
-			"name": "abort json",
-		}).Abort()
-		if err != nil {
-			panic(err)
-		}
-		ctx.Request().Next()
+type testJsonMiddleware struct{}
+type testRedirectMiddleware struct{}
+type contextResponseTestMiddleware struct {
+	s *ContextResponseSuite
+}
+
+func (m *testJsonMiddleware) Signature() string     { return "testJson" }
+func (m *testRedirectMiddleware) Signature() string { return "testRedirect" }
+func (m *contextResponseTestMiddleware) Signature() string {
+	return "contextResponseTest"
+}
+
+func (m *testJsonMiddleware) Handle(ctx contractshttp.Context) {
+	err := ctx.Response().Json(contractshttp.StatusOK, map[string]any{
+		"name": "abort json",
+	}).Abort()
+	if err != nil {
+		panic(err)
 	}
+	ctx.Request().Next()
+}
+
+func (m *testRedirectMiddleware) Handle(ctx contractshttp.Context) {
+	err := ctx.Response().Redirect(contractshttp.StatusMovedPermanently, "/abort-redirected").Abort()
+	if err != nil {
+		panic(err)
+	}
+	ctx.Request().Next()
+}
+
+func (m *contextResponseTestMiddleware) Handle(ctx contractshttp.Context) {
+	ctx.Response().Header("global", "goravel")
+	ctx.Request().Next()
+
+	m.s.Equal("Goravel", ctx.Response().Origin().Body().String())
+	m.s.Equal("goravel", ctx.Response().Origin().Header().Get("global"))
+	m.s.Equal(7, ctx.Response().Origin().Size())
+	m.s.Equal(http.StatusOK, ctx.Response().Origin().Status())
+}
+
+func testJson() contractshttp.Middleware {
+	return &testJsonMiddleware{}
 }
 
 func testRedirect() contractshttp.Middleware {
-	return func(ctx contractshttp.Context) {
-		err := ctx.Response().Redirect(contractshttp.StatusMovedPermanently, "/abort-redirected").Abort()
-		if err != nil {
-			panic(err)
-		}
-		ctx.Request().Next()
-	}
+	return &testRedirectMiddleware{}
 }
 
 func TestRemoveSetCookie(t *testing.T) {

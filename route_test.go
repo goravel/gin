@@ -143,7 +143,7 @@ func (s *RouteTestSuite) TestGlobalMiddleware() {
 	s.mockConfig.EXPECT().GetInt("http.drivers.gin.body_limit", 4096).Return(4096).Once()
 	s.mockConfig.EXPECT().Get("http.drivers.gin.template").Return(nil).Once()
 
-	middleware := func(ctx contractshttp.Context) {}
+	middleware := &routeTestMiddleware{}
 	s.route.GlobalMiddleware(middleware)
 	s.Len(s.route.instance.Handlers, 3)
 }
@@ -828,3 +828,8 @@ func (r *FileImageJson) Attributes(ctx contractshttp.Context) map[string]string 
 func (r *FileImageJson) PrepareForValidation(ctx contractshttp.Context, data validation.Data) error {
 	return nil
 }
+
+type routeTestMiddleware struct{}
+
+func (m *routeTestMiddleware) Signature() string       { return "routeTest" }
+func (m *routeTestMiddleware) Handle(ctx contractshttp.Context) {}

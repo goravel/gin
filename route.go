@@ -27,6 +27,21 @@ var routes = make(map[string]map[string]contractshttp.Info)
 
 var globalRecoverCallback func(ctx contractshttp.Context, err any) = defaultRecoverCallback
 
+type recoverMiddleware struct{}
+
+func (r *recoverMiddleware) Signature() string {
+	return "recover"
+}
+
+func (r *recoverMiddleware) Handle(ctx contractshttp.Context) {
+	defer func() {
+		if err := recover(); err != nil {
+			globalRecoverCallback(ctx, err)
+		}
+	}()
+	ctx.Request().Next()
+}
+
 type Route struct {
 	route.Router
 	config           config.Config
@@ -264,15 +279,7 @@ func (r *Route) init(globalMiddleware []contractshttp.Middleware) error {
 		ginMiddleware = append(ginMiddleware, logMiddleware())
 	}
 
-	recoverMiddleware := func(ctx contractshttp.Context) {
-		defer func() {
-			if err := recover(); err != nil {
-				globalRecoverCallback(ctx, err)
-			}
-		}()
-		ctx.Request().Next()
-	}
-	globalMiddleware = append([]contractshttp.Middleware{recoverMiddleware}, globalMiddleware...)
+	globalMiddleware = append([]contractshttp.Middleware{&recoverMiddleware{}}, globalMiddleware...)
 	engine.Use(append(ginMiddleware, middlewaresToGinHandlers(globalMiddleware)...)...)
 
 	template := r.config.Get("http.drivers." + r.driver + ".template")
