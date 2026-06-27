@@ -2,6 +2,7 @@ package gin
 
 import (
 	"fmt"
+	"reflect"
 	"regexp"
 	"strings"
 	"time"
@@ -35,7 +36,9 @@ func handlerToGinHandler(handler httpcontract.HandlerFunc) gin.HandlerFunc {
 		}()
 
 		if response := handler(context); response != nil {
-			_ = response.Render()
+			if c.Request == nil || c.Request.Context().Err() == nil {
+				_ = response.Render()
+			}
 		}
 	}
 }
@@ -51,8 +54,33 @@ func middlewareToGinHandler(middleware httpcontract.Middleware) gin.HandlerFunc 
 			contextPool.Put(context)
 		}()
 
+		routeInfo := context.Request().Info()
+		if routeInfo.ExcludedMiddleware != nil {
+			for _, excluded := range routeInfo.ExcludedMiddleware {
+				if isSameMiddleware(excluded, middleware) {
+					c.Next()
+					return
+				}
+			}
+		}
+
 		middleware(context)
 	}
+}
+
+func isSameMiddleware(a, b any) bool {
+	tA := reflect.TypeOf(a)
+	tB := reflect.TypeOf(b)
+	if tA == nil || tB == nil {
+		return false
+	}
+	if tA.Kind() == reflect.Pointer {
+		tA = tA.Elem()
+	}
+	if tB.Kind() == reflect.Pointer {
+		tB = tB.Elem()
+	}
+	return tA == tB
 }
 
 func logMiddleware() gin.HandlerFunc {
