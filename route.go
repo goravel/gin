@@ -259,10 +259,12 @@ func (r *Route) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 		// error surfaces at request time. Log it and return a 500 instead of
 		// panicking: when embedded as an http.Handler, a panic here would be
 		// recovered by net/http without any HTTP response reaching the client.
+		// The response body carries the specific compile error, so the failure stays
+		// visible to the caller even when the log is not reachable.
 		if LogFacade != nil {
 			LogFacade.WithContext(request.Context()).Error(err)
 		}
-		http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
 
 		return
 	}

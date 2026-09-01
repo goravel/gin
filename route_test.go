@@ -837,6 +837,7 @@ func TestRoute_ServeHTTP_StickyTemplateError(t *testing.T) {
 		return ctx.Response().Success().String("ok")
 	})
 
+	var body string
 	for i := 0; i < 2; i++ {
 		w := httptest.NewRecorder()
 		req, err := http.NewRequest("GET", "/", nil)
@@ -844,11 +845,14 @@ func TestRoute_ServeHTTP_StickyTemplateError(t *testing.T) {
 		route.ServeHTTP(w, req)
 
 		assert.Equal(t, http.StatusInternalServerError, w.Code)
-		assert.Equal(t, "Internal Server Error\n", w.Body.String())
+		body = w.Body.String()
 	}
 
 	// The compile error stays sticky for later serving entry points (Run/Listen) too.
 	assert.NotNil(t, route.ensureTemplate())
+	// The response body carries the specific compile error so the failure is
+	// visible to the caller even when the log is not reachable.
+	assert.Equal(t, route.ensureTemplate().Error()+"\n", body)
 }
 
 func assertHttpNormal(t *testing.T, addr string, expectNormal bool) {
