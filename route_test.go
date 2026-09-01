@@ -849,10 +849,11 @@ func TestRoute_ServeHTTP_StickyTemplateError(t *testing.T) {
 	}
 
 	// The compile error stays sticky for later serving entry points (Run/Listen) too.
-	assert.NotNil(t, route.ensureTemplate())
+	err := route.ensureTemplate()
+	assert.NotNil(t, err)
 	// The response body carries the specific compile error so the failure is
 	// visible to the caller even when the log is not reachable.
-	assert.Equal(t, route.ensureTemplate().Error()+"\n", body)
+	assert.Equal(t, err.Error()+"\n", body)
 }
 
 func assertHttpNormal(t *testing.T, addr string, expectNormal bool) {
