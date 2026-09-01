@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"sort"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -50,6 +51,8 @@ type Route struct {
 	instance         *gin.Engine
 	server           *http.Server
 	tlsServer        *http.Server
+	templateOnce     sync.Once
+	templateErr      error
 }
 
 func NewRoute(config config.Config, parameters map[string]any) (*Route, error) {
@@ -110,6 +113,10 @@ func (r *Route) GlobalMiddleware(middleware ...contractshttp.Middleware) {
 }
 
 func (r *Route) Listen(l net.Listener) error {
+	if err := r.ensureTemplate(); err != nil {
+		return err
+	}
+
 	r.outputRoutes()
 	color.Green().Println("[HTTP] Listening on: " + str.Of(l.Addr().String()).Start("http://").String())
 
@@ -131,6 +138,10 @@ func (r *Route) ListenTLS(l net.Listener) error {
 }
 
 func (r *Route) ListenTLSWithCert(l net.Listener, certFile, keyFile string) error {
+	if err := r.ensureTemplate(); err != nil {
+		return err
+	}
+
 	r.outputRoutes()
 	color.Green().Println("[HTTPS] Listening on: " + str.Of(l.Addr().String()).Start("https://").String())
 
@@ -167,6 +178,10 @@ func (r *Route) Recover(callback func(ctx contractshttp.Context, err any)) {
 }
 
 func (r *Route) Run(host ...string) error {
+	if err := r.ensureTemplate(); err != nil {
+		return err
+	}
+
 	if len(host) == 0 {
 		defaultHost := r.config.GetString("http.host")
 		defaultPort := r.config.GetString("http.port")
@@ -211,6 +226,10 @@ func (r *Route) RunTLS(host ...string) error {
 }
 
 func (r *Route) RunTLSWithCert(host, certFile, keyFile string) error {
+	if err := r.ensureTemplate(); err != nil {
+		return err
+	}
+
 	if host == "" {
 		return errors.New("host can't be empty")
 	}
@@ -235,6 +254,18 @@ func (r *Route) RunTLSWithCert(host, certFile, keyFile string) error {
 }
 
 func (r *Route) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
+	if err := r.ensureTemplate(); err != nil {
+		// ensureTemplate() runs before the recover middleware, so a template compile
+		// error surfaces at request time. Log it and return a 500 instead of
+		// panicking: when embedded as an http.Handler, a panic here would be
+		// recovered by net/http without any HTTP response reaching the client.
+		if LogFacade != nil {
+			LogFacade.WithContext(request.Context()).Error(err)
+		}
+		http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+
+		return
+	}
 	r.instance.ServeHTTP(writer, request)
 }
 
@@ -294,14 +325,10 @@ func (r *Route) init(globalMiddleware []contractshttp.Middleware) error {
 
 		engine.HTMLRender = htmlRender
 	}
-
-	if engine.HTMLRender == nil {
-		var err error
-		engine.HTMLRender, err = DefaultTemplate()
-		if err != nil {
-			return err
-		}
-	}
+	// NOTE: DefaultTemplate() is intentionally NOT called here. It is deferred to
+	// ensureTemplate(), invoked on the first Listen/Run/ServeHTTP call, so that views
+	// registered via View.LoadViewsFrom() in a provider's Boot() are picked up.
+	// See goravel/goravel#989.
 
 	r.Router = NewGroup(
 		r.config,
@@ -313,6 +340,37 @@ func (r *Route) init(globalMiddleware []contractshttp.Middleware) error {
 	r.instance = engine
 
 	return nil
+}
+
+// ensureTemplate lazily compiles the default template set on first use. It must
+// run after all service providers have booted so that ViewFacade is set and any
+// LoadViewsFrom()-registered directories are included.
+//
+// Compilation happens exactly once, at the first serve call. If no template
+// files exist, DefaultTemplate() returns (nil, nil) and HTMLRender stays nil
+// (gin's default), so views registered after that point are intentionally not
+// compiled. A compile failure is stored in templateErr and returned on every
+// call, so later requests keep failing with the real error instead of serving
+// with no renderer.
+//
+// The once/error state is Route-scoped while the compiled renderer lives on the
+// current engine (r.instance.HTMLRender), so a re-init() after first serve (via
+// GlobalMiddleware/SetGlobalMiddleware/Recover) would build a fresh engine that
+// the already-fired once will not recompile. This mirrors the bootstrap-only
+// design of re-init(), which already discards every registered route.
+func (r *Route) ensureTemplate() error {
+	r.templateOnce.Do(func() {
+		if r.instance.HTMLRender != nil {
+			return
+		}
+		var htmlRender render.HTMLRender
+		htmlRender, r.templateErr = DefaultTemplate()
+		if r.templateErr != nil {
+			return
+		}
+		r.instance.HTMLRender = htmlRender
+	})
+	return r.templateErr
 }
 
 func (r *Route) outputRoutes() {
