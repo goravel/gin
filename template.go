@@ -81,8 +81,12 @@ func NewTemplate(options RenderOptions) (*render.HTMLProduction, error) {
 	}
 
 	var extraViews []string
-	if ViewFacade != nil {
-		extraViews = ViewFacade.RegisteredViews()
+	viewFacade := ViewFacade
+	if viewFacade == nil && App != nil {
+		viewFacade = App.MakeView()
+	}
+	if viewFacade != nil {
+		extraViews = viewFacade.RegisteredViews()
 	}
 	for _, dir := range extraViews {
 		if !file.Exists(dir) {
@@ -120,6 +124,10 @@ func NewTemplate(options RenderOptions) (*render.HTMLProduction, error) {
 		}
 	}
 
+	// No views found (neither app resources/views nor registered package views):
+	// return (nil, nil) so callers keep their current renderer. For the deferred
+	// default-template path this means the template set is compiled exactly once
+	// at first serve — views registered later are not picked up.
 	if len(files) == 0 {
 		return nil, nil
 	}
