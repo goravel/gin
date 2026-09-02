@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -18,6 +19,9 @@ import (
 	"github.com/goravel/framework/contracts/validation"
 	configmocks "github.com/goravel/framework/mocks/config"
 	mockslog "github.com/goravel/framework/mocks/log"
+	mocksview "github.com/goravel/framework/mocks/view"
+	"github.com/goravel/framework/support/file"
+	"github.com/goravel/framework/support/path"
 	"github.com/spf13/cast"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -704,6 +708,154 @@ func (s *RouteTestSuite) TestTest() {
 	s.Equal("Hello, Goravel!", string(body))
 }
 
+// TestRoute_ServeHTTP_DeferredTemplatePackageViews reproduces goravel/goravel#989:
+// route.init() runs before service providers boot (ViewFacade is nil), then a
+// provider registers package views via View.LoadViewsFrom() during Boot(). The
+// default template set must be compiled lazily on the first serve call so those
+// views are included.
+func TestRoute_ServeHTTP_DeferredTemplatePackageViews(t *testing.T) {
+	// Note: path.Resource() (repo-relative resources/) is test-only scratch space;
+	// the gin repo has no resources/ directory and the defer below removes it.
+	pkgDir := path.Resource("pkg_view")
+	assert.Nil(t, os.MkdirAll(pkgDir, os.ModePerm))
+	assert.Nil(t, file.PutContent(path.Resource("pkg_view", "test.tmpl"), `{{ define "test.tmpl" }}Package View Rendered{{ end }}`))
+	defer func() {
+		ConfigFacade = nil
+		ViewFacade = nil
+		assert.Nil(t, file.Remove(path.Resource()))
+	}()
+
+	mockConfig := configmocks.NewConfig(t)
+	mockConfig.EXPECT().GetBool("app.debug").Return(false).Once()
+	mockConfig.EXPECT().GetInt("http.drivers.gin.body_limit", 4096).Return(4096).Once()
+	mockConfig.EXPECT().Get("http.drivers.gin.template").Return(nil).Once()
+	ConfigFacade = mockConfig
+
+	// init() runs before Boot(): ViewFacade is still nil at this point.
+	route := &Route{
+		config: mockConfig,
+		driver: "gin",
+	}
+	assert.Nil(t, route.init(nil))
+
+	// Boot() assigns ViewFacade and registers the package view directory.
+	mockView := mocksview.NewView(t)
+	mockView.EXPECT().RegisteredViews().Return([]string{pkgDir}).Once()
+	mockView.EXPECT().GetShared().Return(nil).Once()
+	ViewFacade = mockView
+
+	route.Get("/view", func(ctx contractshttp.Context) contractshttp.Response {
+		return ctx.Response().View().Make("test.tmpl")
+	})
+
+	w := httptest.NewRecorder()
+	req, err := http.NewRequest("GET", "/view", nil)
+	assert.Nil(t, err)
+	route.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, "Package View Rendered", w.Body.String())
+}
+
+// TestRoute_ServeHTTP_DeferredTemplateDefaultAppViews is a regression test for
+// the default case: templates from the app's resources/views directory still
+// render through the serve path when no package views are registered.
+func TestRoute_ServeHTTP_DeferredTemplateDefaultAppViews(t *testing.T) {
+	// Note: path.Resource() (repo-relative resources/) is test-only scratch space;
+	// the gin repo has no resources/ directory and the defer below removes it.
+	assert.Nil(t, os.MkdirAll(path.Resource("views"), os.ModePerm))
+	assert.Nil(t, file.PutContent(path.Resource("views", "home.tmpl"), `{{ define "home.tmpl" }}Home Rendered{{ end }}`))
+	defer func() {
+		ConfigFacade = nil
+		ViewFacade = nil
+		assert.Nil(t, file.Remove(path.Resource()))
+	}()
+
+	mockConfig := configmocks.NewConfig(t)
+	mockConfig.EXPECT().GetBool("app.debug").Return(false).Once()
+	mockConfig.EXPECT().GetInt("http.drivers.gin.body_limit", 4096).Return(4096).Once()
+	mockConfig.EXPECT().Get("http.drivers.gin.template").Return(nil).Once()
+	ConfigFacade = mockConfig
+
+	route := &Route{
+		config: mockConfig,
+		driver: "gin",
+	}
+	assert.Nil(t, route.init(nil))
+
+	mockView := mocksview.NewView(t)
+	mockView.EXPECT().RegisteredViews().Return(nil).Once()
+	mockView.EXPECT().GetShared().Return(nil).Once()
+	ViewFacade = mockView
+
+	route.Get("/home", func(ctx contractshttp.Context) contractshttp.Response {
+		return ctx.Response().View().Make("home.tmpl")
+	})
+
+	w := httptest.NewRecorder()
+	req, err := http.NewRequest("GET", "/home", nil)
+	assert.Nil(t, err)
+	route.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, "Home Rendered", w.Body.String())
+}
+
+// TestRoute_ServeHTTP_StickyTemplateError guards the ensureTemplate() contract that a
+// template compile failure is sticky: after the first request fails, later requests must
+// keep failing with a 500 through the ensureTemplate() error path instead of proceeding
+// to serve with no renderer (which would lose the real error).
+func TestRoute_ServeHTTP_StickyTemplateError(t *testing.T) {
+	// Note: path.Resource() (repo-relative resources/) is test-only scratch space;
+	// the gin repo has no resources/ directory and the defer below removes it.
+	// A malformed template makes DefaultTemplate() fail at compile time.
+	assert.Nil(t, os.MkdirAll(path.Resource("views"), os.ModePerm))
+	assert.Nil(t, file.PutContent(path.Resource("views", "bad.tmpl"), `{{ define "bad.tmpl" }}{{`))
+	defer func() {
+		ConfigFacade = nil
+		LogFacade = nil
+		ViewFacade = nil
+		assert.Nil(t, file.Remove(path.Resource()))
+	}()
+
+	mockConfig := configmocks.NewConfig(t)
+	mockConfig.EXPECT().GetBool("app.debug").Return(false).Once()
+	mockConfig.EXPECT().GetInt("http.drivers.gin.body_limit", 4096).Return(4096).Once()
+	mockConfig.EXPECT().Get("http.drivers.gin.template").Return(nil).Once()
+	ConfigFacade = mockConfig
+	// Neutralize any LogFacade left over from other tests: the ServeHTTP error path
+	// logs via LogFacade, and a stale mock would fail on the unexpected call.
+	LogFacade = nil
+
+	route := &Route{
+		config: mockConfig,
+		driver: "gin",
+	}
+	assert.Nil(t, route.init(nil))
+
+	route.Get("/", func(ctx contractshttp.Context) contractshttp.Response {
+		return ctx.Response().Success().String("ok")
+	})
+
+	var body string
+	for i := 0; i < 2; i++ {
+		w := httptest.NewRecorder()
+		req, err := http.NewRequest("GET", "/", nil)
+		assert.Nil(t, err)
+		route.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
+		body = w.Body.String()
+	}
+
+	// The compile error stays sticky for later serving entry points (Run/Listen) too.
+	err := route.ensureTemplate()
+	assert.NotNil(t, err)
+	// The response body carries the specific compile error so the failure is
+	// visible to the caller even when the log is not reachable.
+	assert.Equal(t, err.Error()+"\n", body)
+}
+
 func assertHttpNormal(t *testing.T, addr string, expectNormal bool) {
 	resp, err := http.DefaultClient.Get(addr)
 	if !expectNormal {
@@ -831,5 +983,5 @@ func (r *FileImageJson) PrepareForValidation(ctx contractshttp.Context, data val
 
 type routeTestMiddleware struct{}
 
-func (m *routeTestMiddleware) Signature() string       { return "routeTest" }
+func (m *routeTestMiddleware) Signature() string                { return "routeTest" }
 func (m *routeTestMiddleware) Handle(ctx contractshttp.Context) {}
