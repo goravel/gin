@@ -82,6 +82,10 @@ func NewTemplate(options RenderOptions) (*render.HTMLProduction, error) {
 		loaded = true
 	}
 
+	// No views found (neither app resources/views nor registered package views or
+	// filesystems): return (nil, nil) so callers keep their current renderer. For
+	// the deferred default-template path this means the template set is compiled
+	// exactly once at first serve — views registered later are not picked up.
 	if !loaded {
 		return nil, nil
 	}
@@ -101,17 +105,21 @@ func viewSources() []viewSource {
 		sources = append(sources, dirSource(dir, true))
 	}
 
-	if ViewFacade == nil {
+	viewFacade := ViewFacade
+	if viewFacade == nil && App != nil {
+		viewFacade = App.MakeView()
+	}
+	if viewFacade == nil {
 		return sources
 	}
 
-	for _, dir := range ViewFacade.RegisteredViews() {
+	for _, dir := range viewFacade.RegisteredViews() {
 		if file.Exists(dir) {
 			sources = append(sources, dirSource(dir, false))
 		}
 	}
 
-	for i, fsys := range ViewFacade.RegisteredViewFS() {
+	for i, fsys := range viewFacade.RegisteredViewFS() {
 		if _, err := fs.Stat(fsys, "."); err != nil {
 			continue
 		}
