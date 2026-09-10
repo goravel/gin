@@ -5,6 +5,7 @@ import (
 	"html/template"
 	"io/fs"
 	"os"
+	stdpath "path"
 	"path/filepath"
 	"regexp"
 
@@ -27,11 +28,61 @@ var (
 	defineRe = regexp.MustCompile(`\{\{\s*define\s+"([^"]+)"`)
 )
 
-// common type for view sources, wrapping an fs.FS and providing collision warning display.
+// viewTier is the precedence class of a view source. Lower tiers win
+// Sequentially: tierApp > tierDir > tierFS.
+type viewTier int
+
+const (
+	tierApp viewTier = iota
+	tierDir
+	tierFS
+)
+
 type viewSource struct {
-	fsys          fs.FS
-	display       func(name string) string
-	isAppResource bool
+	fsys fs.FS
+	tier viewTier
+	// root labels the source: the directory path for tierApp and tierDir,
+	// "fs[i]" (i being the LoadViewsFromFS registration index) for tierFS.
+	root string
+}
+
+// pathOf renders name, a slash-separated path inside the source, for display.
+func (s viewSource) pathOf(name string) string {
+	if s.tier == tierFS {
+		return s.root + "/" + name
+	}
+	return filepath.Join(s.root, filepath.FromSlash(name))
+}
+
+// viewDefines tracks the template name each precedence tier has already claimed,
+// so the first source to define a name wins.
+type viewDefines struct {
+	app map[string]string
+	pkg map[string]string
+}
+
+// claim records defineName for source and reports whether source may contribute
+// it. A name already claimed by the application is dropped silently; one already
+// claimed by an earlier package source is dropped with a warning.
+func (d viewDefines) claim(source viewSource, name, defineName string) bool {
+	fullPath := source.pathOf(name)
+
+	if source.tier == tierApp {
+		d.app[defineName] = fullPath
+		return true
+	}
+	if _, ok := d.app[defineName]; ok {
+		return false
+	}
+	if prevFile, ok := d.pkg[defineName]; ok {
+		if LogFacade != nil {
+			LogFacade.Warningf("view collision: %q defined in %q and %q, using first", defineName, prevFile, fullPath)
+		}
+		return false
+	}
+
+	d.pkg[defineName] = fullPath
+	return true
 }
 
 func extractDefineName(content string, leftDelim string) string {
@@ -62,24 +113,15 @@ func NewTemplate(options RenderOptions) (*render.HTMLProduction, error) {
 		leftDelim = options.Delims.Left
 	}
 
-	appDefines := make(map[string]string)
-	pkgDefines := make(map[string]string)
+	defines := viewDefines{app: make(map[string]string), pkg: make(map[string]string)}
 	loaded := false
 
-	// Precedence: application views > package directories > package filesystems,
-	// each in registration order.
 	for _, source := range viewSources() {
-		files, err := collectTemplates(source, leftDelim, appDefines, pkgDefines)
+		contributed, err := loadSource(instance, source, leftDelim, defines)
 		if err != nil {
 			return nil, err
 		}
-		if len(files) == 0 {
-			continue
-		}
-		if _, err := instance.ParseFS(source.fsys, files...); err != nil {
-			return nil, err
-		}
-		loaded = true
+		loaded = loaded || contributed
 	}
 
 	// No views found (neither app resources/views nor registered package views or
@@ -97,12 +139,12 @@ func DefaultTemplate() (*render.HTMLProduction, error) {
 	return NewTemplate(RenderOptions{})
 }
 
-// returns every existing template source in precedence order.
+// viewSources returns every existing template source in precedence order:
 func viewSources() []viewSource {
 	var sources []viewSource
 
 	if dir := path.Resource("views"); file.Exists(dir) {
-		sources = append(sources, dirSource(dir, true))
+		sources = append(sources, viewSource{fsys: os.DirFS(dir), tier: tierApp, root: dir})
 	}
 
 	viewFacade := ViewFacade
@@ -115,37 +157,37 @@ func viewSources() []viewSource {
 
 	for _, dir := range viewFacade.RegisteredViews() {
 		if file.Exists(dir) {
-			sources = append(sources, dirSource(dir, false))
+			sources = append(sources, viewSource{fsys: os.DirFS(dir), tier: tierDir, root: dir})
 		}
 	}
 
+	// Labels keep the registration index, so a skipped filesystem still consumes
+	// its slot and warnings point at the position the package registered.
 	for i, fsys := range viewFacade.RegisteredViewFS() {
-		if _, err := fs.Stat(fsys, "."); err != nil {
+		if fsys == nil {
+			if LogFacade != nil {
+				LogFacade.Warningf("view source fs[%d] is nil, skipping", i)
+			}
 			continue
 		}
-		sources = append(sources, viewSource{
-			fsys: fsys,
-			display: func(name string) string {
-				return fmt.Sprintf("fs[%d]/%s", i, name)
-			},
-		})
+		if _, err := fs.Stat(fsys, "."); err != nil {
+			if LogFacade != nil {
+				LogFacade.Warningf("view source fs[%d] is unreadable, skipping: %v", i, err)
+			}
+			continue
+		}
+		sources = append(sources, viewSource{fsys: fsys, tier: tierFS, root: fmt.Sprintf("fs[%d]", i)})
 	}
 
 	return sources
 }
 
-func dirSource(dir string, isAppResource bool) viewSource {
-	return viewSource{
-		fsys: os.DirFS(dir),
-		display: func(name string) string {
-			return filepath.Join(dir, filepath.FromSlash(name))
-		},
-		isAppResource: isAppResource,
-	}
-}
-
-func collectTemplates(source viewSource, leftDelim string, appDefines, pkgDefines map[string]string) ([]string, error) {
-	var files []string
+// loadSource walks source and parses every template it contributes into
+// instance, reporting whether it contributed any. Each file is read once and
+// parsed immediately, so only one file's content is held at a time. Files with
+// no define block are always parsed, since claim() has no name to dedup on.
+func loadSource(instance *template.Template, source viewSource, leftDelim string, defines viewDefines) (bool, error) {
+	contributed := false
 
 	err := fs.WalkDir(source.fsys, ".", func(name string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -155,41 +197,33 @@ func collectTemplates(source viewSource, leftDelim string, appDefines, pkgDefine
 			return nil
 		}
 
-		content, readErr := fs.ReadFile(source.fsys, name)
-		if readErr != nil {
-			return readErr
+		content, err := fs.ReadFile(source.fsys, name)
+		if err != nil {
+			return err
 		}
+		text := string(content)
 
-		defineName := extractDefineName(string(content), leftDelim)
-		if defineName == "" {
-			files = append(files, name)
-			return nil
-		}
-
-		fullPath := source.display(name)
-		if source.isAppResource {
-			appDefines[defineName] = fullPath
-			files = append(files, name)
-			return nil
-		}
-
-		if _, ok := appDefines[defineName]; ok {
-			return nil
-		}
-		if prevFile, ok := pkgDefines[defineName]; ok {
-			if LogFacade != nil {
-				LogFacade.Warningf("view collision: %q defined in %q and %q, using first", defineName, prevFile, fullPath)
+		if defineName := extractDefineName(text, leftDelim); defineName != "" {
+			if !defines.claim(source, name, defineName) {
+				return nil
 			}
-			return nil
 		}
 
-		pkgDefines[defineName] = fullPath
-		files = append(files, name)
+		// Mirrors html/template.ParseFS: every file becomes an associated template
+		// named after its base. The content is parsed directly instead of going
+		// through ParseFS, which would re-read the file and — because it resolves
+		// names through fs.Glob — mangle or fail on any name containing "[", "*"
+		// or "?".
+		if _, err := instance.New(stdpath.Base(name)).Parse(text); err != nil {
+			return err
+		}
+		contributed = true
+
 		return nil
 	})
 	if err != nil {
-		return nil, err
+		return false, err
 	}
 
-	return files, nil
+	return contributed, nil
 }

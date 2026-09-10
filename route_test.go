@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"io"
+	"io/fs"
 	"mime/multipart"
 	"net"
 	"net/http"
@@ -756,6 +757,49 @@ func TestRoute_ServeHTTP_DeferredTemplatePackageViews(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 	assert.Equal(t, "Package View Rendered", w.Body.String())
+}
+
+// TestRoute_ServeHTTP_DeferredTemplateEmbeddedViews is the goravel/goravel#989
+// counterpart for embedded views: a provider registers an embed.FS via
+// View.LoadViewsFromFS() during Boot(), after route.init() has already run, and
+// the template set compiled on the first serve call must include it.
+func TestRoute_ServeHTTP_DeferredTemplateEmbeddedViews(t *testing.T) {
+	defer func() {
+		ConfigFacade = nil
+		ViewFacade = nil
+	}()
+
+	mockConfig := configmocks.NewConfig(t)
+	mockConfig.EXPECT().GetBool("app.debug").Return(false).Once()
+	mockConfig.EXPECT().GetInt("http.drivers.gin.body_limit", 4096).Return(4096).Once()
+	mockConfig.EXPECT().Get("http.drivers.gin.template").Return(nil).Once()
+	ConfigFacade = mockConfig
+
+	// init() runs before Boot(): ViewFacade is still nil at this point.
+	route := &Route{
+		config: mockConfig,
+		driver: "gin",
+	}
+	assert.Nil(t, route.init(nil))
+
+	// Boot() assigns ViewFacade and registers the embedded filesystem.
+	mockView := mocksview.NewView(t)
+	mockView.EXPECT().RegisteredViews().Return(nil).Once()
+	mockView.EXPECT().RegisteredViewFS().Return([]fs.FS{subFS(t, embeddedViews, "testdata/views")}).Once()
+	mockView.EXPECT().GetShared().Return(nil).Once()
+	ViewFacade = mockView
+
+	route.Get("/embedded", func(ctx contractshttp.Context) contractshttp.Response {
+		return ctx.Response().View().Make("pages/home.tmpl", map[string]any{"Title": "Home", "Nav": "Menu"})
+	})
+
+	w := httptest.NewRecorder()
+	req, err := http.NewRequest("GET", "/embedded", nil)
+	assert.Nil(t, err)
+	route.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, "<html><body><nav>Menu</nav><main><h1>Home</h1></main></body></html>", w.Body.String())
 }
 
 // TestRoute_ServeHTTP_DeferredTemplateDefaultAppViews is a regression test for
