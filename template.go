@@ -28,8 +28,8 @@ var (
 	defineRe = regexp.MustCompile(`\{\{\s*define\s+"([^"]+)"`)
 )
 
-// viewTier is the precedence class of a view source. Lower tiers win
-// Sequentially: tierApp > tierDir > tierFS.
+// viewTier is the precedence class of a view source. Lower-numbered tiers take
+// precedence, in the order tierApp, tierDir, tierFS.
 type viewTier int
 
 const (
@@ -38,20 +38,22 @@ const (
 	tierFS
 )
 
+// viewSource is a filesystem that contributes templates at a given precedence tier.
 type viewSource struct {
 	fsys fs.FS
 	tier viewTier
-	// root labels the source: the directory path for tierApp and tierDir,
-	// "fs[i]" (i being the LoadViewsFromFS registration index) for tierFS.
-	root string
+	// label identifies the source in warnings: the directory path for tierApp
+	// and tierDir, "fs[i]" (i being the LoadViewsFromFS registration index) for
+	// tierFS.
+	label string
 }
 
 // pathOf renders name, a slash-separated path inside the source, for display.
 func (s viewSource) pathOf(name string) string {
 	if s.tier == tierFS {
-		return s.root + "/" + name
+		return s.label + "/" + name
 	}
-	return filepath.Join(s.root, filepath.FromSlash(name))
+	return filepath.Join(s.label, filepath.FromSlash(name))
 }
 
 // viewDefines tracks the template name each precedence tier has already claimed,
@@ -61,27 +63,27 @@ type viewDefines struct {
 	pkg map[string]string
 }
 
-// claim records defineName for source and reports whether source may contribute
+// claim records templateName for source and reports whether source may contribute
 // it. A name already claimed by the application is dropped silently; one already
 // claimed by an earlier package source is dropped with a warning.
-func (d viewDefines) claim(source viewSource, name, defineName string) bool {
+func (d *viewDefines) claim(source viewSource, name, templateName string) bool {
 	fullPath := source.pathOf(name)
 
 	if source.tier == tierApp {
-		d.app[defineName] = fullPath
+		d.app[templateName] = fullPath
 		return true
 	}
-	if _, ok := d.app[defineName]; ok {
+	if _, ok := d.app[templateName]; ok {
 		return false
 	}
-	if prevFile, ok := d.pkg[defineName]; ok {
+	if prevFile, ok := d.pkg[templateName]; ok {
 		if LogFacade != nil {
-			LogFacade.Warningf("view collision: %q defined in %q and %q, using first", defineName, prevFile, fullPath)
+			LogFacade.Warningf("view collision: %q defined in %q and %q, using first", templateName, prevFile, fullPath)
 		}
 		return false
 	}
 
-	d.pkg[defineName] = fullPath
+	d.pkg[templateName] = fullPath
 	return true
 }
 
@@ -113,7 +115,7 @@ func NewTemplate(options RenderOptions) (*render.HTMLProduction, error) {
 		leftDelim = options.Delims.Left
 	}
 
-	defines := viewDefines{app: make(map[string]string), pkg: make(map[string]string)}
+	defines := &viewDefines{app: make(map[string]string), pkg: make(map[string]string)}
 	loaded := false
 
 	for _, source := range viewSources() {
@@ -139,12 +141,14 @@ func DefaultTemplate() (*render.HTMLProduction, error) {
 	return NewTemplate(RenderOptions{})
 }
 
-// viewSources returns every existing template source in precedence order:
+// viewSources returns every existing template source in precedence order: the
+// application's resources/views, then directories registered via LoadViewsFrom,
+// then filesystems registered via LoadViewsFromFS, each in registration order.
 func viewSources() []viewSource {
 	var sources []viewSource
 
 	if dir := path.Resource("views"); file.Exists(dir) {
-		sources = append(sources, viewSource{fsys: os.DirFS(dir), tier: tierApp, root: dir})
+		sources = append(sources, viewSource{fsys: os.DirFS(dir), tier: tierApp, label: dir})
 	}
 
 	viewFacade := ViewFacade
@@ -157,7 +161,7 @@ func viewSources() []viewSource {
 
 	for _, dir := range viewFacade.RegisteredViews() {
 		if file.Exists(dir) {
-			sources = append(sources, viewSource{fsys: os.DirFS(dir), tier: tierDir, root: dir})
+			sources = append(sources, viewSource{fsys: os.DirFS(dir), tier: tierDir, label: dir})
 		}
 	}
 
@@ -176,7 +180,7 @@ func viewSources() []viewSource {
 			}
 			continue
 		}
-		sources = append(sources, viewSource{fsys: fsys, tier: tierFS, root: fmt.Sprintf("fs[%d]", i)})
+		sources = append(sources, viewSource{fsys: fsys, tier: tierFS, label: fmt.Sprintf("fs[%d]", i)})
 	}
 
 	return sources
@@ -184,9 +188,10 @@ func viewSources() []viewSource {
 
 // loadSource walks source and parses every template it contributes into
 // instance, reporting whether it contributed any. Each file is read once and
-// parsed immediately, so only one file's content is held at a time. Files with
-// no define block are always parsed, since claim() has no name to dedup on.
-func loadSource(instance *template.Template, source viewSource, leftDelim string, defines viewDefines) (bool, error) {
+// parsed immediately, so only one file's content is held at a time. A file with
+// no define block is claimed under its base name, the name it is parsed as, so it
+// cannot override a same-named template from a higher-precedence source.
+func loadSource(instance *template.Template, source viewSource, leftDelim string, defines *viewDefines) (bool, error) {
 	contributed := false
 
 	err := fs.WalkDir(source.fsys, ".", func(name string, d fs.DirEntry, err error) error {
@@ -203,10 +208,12 @@ func loadSource(instance *template.Template, source viewSource, leftDelim string
 		}
 		text := string(content)
 
-		if defineName := extractDefineName(text, leftDelim); defineName != "" {
-			if !defines.claim(source, name, defineName) {
-				return nil
-			}
+		templateName := extractDefineName(text, leftDelim)
+		if templateName == "" {
+			templateName = stdpath.Base(name)
+		}
+		if !defines.claim(source, name, templateName) {
+			return nil
 		}
 
 		// Mirrors html/template.ParseFS: every file becomes an associated template

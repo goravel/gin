@@ -258,13 +258,90 @@ func TestNewTemplate_EmbeddedViews(t *testing.T) {
 		assert.Equal(t, "Embedded Content", renderView(t, RenderOptions{}, "page.tmpl", nil))
 	})
 
+	t.Run("nil or unreadable filesystem without a log facade", func(t *testing.T) {
+		defer func() { ViewFacade = nil }()
+		LogFacade = nil
+
+		missing, err := fs.Sub(fstest.MapFS{}, "does/not/exist")
+		require.NoError(t, err)
+
+		mockView := mocksview.NewView(t)
+		mockView.EXPECT().RegisteredViews().Return(nil).Once()
+		mockView.EXPECT().RegisteredViewFS().Return([]fs.FS{nil, missing, pkg}).Once()
+		ViewFacade = mockView
+
+		assert.Equal(t, "Embedded Content", renderView(t, RenderOptions{}, "page.tmpl", nil))
+	})
+
+	t.Run("app template without define overrides embedded package", func(t *testing.T) {
+		defer func() {
+			ViewFacade = nil
+			assert.Nil(t, file.Remove(path.Resource()))
+		}()
+		require.NoError(t, file.PutContent(path.Resource("views", "page.tmpl"), `App Raw`))
+
+		raw := fstest.MapFS{
+			"page.tmpl": {Data: []byte(`Package Raw`)},
+		}
+
+		mockView := mocksview.NewView(t)
+		mockView.EXPECT().RegisteredViews().Return(nil).Once()
+		mockView.EXPECT().RegisteredViewFS().Return([]fs.FS{raw, pkg}).Once()
+		ViewFacade = mockView
+
+		assert.Equal(t, "App Raw", renderView(t, RenderOptions{}, "page.tmpl", nil))
+	})
+
+	t.Run("embedded template without define cannot override app define", func(t *testing.T) {
+		defer func() {
+			ViewFacade = nil
+			assert.Nil(t, file.Remove(path.Resource()))
+		}()
+		require.NoError(t, file.PutContent(path.Resource("views", "page.tmpl"), `{{ define "page.tmpl" }}App Content{{ end }}`))
+
+		raw := fstest.MapFS{
+			"page.tmpl": {Data: []byte(`Package Raw`)},
+		}
+
+		mockView := mocksview.NewView(t)
+		mockView.EXPECT().RegisteredViews().Return(nil).Once()
+		mockView.EXPECT().RegisteredViewFS().Return([]fs.FS{raw}).Once()
+		ViewFacade = mockView
+
+		assert.Equal(t, "App Content", renderView(t, RenderOptions{}, "page.tmpl", nil))
+	})
+
+	t.Run("collision between package templates without define uses first", func(t *testing.T) {
+		defer func() {
+			ViewFacade = nil
+			LogFacade = nil
+		}()
+
+		first := fstest.MapFS{
+			"page.tmpl": {Data: []byte(`First Raw`)},
+		}
+		second := fstest.MapFS{
+			"nested/page.tmpl": {Data: []byte(`Second Raw`)},
+		}
+
+		mockLog := mockslog.NewLog(t)
+		LogFacade = mockLog
+		mockLog.EXPECT().Warningf("view collision: %q defined in %q and %q, using first", "page.tmpl", "fs[0]/page.tmpl", "fs[1]/nested/page.tmpl").Return().Once()
+
+		mockView := mocksview.NewView(t)
+		mockView.EXPECT().RegisteredViews().Return(nil).Once()
+		mockView.EXPECT().RegisteredViewFS().Return([]fs.FS{first, second}).Once()
+		ViewFacade = mockView
+
+		assert.Equal(t, "First Raw", renderView(t, RenderOptions{}, "page.tmpl", nil))
+	})
+
 	t.Run("only empty filesystems yields no renderer", func(t *testing.T) {
 		defer func() { ViewFacade = nil }()
 
 		// A readable root holding no files: the source passes the stat guard and
 		// is dropped because loadSource() finds nothing to parse.
 		empty := fstest.MapFS{"sub": {Mode: fs.ModeDir}}
-		require.NoError(t, fstest.TestFS(empty, "sub"))
 
 		mockView := mocksview.NewView(t)
 		mockView.EXPECT().RegisteredViews().Return(nil).Once()
