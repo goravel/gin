@@ -62,6 +62,7 @@ func TestNewTemplate_PackageViews(t *testing.T) {
 
 	mockView := mocksview.NewView(t)
 	mockView.EXPECT().RegisteredViews().Return([]string{pkgDir}).Once()
+	mockView.EXPECT().RegisteredViewFS().Return(nil).Once()
 	ViewFacade = mockView
 
 	r, err := NewTemplate(RenderOptions{})
@@ -89,6 +90,7 @@ func TestNewTemplate_AppOverridesPackage(t *testing.T) {
 
 	mockView := mocksview.NewView(t)
 	mockView.EXPECT().RegisteredViews().Return([]string{pkgDir}).Once()
+	mockView.EXPECT().RegisteredViewFS().Return(nil).Once()
 	ViewFacade = mockView
 
 	r, err := NewTemplate(RenderOptions{})
@@ -127,6 +129,7 @@ func TestNewTemplate_PackageCollision(t *testing.T) {
 
 	mockView := mocksview.NewView(t)
 	mockView.EXPECT().RegisteredViews().Return([]string{dir1, dir2}).Once()
+	mockView.EXPECT().RegisteredViewFS().Return(nil).Once()
 	ViewFacade = mockView
 
 	r, err := NewTemplate(RenderOptions{})
@@ -161,6 +164,7 @@ func TestNewTemplate_ExtraViewsNilOrEmpty(t *testing.T) {
 	t.Run("empty registered views", func(t *testing.T) {
 		mockView := mocksview.NewView(t)
 		mockView.EXPECT().RegisteredViews().Return([]string{}).Once()
+		mockView.EXPECT().RegisteredViewFS().Return(nil).Once()
 		ViewFacade = mockView
 
 		r, err := NewTemplate(RenderOptions{})
@@ -210,6 +214,7 @@ func TestNewTemplate_CustomDelims(t *testing.T) {
 
 	mockView := mocksview.NewView(t)
 	mockView.EXPECT().RegisteredViews().Return([]string{pkgDir}).Once()
+	mockView.EXPECT().RegisteredViewFS().Return(nil).Once()
 	ViewFacade = mockView
 
 	options := RenderOptions{
@@ -241,6 +246,7 @@ func TestNewTemplate_CustomDelimsCollision(t *testing.T) {
 
 	mockView := mocksview.NewView(t)
 	mockView.EXPECT().RegisteredViews().Return([]string{pkg1, pkg2}).Once()
+	mockView.EXPECT().RegisteredViewFS().Return(nil).Once()
 	ViewFacade = mockView
 
 	options := RenderOptions{
@@ -268,6 +274,7 @@ func TestNewTemplate_CustomFuncMap(t *testing.T) {
 
 	mockView := mocksview.NewView(t)
 	mockView.EXPECT().RegisteredViews().Return([]string{pkgDir}).Once()
+	mockView.EXPECT().RegisteredViewFS().Return(nil).Once()
 	ViewFacade = mockView
 
 	options := RenderOptions{
