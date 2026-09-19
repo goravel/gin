@@ -211,3 +211,53 @@ func TestTimeoutMiddleware(t *testing.T) {
 		globalRecoverCallback = defaultRecoverCallback
 	})
 }
+
+func TestTimeoutMiddleware_UnmatchedRoute(t *testing.T) {
+	mockConfig := mocksconfig.NewConfig(t)
+	mockConfig.EXPECT().GetInt("http.drivers.gin.body_limit", 4096).Return(4096).Once()
+	mockConfig.EXPECT().GetBool("app.debug").Return(false).Once()
+	mockConfig.EXPECT().Get("http.drivers.gin.template").Return(nil).Once()
+
+	route := &Route{
+		config: mockConfig,
+		driver: "gin",
+	}
+	require.NoError(t, route.init([]contractshttp.Middleware{Timeout(time.Second)}))
+
+	route.Get("/users", func(ctx contractshttp.Context) contractshttp.Response {
+		return ctx.Response().Success().String("users")
+	})
+
+	tests := []struct {
+		name   string
+		method string
+		path   string
+	}{
+		{name: "unknown path", method: http.MethodGet, path: "/unknown"},
+		{name: "unregistered method", method: http.MethodPost, path: "/users"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			req, err := http.NewRequest(test.method, test.path, nil)
+			require.NoError(t, err)
+
+			route.ServeHTTP(w, req)
+
+			assert.Equal(t, http.StatusNotFound, w.Code)
+			assert.Equal(t, "404 page not found", w.Body.String())
+		})
+	}
+
+	t.Run("matched route", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		req, err := http.NewRequest(http.MethodGet, "/users", nil)
+		require.NoError(t, err)
+
+		route.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+		assert.Equal(t, "users", w.Body.String())
+	})
+}
