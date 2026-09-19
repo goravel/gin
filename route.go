@@ -305,12 +305,17 @@ func (r *Route) init(globalMiddleware []contractshttp.Middleware) error {
 	gin.SetMode(gin.ReleaseMode)
 	gin.DisableBindValidation()
 	engine := gin.New()
-	engine.MaxMultipartMemory = int64(r.config.GetInt(fmt.Sprintf("http.drivers.%s.body_limit", r.driver), 4096)) << 10
+	bodyLimit := int64(r.config.GetInt(fmt.Sprintf("http.drivers.%s.body_limit", r.driver), 4096)) << 10
+	if bodyLimit <= 0 {
+		bodyLimit = defaultBodyLimit
+	}
+	engine.MaxMultipartMemory = bodyLimit
 
 	ginMiddleware := []gin.HandlerFunc{}
 	if r.config.GetBool("app.debug") {
 		ginMiddleware = append(ginMiddleware, logMiddleware())
 	}
+	ginMiddleware = append(ginMiddleware, bodyLimitMiddleware(bodyLimit))
 
 	globalMiddleware = append([]contractshttp.Middleware{&recoverMiddleware{}}, globalMiddleware...)
 	engine.Use(append(ginMiddleware, middlewaresToGinHandlers(globalMiddleware)...)...)

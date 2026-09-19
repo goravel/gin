@@ -150,7 +150,7 @@ func (s *RouteTestSuite) TestGlobalMiddleware() {
 
 	middleware := &routeTestMiddleware{}
 	s.route.GlobalMiddleware(middleware)
-	s.Len(s.route.instance.Handlers, 3)
+	s.Len(s.route.instance.Handlers, 4)
 }
 
 func (s *RouteTestSuite) TestListen() {
