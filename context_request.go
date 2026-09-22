@@ -633,10 +633,13 @@ func getHttpBody(ctx *Context) (map[string]any, error) {
 	data := make(map[string]any)
 	if contentType == "application/json" {
 		bodyBytes, err := io.ReadAll(request.Body)
-		_ = request.Body.Close()
 		if err != nil {
+			// The body is deliberately not closed here: closing a server request
+			// body drains what is left of it, which stalls on a client that stopped
+			// sending. The server closes it itself once the response is out.
 			return nil, fmt.Errorf("retrieve json error: %w", err)
 		}
+		_ = request.Body.Close()
 
 		if len(bodyBytes) > 0 {
 			if err := json.Unmarshal(bodyBytes, &data); err != nil {

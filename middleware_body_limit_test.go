@@ -1,14 +1,18 @@
 package gin
 
 import (
+	"bufio"
 	"bytes"
+	"fmt"
 	"io"
 	"mime/multipart"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	contractshttp "github.com/goravel/framework/contracts/http"
 	mocksconfig "github.com/goravel/framework/mocks/config"
@@ -162,16 +166,13 @@ func TestBodyLimitMiddleware(t *testing.T) {
 			var body io.Reader
 			if test.body != "" {
 				body = strings.NewReader(test.body)
-				if test.chunked {
-					// Hide the length so the request looks like a chunked one.
-					body = io.MultiReader(body)
-				}
 			}
 
 			req, err := http.NewRequest(test.method, test.path, body)
 			require.NoError(t, err)
 			if test.chunked {
 				req.ContentLength = -1
+				req.TransferEncoding = []string{"chunked"}
 			}
 			if test.contentType != "" {
 				req.Header.Set("Content-Type", test.contentType)
@@ -215,7 +216,54 @@ func TestBodyLimitMiddleware_DefaultLimit(t *testing.T) {
 	}
 }
 
+func TestBodyLimitMiddleware_StalledChunkedBodyReadByHandler(t *testing.T) {
+	route := newBodyLimitTestRoute(t, 1)
+	route.Post("/raw", func(ctx contractshttp.Context) contractshttp.Response {
+		_, err := io.ReadAll(ctx.Request().Origin().Body)
+		if isBodyTooLarge(err) {
+			return ctx.Response().String(http.StatusBadRequest, "too large")
+		}
+
+		return ctx.Response().String(http.StatusOK, "ok")
+	})
+
+	response := stalledChunkedRequest(t, route, "/raw", "application/octet-stream")
+
+	assert.Equal(t, http.StatusBadRequest, response.StatusCode)
+}
+
+func TestBodyLimitMiddleware_StalledChunkedJson(t *testing.T) {
+	route := newBodyLimitTestRoute(t, 1)
+	route.Post("/input", func(ctx contractshttp.Context) contractshttp.Response {
+		return ctx.Response().String(http.StatusOK, ctx.Request().Input("name"))
+	})
+
+	response := stalledChunkedRequest(t, route, "/input", "application/json")
+
+	assert.Equal(t, http.StatusRequestEntityTooLarge, response.StatusCode)
+}
+
+func TestBodyLimitMiddleware_ContentLengthOverLimitIsNotRead(t *testing.T) {
+	route := newBodyLimitTestRoute(t, 1)
+	route.Post("/input", func(ctx contractshttp.Context) contractshttp.Response {
+		return ctx.Response().String(http.StatusOK, "ok")
+	})
+
+	body := &countingReader{}
+	request := httptest.NewRequest(http.MethodPost, "/input", body)
+	request.ContentLength = 2048
+	request.Header.Set("Content-Type", "application/json")
+
+	recorder := httptest.NewRecorder()
+	route.ServeHTTP(recorder, request)
+
+	assert.Equal(t, http.StatusRequestEntityTooLarge, recorder.Code)
+	assert.Zero(t, body.reads, "a body already known to be over the limit must not be read")
+}
+
 func newBodyLimitTestRoute(t *testing.T, limit int) *Route {
+	t.Helper()
+
 	mockConfig := mocksconfig.NewConfig(t)
 	mockConfig.EXPECT().GetInt("http.drivers.gin.body_limit", 4096).Return(limit).Once()
 	mockConfig.EXPECT().GetBool("app.debug").Return(false).Once()
@@ -231,6 +279,8 @@ func newBodyLimitTestRoute(t *testing.T, limit int) *Route {
 }
 
 func multipartBody(t *testing.T, size int) (string, string) {
+	t.Helper()
+
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 	part, err := writer.CreateFormFile("file", "file.txt")
@@ -240,4 +290,42 @@ func multipartBody(t *testing.T, size int) (string, string) {
 	require.NoError(t, writer.Close())
 
 	return body.String(), writer.FormDataContentType()
+}
+
+// stalledChunkedRequest sends a chunked request that goes over the limit and then
+// stops sending: no terminating chunk, no close. The response has to come back
+// anyway, otherwise the server is left reading from a peer that says nothing and
+// no read timeout is configured on it.
+func stalledChunkedRequest(t *testing.T, route *Route, path, contentType string) *http.Response {
+	t.Helper()
+
+	server := httptest.NewServer(route)
+	t.Cleanup(server.Close)
+
+	conn, err := net.Dial("tcp", server.Listener.Addr().String())
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = conn.Close() })
+
+	chunk := strings.Repeat("a", 2048)
+	_, err = fmt.Fprintf(conn, "POST %s HTTP/1.1\r\nHost: goravel\r\nContent-Type: %s\r\n"+
+		"Transfer-Encoding: chunked\r\n\r\n%x\r\n%s\r\n", path, contentType, len(chunk), chunk)
+	require.NoError(t, err)
+
+	require.NoError(t, conn.SetReadDeadline(time.Now().Add(10*time.Second)))
+	response, err := http.ReadResponse(bufio.NewReader(conn), nil)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = response.Body.Close() })
+
+	return response
+}
+
+// countingReader records how many times the body was read.
+type countingReader struct {
+	reads int
+}
+
+func (r *countingReader) Read(p []byte) (int, error) {
+	r.reads++
+
+	return 0, io.EOF
 }
