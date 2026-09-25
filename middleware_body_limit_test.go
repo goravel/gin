@@ -198,12 +198,14 @@ func TestBodyLimitMiddleware_DefaultLimit(t *testing.T) {
 		return ctx.Response().String(http.StatusOK, "%d", len(body))
 	})
 
+	const wantLimit = 4096 << 10
+
 	for _, test := range []struct {
 		size     int
 		wantCode int
 	}{
-		{size: defaultBodyLimit, wantCode: http.StatusOK},
-		{size: defaultBodyLimit + 1, wantCode: http.StatusRequestEntityTooLarge},
+		{size: wantLimit, wantCode: http.StatusOK},
+		{size: wantLimit + 1, wantCode: http.StatusRequestEntityTooLarge},
 	} {
 		req, err := http.NewRequest(http.MethodPost, "/raw", bytes.NewReader(make([]byte, test.size)))
 		require.NoError(t, err)
@@ -261,6 +263,22 @@ func TestBodyLimitMiddleware_ContentLengthOverLimitIsNotRead(t *testing.T) {
 	assert.Zero(t, body.reads, "a body already known to be over the limit must not be read")
 }
 
+// The server drains up to 256 KB of an unread body before it writes the response,
+// so a declared length under that from a client that stopped sending would stall
+// the 413 unless the connection is marked for close.
+func TestBodyLimitMiddleware_StalledContentLengthOverLimit(t *testing.T) {
+	route := newBodyLimitTestRoute(t, 1)
+	route.Post("/input", func(ctx contractshttp.Context) contractshttp.Response {
+		return ctx.Response().String(http.StatusOK, "ok")
+	})
+
+	response := stalledRequest(t, route, "/input",
+		"Content-Type: application/json\r\nContent-Length: 204800", strings.Repeat("a", 2048))
+
+	assert.Equal(t, http.StatusRequestEntityTooLarge, response.StatusCode)
+	assert.True(t, response.Close)
+}
+
 func newBodyLimitTestRoute(t *testing.T, limit int) *Route {
 	t.Helper()
 
@@ -292,12 +310,14 @@ func multipartBody(t *testing.T, size int) (string, string) {
 	return body.String(), writer.FormDataContentType()
 }
 
-// stalledChunkedRequest sends a chunked request that goes over the limit and then
-// stops sending: no terminating chunk, no close. The response has to come back
-// anyway, otherwise the server is left reading from a peer that says nothing and
-// no read timeout is configured on it.
-func stalledChunkedRequest(t *testing.T, route *Route, path, contentType string) *http.Response {
+// stalledRequest sends a request whose body goes over the limit and then stops
+// sending: the rest of the body never comes and the connection stays open. The
+// response has to come back anyway, otherwise the server is left reading from a
+// peer that says nothing and no read timeout is configured on it.
+func stalledRequest(t *testing.T, route *Route, path, headers, body string) *http.Response {
 	t.Helper()
+
+	const timeout = 2 * time.Second
 
 	server := httptest.NewServer(route)
 	t.Cleanup(server.Close)
@@ -306,17 +326,26 @@ func stalledChunkedRequest(t *testing.T, route *Route, path, contentType string)
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = conn.Close() })
 
-	chunk := strings.Repeat("a", 2048)
-	_, err = fmt.Fprintf(conn, "POST %s HTTP/1.1\r\nHost: goravel\r\nContent-Type: %s\r\n"+
-		"Transfer-Encoding: chunked\r\n\r\n%x\r\n%s\r\n", path, contentType, len(chunk), chunk)
+	require.NoError(t, conn.SetWriteDeadline(time.Now().Add(timeout)))
+	_, err = fmt.Fprintf(conn, "POST %s HTTP/1.1\r\nHost: goravel\r\n%s\r\n\r\n%s", path, headers, body)
 	require.NoError(t, err)
 
-	require.NoError(t, conn.SetReadDeadline(time.Now().Add(10*time.Second)))
+	require.NoError(t, conn.SetReadDeadline(time.Now().Add(timeout)))
 	response, err := http.ReadResponse(bufio.NewReader(conn), nil)
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = response.Body.Close() })
 
 	return response
+}
+
+func stalledChunkedRequest(t *testing.T, route *Route, path, contentType string) *http.Response {
+	t.Helper()
+
+	chunk := strings.Repeat("a", 2048)
+
+	return stalledRequest(t, route, path,
+		fmt.Sprintf("Content-Type: %s\r\nTransfer-Encoding: chunked", contentType),
+		fmt.Sprintf("%x\r\n%s\r\n", len(chunk), chunk))
 }
 
 // countingReader records how many times the body was read.

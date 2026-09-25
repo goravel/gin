@@ -7,9 +7,9 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// The body limit used when body_limit is missing or not positive, the same as
+// fiber's default.
 const (
-	// defaultBodyLimitKB matches fiber's default and is used when body_limit is
-	// missing or not positive.
 	defaultBodyLimitKB = 4096
 	defaultBodyLimit   = defaultBodyLimitKB << 10
 )
@@ -54,7 +54,11 @@ func unwrapWriter(writer http.ResponseWriter) http.ResponseWriter {
 	return writer
 }
 
+// abortBodyTooLarge answers 413 and closes the connection. Without the close the
+// server drains up to 256 KB of the unread body before writing the response, which
+// stalls on a client that stopped sending.
 func abortBodyTooLarge(c *gin.Context) {
+	c.Header("Connection", "close")
 	c.Abort()
 	c.String(http.StatusRequestEntityTooLarge, http.StatusText(http.StatusRequestEntityTooLarge))
 }
