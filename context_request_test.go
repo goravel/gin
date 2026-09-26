@@ -195,6 +195,37 @@ func (s *ContextRequestSuite) TestAll_PostWithErrorJson() {
 	s.Equal(http.StatusOK, code)
 }
 
+func (s *ContextRequestSuite) TestAll_PostWithTruncatedMultipart() {
+	originalLog := LogFacade
+	defer func() { LogFacade = originalLog }()
+
+	mockLog := mockslog.NewLog(s.T())
+	LogFacade = mockLog
+	mockLog.EXPECT().Error(mock.MatchedBy(func(msg string) bool {
+		return strings.HasPrefix(msg, "parse multipart form error:")
+	})).Once()
+
+	s.route.Middleware(testAllMiddleware()).Post("/all-with-truncated-multipart", func(ctx contractshttp.Context) contractshttp.Response {
+		return ctx.Response().Success().Json(contractshttp.Json{
+			"all": ctx.Request().All(),
+		})
+	})
+
+	// The closing boundary never arrives, as with an interrupted upload.
+	payload := strings.NewReader("--BOUNDARY\r\n" +
+		"Content-Disposition: form-data; name=\"file\"; filename=\"x.png\"\r\n" +
+		"Content-Type: image/png\r\n\r\n" +
+		"partial-bytes")
+	req, err := http.NewRequest("POST", "/all-with-truncated-multipart?a=1", payload)
+	s.Require().Nil(err)
+
+	req.Header.Set("Content-Type", "multipart/form-data; boundary=BOUNDARY")
+	code, body, _, _ := s.request(req)
+
+	s.Equal("{\"all\":{\"a\":\"1\"}}", body)
+	s.Equal(http.StatusOK, code)
+}
+
 func (s *ContextRequestSuite) TestAll_PostWithEmptyJson() {
 	s.route.Post("/all", func(ctx contractshttp.Context) contractshttp.Response {
 		return ctx.Response().Success().Json(contractshttp.Json{
