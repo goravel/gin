@@ -664,11 +664,16 @@ func getHttpBody(ctx *Context) (map[string]any, error) {
 				data[k] = v[0]
 			}
 		}
-		for k, v := range request.MultipartForm.File {
-			if len(v) > 1 {
-				data[k] = v
-			} else if len(v) == 1 {
-				data[k] = v[0]
+		// ParseMultipartForm sets PostForm before it reads the body, so if the
+		// parse failed in an earlier context of this request, or something else
+		// called ParseForm, MultipartForm is still nil here.
+		if request.MultipartForm != nil {
+			for k, v := range request.MultipartForm.File {
+				if len(v) > 1 {
+					data[k] = v
+				} else if len(v) == 1 {
+					data[k] = v[0]
+				}
 			}
 		}
 	}
