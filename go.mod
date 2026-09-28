@@ -5,7 +5,7 @@ go 1.26.0
 toolchain go1.27.1
 
 require (
-	github.com/gin-contrib/timeout v1.2.2
+	github.com/gin-contrib/timeout v1.2.3
 	github.com/gin-gonic/gin v1.12.0
 	github.com/goravel/framework v1.18.1-0.20260920090900-f54ab135fac3
 	github.com/rs/cors v1.11.1
