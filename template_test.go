@@ -50,6 +50,30 @@ func TestNewTemplate(t *testing.T) {
 	}
 }
 
+func TestNewTemplate_RelativePathNames(t *testing.T) {
+	defer func() {
+		assert.Nil(t, file.Remove(path.Resource()))
+	}()
+
+	assert.Nil(t, file.PutContent(path.Resource("views", "admin", "index.html"), "Admin"))
+	assert.Nil(t, file.PutContent(path.Resource("views", "public", "index.html"), "Public"))
+	assert.Nil(t, file.PutContent(path.Resource("views", "index.html"), "Root"))
+
+	r, err := NewTemplate(RenderOptions{})
+	assert.Nil(t, err)
+	assert.NotNil(t, r)
+
+	for name, expected := range map[string]string{
+		"admin/index.html":  "Admin",
+		"public/index.html": "Public",
+		"index.html":        "Root",
+	} {
+		var buf bytes.Buffer
+		assert.Nil(t, r.Template.ExecuteTemplate(&buf, name, nil), name)
+		assert.Equal(t, expected, buf.String(), name)
+	}
+}
+
 func TestNewTemplate_PackageViews(t *testing.T) {
 	pkgDir := path.Resource("pkg_custom")
 	defer func() {
