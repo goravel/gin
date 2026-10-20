@@ -2,6 +2,7 @@ package gin
 
 import (
 	"fmt"
+	"html/template"
 	"reflect"
 
 	"github.com/gin-gonic/gin"
@@ -26,6 +27,9 @@ func (receive *View) Make(view string, data ...any) contractshttp.Response {
 			sessionValue := session.(contractsession.Session)
 			token := sessionValue.Token()
 			shared["csrf_token"] = token
+			shared["csrf_field"] = template.HTML(
+				fmt.Sprintf(`<input type="hidden" name="_token" value="%s" />`, template.HTMLEscapeString(token)),
+			)
 		}
 	}
 	if len(data) == 0 {
