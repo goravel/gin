@@ -5,7 +5,6 @@ import (
 	"html/template"
 	"io/fs"
 	"os"
-	stdpath "path"
 	"path/filepath"
 	"regexp"
 
@@ -188,9 +187,11 @@ func viewSources() []viewSource {
 
 // loadSource walks source and parses every template it contributes into
 // instance, reporting whether it contributed any. Each file is read once and
-// parsed immediately, so only one file's content is held at a time. A file with
-// no define block is claimed under its base name, the name it is parsed as, so it
-// cannot override a same-named template from a higher-precedence source.
+// parsed immediately, so only one file's content is held at a time. Every file is
+// parsed under its slash-separated path relative to the source root, so files
+// sharing a base name in different directories stay distinct. A file with no
+// define block is claimed under that path, so it cannot override a template of
+// the same path from a higher-precedence source.
 func loadSource(instance *template.Template, source viewSource, leftDelim string, defines *viewDefines) (bool, error) {
 	contributed := false
 
@@ -210,18 +211,18 @@ func loadSource(instance *template.Template, source viewSource, leftDelim string
 
 		templateName := extractDefineName(text, leftDelim)
 		if templateName == "" {
-			templateName = stdpath.Base(name)
+			templateName = name
 		}
 		if !defines.claim(source, name, templateName) {
 			return nil
 		}
 
-		// Mirrors html/template.ParseFS: every file becomes an associated template
-		// named after its base. The content is parsed directly instead of going
-		// through ParseFS, which would re-read the file and — because it resolves
-		// names through fs.Glob — mangle or fail on any name containing "[", "*"
-		// or "?".
-		if _, err := instance.New(stdpath.Base(name)).Parse(text); err != nil {
+		// Unlike html/template.ParseFS, which names each file after its base, the
+		// file is named after its relative path. The content is parsed directly
+		// instead of going through ParseFS, which would re-read the file and —
+		// because it resolves names through fs.Glob — mangle or fail on any name
+		// containing "[", "*" or "?".
+		if _, err := instance.New(name).Parse(text); err != nil {
 			return err
 		}
 		contributed = true
