@@ -321,19 +321,63 @@ func TestNewTemplate_EmbeddedViews(t *testing.T) {
 			"page.tmpl": {Data: []byte(`First Raw`)},
 		}
 		second := fstest.MapFS{
-			"nested/page.tmpl": {Data: []byte(`Second Raw`)},
+			"page.tmpl":        {Data: []byte(`Second Raw`)},
+			"nested/page.tmpl": {Data: []byte(`Second Nested Raw`)},
 		}
 
 		mockLog := mockslog.NewLog(t)
 		LogFacade = mockLog
-		mockLog.EXPECT().Warningf("view collision: %q defined in %q and %q, using first", "page.tmpl", "fs[0]/page.tmpl", "fs[1]/nested/page.tmpl").Return().Once()
+		mockLog.EXPECT().Warningf("view collision: %q defined in %q and %q, using first", "page.tmpl", "fs[0]/page.tmpl", "fs[1]/page.tmpl").Return().Once()
 
 		mockView := mocksview.NewView(t)
 		mockView.EXPECT().RegisteredViews().Return(nil).Once()
 		mockView.EXPECT().RegisteredViewFS().Return([]fs.FS{first, second}).Once()
 		ViewFacade = mockView
 
-		assert.Equal(t, "First Raw", renderView(t, RenderOptions{}, "page.tmpl", nil))
+		r, err := NewTemplate(RenderOptions{})
+		require.NoError(t, err)
+		require.NotNil(t, r)
+
+		// Only the same relative path collides; a shared base name does not.
+		for name, expected := range map[string]string{
+			"page.tmpl":        "First Raw",
+			"nested/page.tmpl": "Second Nested Raw",
+		} {
+			var buf bytes.Buffer
+			require.NoError(t, r.Template.ExecuteTemplate(&buf, name, nil), name)
+			assert.Equal(t, expected, buf.String(), name)
+		}
+	})
+
+	t.Run("nested app template without define overrides embedded package", func(t *testing.T) {
+		defer func() {
+			ViewFacade = nil
+			assert.Nil(t, file.Remove(path.Resource()))
+		}()
+		require.NoError(t, file.PutContent(path.Resource("views", "admin", "index.tmpl"), `App Admin`))
+
+		raw := fstest.MapFS{
+			"admin/index.tmpl":  {Data: []byte(`Package Admin`)},
+			"public/index.tmpl": {Data: []byte(`Package Public`)},
+		}
+
+		mockView := mocksview.NewView(t)
+		mockView.EXPECT().RegisteredViews().Return(nil).Once()
+		mockView.EXPECT().RegisteredViewFS().Return([]fs.FS{raw}).Once()
+		ViewFacade = mockView
+
+		r, err := NewTemplate(RenderOptions{})
+		require.NoError(t, err)
+		require.NotNil(t, r)
+
+		for name, expected := range map[string]string{
+			"admin/index.tmpl":  "App Admin",
+			"public/index.tmpl": "Package Public",
+		} {
+			var buf bytes.Buffer
+			require.NoError(t, r.Template.ExecuteTemplate(&buf, name, nil), name)
+			assert.Equal(t, expected, buf.String(), name)
+		}
 	})
 
 	t.Run("only empty filesystems yields no renderer", func(t *testing.T) {
@@ -357,7 +401,7 @@ func TestNewTemplate_EmbeddedViews(t *testing.T) {
 		defer func() { ViewFacade = nil }()
 
 		// //go:embed of a views directory picks up whatever else lives there.
-		// Files without a define block are still parsed, under their base name.
+		// Files without a define block are still parsed, under their relative path.
 		assets := fstest.MapFS{
 			"README.md":       {Data: []byte("# Package views\n")},
 			"assets/site.css": {Data: []byte("body { margin: 0 }")},
