@@ -316,58 +316,6 @@ func TestNewTemplate_CustomFuncMap(t *testing.T) {
 	assert.Equal(t, "Hello, User!", buf.String())
 }
 
-func TestExtractDefineName(t *testing.T) {
-	tests := []struct {
-		name     string
-		content  string
-		expected string
-		left     string
-	}{
-		{
-			name:     "single line define",
-			content:  `{{ define "index.tmpl" }}hello{{ end }}`,
-			expected: "index.tmpl",
-		},
-		{
-			name:     "define with extra whitespace",
-			content:  `{{ define    "page.tmpl" }}`,
-			expected: "page.tmpl",
-		},
-		{
-			name:     "no define",
-			content:  `hello world`,
-			expected: "",
-		},
-		{
-			name:     "block instead of define",
-			content:  `{{ block "content" . }}{{ end }}`,
-			expected: "",
-		},
-		{
-			name:     "custom delimiter - no match with standard left",
-			content:  `{[ define "cm.tmpl" ]}Custom{[ end ]}`,
-			expected: "",
-		},
-		{
-			name:     "custom delimiter with matching left",
-			content:  `{[ define "cm.tmpl" ]}Custom{[ end ]}`,
-			expected: "cm.tmpl",
-			left:     "{[",
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			left := test.left
-			if left == "" {
-				left = "{{"
-			}
-			result := extractDefineName(test.content, left)
-			assert.Equal(t, test.expected, result)
-		})
-	}
-}
-
 func TestNewTemplate_AppFuncMapApplied(t *testing.T) {
 	viewsDir := path.Resource("views")
 	defer func() {

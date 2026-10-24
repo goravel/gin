@@ -474,7 +474,7 @@ func TestNewTemplate_EmbeddedViews(t *testing.T) {
 		defer func() { ViewFacade = nil }()
 
 		// A readable root holding no files: the source passes the stat guard and
-		// is dropped because loadSource() finds nothing to parse.
+		// is dropped because view.Compile finds nothing to parse.
 		empty := fstest.MapFS{"sub": {Mode: fs.ModeDir}}
 
 		mockView := mocksview.NewView(t)
