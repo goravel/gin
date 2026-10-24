@@ -349,6 +349,96 @@ func TestNewTemplate_EmbeddedViews(t *testing.T) {
 		}
 	})
 
+	t.Run("package template with a define cannot override app template at the same path", func(t *testing.T) {
+		defer func() {
+			ViewFacade = nil
+			assert.Nil(t, file.Remove(path.Resource()))
+		}()
+		require.NoError(t, file.PutContent(path.Resource("views", "page.tmpl"), `App Raw`))
+
+		// The package file claims a different define name, but its loose content
+		// is still parsed under "page.tmpl". html/template keeps one template per
+		// name, so without the path claim it would replace the app's template.
+		raw := fstest.MapFS{
+			"page.tmpl": {Data: []byte(`{{ define "widget" }}Widget{{ end }}Package Raw`)},
+		}
+
+		mockView := mocksview.NewView(t)
+		mockView.EXPECT().RegisteredViews().Return(nil).Once()
+		mockView.EXPECT().RegisteredViewFS().Return([]fs.FS{raw}).Once()
+		ViewFacade = mockView
+
+		r, err := NewTemplate(RenderOptions{})
+		require.NoError(t, err)
+		require.NotNil(t, r)
+
+		var buf bytes.Buffer
+		require.NoError(t, r.Template.ExecuteTemplate(&buf, "page.tmpl", nil))
+		assert.Equal(t, "App Raw", buf.String())
+		assert.Nil(t, r.Template.Lookup("widget"), "the whole file is skipped, not just its path template")
+	})
+
+	t.Run("collision between package templates at the same path uses first", func(t *testing.T) {
+		defer func() {
+			ViewFacade = nil
+			LogFacade = nil
+		}()
+
+		first := fstest.MapFS{
+			"page.tmpl": {Data: []byte(`{{ define "first" }}First{{ end }}First Raw`)},
+		}
+		second := fstest.MapFS{
+			"page.tmpl": {Data: []byte(`{{ define "second" }}Second{{ end }}Second Raw`)},
+		}
+
+		mockLog := mockslog.NewLog(t)
+		LogFacade = mockLog
+		mockLog.EXPECT().Warningf("view collision: %q defined in %q and %q, using first", "page.tmpl", "fs[0]/page.tmpl", "fs[1]/page.tmpl").Return().Once()
+
+		mockView := mocksview.NewView(t)
+		mockView.EXPECT().RegisteredViews().Return(nil).Once()
+		mockView.EXPECT().RegisteredViewFS().Return([]fs.FS{first, second}).Once()
+		ViewFacade = mockView
+
+		r, err := NewTemplate(RenderOptions{})
+		require.NoError(t, err)
+		require.NotNil(t, r)
+
+		var buf bytes.Buffer
+		require.NoError(t, r.Template.ExecuteTemplate(&buf, "page.tmpl", nil))
+		assert.Equal(t, "First Raw", buf.String())
+		assert.NotNil(t, r.Template.Lookup("first"))
+		assert.Nil(t, r.Template.Lookup("second"))
+	})
+
+	t.Run("regular file as a view path is skipped", func(t *testing.T) {
+		// LoadViewsFrom() does not validate what it is given, and nothing stops
+		// resources/views from being a file. Walking a file through os.DirFS
+		// fails with "not a directory", which must not take the compile down.
+		defer func() {
+			ViewFacade = nil
+			assert.Nil(t, file.Remove(path.Resource()))
+		}()
+		pkgDir := path.Resource("pkg_file")
+		single := filepath.Join(pkgDir, "single.tmpl")
+		require.NoError(t, file.PutContent(single, `{{ define "single.tmpl" }}Single{{ end }}`))
+		require.NoError(t, file.PutContent(path.Resource("views"), `{{ define "page.tmpl" }}App File{{ end }}`))
+
+		mockView := mocksview.NewView(t)
+		mockView.EXPECT().RegisteredViews().Return([]string{single}).Once()
+		mockView.EXPECT().RegisteredViewFS().Return([]fs.FS{pkg}).Once()
+		ViewFacade = mockView
+
+		r, err := NewTemplate(RenderOptions{})
+		require.NoError(t, err)
+		require.NotNil(t, r)
+
+		var buf bytes.Buffer
+		require.NoError(t, r.Template.ExecuteTemplate(&buf, "page.tmpl", nil))
+		assert.Equal(t, "Embedded Content", buf.String())
+		assert.Nil(t, r.Template.Lookup("single.tmpl"))
+	})
+
 	t.Run("nested app template without define overrides embedded package", func(t *testing.T) {
 		defer func() {
 			ViewFacade = nil
@@ -465,13 +555,16 @@ func TestNewTemplate_EmbeddedViews(t *testing.T) {
 		}
 	})
 
-	t.Run("walk errors are propagated", func(t *testing.T) {
+	t.Run("walk errors are propagated with the source path", func(t *testing.T) {
 		base := fstest.MapFS{
 			"page.tmpl":     {Data: []byte(`{{ define "page.tmpl" }}Page{{ end }}`)},
 			"sub/deep.tmpl": {Data: []byte(`{{ define "sub/deep.tmpl" }}Deep{{ end }}`)},
 		}
 
-		for _, failPath := range []string{"sub", "page.tmpl"} {
+		for failPath, expected := range map[string]string{
+			"sub":       "failed to walk view source fs[0]/sub: ",
+			"page.tmpl": "failed to read view fs[0]/page.tmpl: ",
+		} {
 			t.Run(failPath, func(t *testing.T) {
 				defer func() { ViewFacade = nil }()
 
@@ -481,6 +574,7 @@ func TestNewTemplate_EmbeddedViews(t *testing.T) {
 				ViewFacade = mockView
 
 				r, err := NewTemplate(RenderOptions{})
+				assert.ErrorContains(t, err, expected)
 				assert.ErrorContains(t, err, "permission denied")
 				assert.Nil(t, r)
 			})
@@ -524,7 +618,7 @@ func TestNewTemplate_EmbeddedViews(t *testing.T) {
 		ViewFacade = mockView
 
 		r, err := NewTemplate(RenderOptions{})
-		assert.Error(t, err)
+		assert.ErrorContains(t, err, "failed to parse view fs[0]/broken.tmpl: ")
 		assert.Nil(t, r)
 	})
 }
