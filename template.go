@@ -9,6 +9,7 @@ import (
 	"regexp"
 
 	"github.com/gin-gonic/gin/render"
+	contractsview "github.com/goravel/framework/contracts/view"
 	"github.com/goravel/framework/support/path"
 )
 
@@ -144,8 +145,30 @@ func NewTemplate(options RenderOptions) (*render.HTMLProduction, error) {
 	return &render.HTMLProduction{Template: instance}, nil
 }
 
+// DefaultTemplate compiles every registered view source with the functions
+// registered on the view facade through View.AddFuncs, which is also where
+// ApplicationBuilder.WithViewFuncs puts the application's functions.
+// Custom delimiters still require the http.drivers.<driver>.template callback.
 func DefaultTemplate() (*render.HTMLProduction, error) {
-	return NewTemplate(RenderOptions{})
+	options := RenderOptions{}
+	if viewFacade := resolveViewFacade(); viewFacade != nil {
+		options.FuncMap = viewFacade.Funcs()
+	}
+
+	return NewTemplate(options)
+}
+
+// resolveViewFacade returns the view facade ServiceProvider.Boot assigned, or
+// resolves it from the container when the driver is used before Boot.
+func resolveViewFacade() contractsview.View {
+	if ViewFacade != nil {
+		return ViewFacade
+	}
+	if App != nil {
+		return App.MakeView()
+	}
+
+	return nil
 }
 
 // viewSources returns every existing template source in precedence order: the
@@ -160,10 +183,7 @@ func viewSources() []viewSource {
 		sources = append(sources, viewSource{fsys: os.DirFS(dir), tier: tierApp, label: dir})
 	}
 
-	viewFacade := ViewFacade
-	if viewFacade == nil && App != nil {
-		viewFacade = App.MakeView()
-	}
+	viewFacade := resolveViewFacade()
 	if viewFacade == nil {
 		return sources
 	}

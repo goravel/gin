@@ -391,3 +391,30 @@ func TestNewTemplate_AppFuncMapApplied(t *testing.T) {
 	assert.Nil(t, r.Template.ExecuteTemplate(&buf, "greet.tmpl", nil))
 	assert.Equal(t, "UPPER", buf.String())
 }
+
+func TestDefaultTemplate_ViewFuncs(t *testing.T) {
+	viewsDir := path.Resource("views")
+	defer func() {
+		ViewFacade = nil
+		assert.Nil(t, file.Remove(path.Resource()))
+	}()
+
+	assert.Nil(t, os.MkdirAll(viewsDir, os.ModePerm))
+	assert.Nil(t, file.PutContent(path.Resource("views", "funcs.tmpl"), `{{ define "funcs.tmpl" }}{{ shout "hey" }}{{ end }}`))
+
+	mockView := mocksview.NewView(t)
+	mockView.EXPECT().RegisteredViews().Return(nil).Once()
+	mockView.EXPECT().RegisteredViewFS().Return(nil).Once()
+	mockView.EXPECT().Funcs().Return(template.FuncMap{
+		"shout": func(s string) string { return s + "!" },
+	}).Once()
+	ViewFacade = mockView
+
+	r, err := DefaultTemplate()
+	assert.Nil(t, err)
+	assert.NotNil(t, r)
+
+	var buf bytes.Buffer
+	assert.Nil(t, r.Template.ExecuteTemplate(&buf, "funcs.tmpl", nil))
+	assert.Equal(t, "hey!", buf.String())
+}
