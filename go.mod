@@ -7,7 +7,7 @@ toolchain go1.27.2
 require (
 	github.com/gin-contrib/timeout v1.2.3
 	github.com/gin-gonic/gin v1.12.0
-	github.com/goravel/framework v1.18.1-0.20261019082352-bc9e320af832
+	github.com/goravel/framework v1.18.1-0.20261026075349-ee5302da9928
 	github.com/rs/cors v1.11.1
 	github.com/spf13/cast v1.10.0
 	github.com/stretchr/testify v1.12.1
