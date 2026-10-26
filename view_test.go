@@ -400,6 +400,7 @@ func TestView_First(t *testing.T) {
 func TestView_CSRFToken(t *testing.T) {
 	assert.Nil(t, file.PutContent(path.Resource("views", "csrf.tmpl"), `{{ define "csrf.tmpl" }}
 csrf_token={{ .csrf_token }}
+csrf_field={{ .csrf_field }}
 {{ end }}
 `))
 
@@ -428,11 +429,13 @@ csrf_token={{ .csrf_token }}
 		err := route.init(nil)
 		require.Nil(t, err)
 
+		var expectedToken string
 		route.Get("/csrf", func(ctx contractshttp.Context) contractshttp.Response {
 			sessionData := session.NewSession(sessionKey, nil, foundationjson.New())
 			ctx.Request().SetSession(sessionData)
 			err = sessionData.Regenerate()
 			assert.Nil(t, err)
+			expectedToken = sessionData.Token()
 
 			return ctx.Response().View().Make("csrf.tmpl")
 		})
@@ -441,7 +444,8 @@ csrf_token={{ .csrf_token }}
 		assert.Nil(t, err)
 		w := httptest.NewRecorder()
 		route.ServeHTTP(w, req)
-		assert.Regexp(t, `^\ncsrf_token=([A-Za-z0-9\-_]+)\n$`, w.Body.String())
+		assert.NotEmpty(t, expectedToken)
+		assert.Equal(t, "\ncsrf_token="+expectedToken+"\ncsrf_field=<input type=\"hidden\" name=\"_token\" value=\""+expectedToken+"\" />\n", w.Body.String())
 	})
 }
 
