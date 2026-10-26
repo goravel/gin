@@ -2,6 +2,7 @@ package gin
 
 import (
 	"html/template"
+	"maps"
 
 	"github.com/gin-gonic/gin/render"
 	contractsview "github.com/goravel/framework/contracts/view"
@@ -19,13 +20,15 @@ type RenderOptions struct {
 }
 
 // NewTemplate compiles the application's resources/views and every source
-// registered on the view facade into a gin renderer. Precedence, naming and
-// collision handling are those of view.Compile. It returns (nil, nil) when no
-// view file exists, so callers keep gin's default renderer.
+// registered on the view facade into a gin renderer. The functions registered
+// on the view facade through View.AddFuncs, which is also where
+// ApplicationBuilder.WithViewFuncs puts the application's, are installed first;
+// options.FuncMap is added on top and overrides them by name. Precedence, naming
+// and collision handling are those of view.Compile. It returns (nil, nil) when
+// no view file exists, so callers keep gin's default renderer.
 func NewTemplate(options RenderOptions) (*render.HTMLProduction, error) {
 	compileOptions := frameworkview.CompileOptions{
-		FuncMap: options.FuncMap,
-		Log:     LogFacade,
+		Log: LogFacade,
 	}
 	if options.Delims != nil {
 		compileOptions.Delims = &frameworkview.Delims{Left: options.Delims.Left, Right: options.Delims.Right}
@@ -33,6 +36,13 @@ func NewTemplate(options RenderOptions) (*render.HTMLProduction, error) {
 	if viewFacade := resolveViewFacade(); viewFacade != nil {
 		compileOptions.Paths = viewFacade.RegisteredViews()
 		compileOptions.FS = viewFacade.RegisteredViewFS()
+		compileOptions.FuncMap = viewFacade.Funcs()
+	}
+	if len(options.FuncMap) > 0 {
+		if compileOptions.FuncMap == nil {
+			compileOptions.FuncMap = make(template.FuncMap, len(options.FuncMap))
+		}
+		maps.Copy(compileOptions.FuncMap, options.FuncMap)
 	}
 
 	instance, err := frameworkview.Compile(compileOptions)
@@ -44,16 +54,11 @@ func NewTemplate(options RenderOptions) (*render.HTMLProduction, error) {
 }
 
 // DefaultTemplate compiles every registered view source with the functions
-// registered on the view facade through View.AddFuncs, which is also where
-// ApplicationBuilder.WithViewFuncs puts the application's functions. Custom
-// delimiters still require the http.drivers.<driver>.template callback.
+// registered on the view facade and no custom delimiters. Custom delimiters
+// still require the http.drivers.<driver>.template callback, which keeps the
+// registered functions because NewTemplate installs them itself.
 func DefaultTemplate() (*render.HTMLProduction, error) {
-	options := RenderOptions{}
-	if viewFacade := resolveViewFacade(); viewFacade != nil {
-		options.FuncMap = viewFacade.Funcs()
-	}
-
-	return NewTemplate(options)
+	return NewTemplate(RenderOptions{})
 }
 
 // resolveViewFacade returns the view facade ServiceProvider.Boot assigned, or

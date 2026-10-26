@@ -93,6 +93,7 @@ func TestRoute_TemplateCallbackDeferred(t *testing.T) {
 	mockView := mocksview.NewView(t)
 	mockView.EXPECT().RegisteredViews().Return([]string{pkgDir}).Once()
 	mockView.EXPECT().RegisteredViewFS().Return(nil).Once()
+	mockView.EXPECT().Funcs().Return(nil).Once()
 	mockView.EXPECT().GetShared().Return(nil).Times(3)
 	ViewFacade = mockView
 
@@ -128,6 +129,7 @@ func TestRoute_TemplateCallbackDeferred(t *testing.T) {
 	})
 	mockView.EXPECT().RegisteredViews().Return([]string{pkgDir}).Once()
 	mockView.EXPECT().RegisteredViewFS().Return(nil).Once()
+	mockView.EXPECT().Funcs().Return(nil).Once()
 	w = serve(t, route2, "/shout")
 	assert.Equal(t, http.StatusOK, w.Code)
 	assert.Equal(t, "LATE", w.Body.String())

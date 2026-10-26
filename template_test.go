@@ -87,6 +87,7 @@ func TestNewTemplate_PackageViews(t *testing.T) {
 	mockView := mocksview.NewView(t)
 	mockView.EXPECT().RegisteredViews().Return([]string{pkgDir}).Once()
 	mockView.EXPECT().RegisteredViewFS().Return(nil).Once()
+	mockView.EXPECT().Funcs().Return(nil).Once()
 	ViewFacade = mockView
 
 	r, err := NewTemplate(RenderOptions{})
@@ -115,6 +116,7 @@ func TestNewTemplate_AppOverridesPackage(t *testing.T) {
 	mockView := mocksview.NewView(t)
 	mockView.EXPECT().RegisteredViews().Return([]string{pkgDir}).Once()
 	mockView.EXPECT().RegisteredViewFS().Return(nil).Once()
+	mockView.EXPECT().Funcs().Return(nil).Once()
 	ViewFacade = mockView
 
 	r, err := NewTemplate(RenderOptions{})
@@ -154,6 +156,7 @@ func TestNewTemplate_PackageCollision(t *testing.T) {
 	mockView := mocksview.NewView(t)
 	mockView.EXPECT().RegisteredViews().Return([]string{dir1, dir2}).Once()
 	mockView.EXPECT().RegisteredViewFS().Return(nil).Once()
+	mockView.EXPECT().Funcs().Return(nil).Once()
 	ViewFacade = mockView
 
 	r, err := NewTemplate(RenderOptions{})
@@ -189,6 +192,7 @@ func TestNewTemplate_ExtraViewsNilOrEmpty(t *testing.T) {
 		mockView := mocksview.NewView(t)
 		mockView.EXPECT().RegisteredViews().Return([]string{}).Once()
 		mockView.EXPECT().RegisteredViewFS().Return(nil).Once()
+		mockView.EXPECT().Funcs().Return(nil).Once()
 		ViewFacade = mockView
 
 		r, err := NewTemplate(RenderOptions{})
@@ -239,6 +243,7 @@ func TestNewTemplate_CustomDelims(t *testing.T) {
 	mockView := mocksview.NewView(t)
 	mockView.EXPECT().RegisteredViews().Return([]string{pkgDir}).Once()
 	mockView.EXPECT().RegisteredViewFS().Return(nil).Once()
+	mockView.EXPECT().Funcs().Return(nil).Once()
 	ViewFacade = mockView
 
 	options := RenderOptions{
@@ -271,6 +276,7 @@ func TestNewTemplate_CustomDelimsCollision(t *testing.T) {
 	mockView := mocksview.NewView(t)
 	mockView.EXPECT().RegisteredViews().Return([]string{pkg1, pkg2}).Once()
 	mockView.EXPECT().RegisteredViewFS().Return(nil).Once()
+	mockView.EXPECT().Funcs().Return(nil).Once()
 	ViewFacade = mockView
 
 	options := RenderOptions{
@@ -299,6 +305,7 @@ func TestNewTemplate_CustomFuncMap(t *testing.T) {
 	mockView := mocksview.NewView(t)
 	mockView.EXPECT().RegisteredViews().Return([]string{pkgDir}).Once()
 	mockView.EXPECT().RegisteredViewFS().Return(nil).Once()
+	mockView.EXPECT().Funcs().Return(nil).Once()
 	ViewFacade = mockView
 
 	options := RenderOptions{
@@ -365,4 +372,39 @@ func TestDefaultTemplate_ViewFuncs(t *testing.T) {
 	var buf bytes.Buffer
 	assert.Nil(t, r.Template.ExecuteTemplate(&buf, "funcs.tmpl", nil))
 	assert.Equal(t, "hey!", buf.String())
+}
+
+func TestNewTemplate_FacadeFuncsMergedWithOptions(t *testing.T) {
+	viewsDir := path.Resource("views")
+	defer func() {
+		ViewFacade = nil
+		assert.Nil(t, file.Remove(path.Resource()))
+	}()
+
+	assert.Nil(t, os.MkdirAll(viewsDir, os.ModePerm))
+	assert.Nil(t, file.PutContent(path.Resource("views", "merged.tmpl"), `{{ define "merged.tmpl" }}{{ shout "hey" }} {{ greet "User" }}{{ end }}`))
+
+	mockView := mocksview.NewView(t)
+	mockView.EXPECT().RegisteredViews().Return(nil).Once()
+	mockView.EXPECT().RegisteredViewFS().Return(nil).Once()
+	mockView.EXPECT().Funcs().Return(template.FuncMap{
+		"shout": func(s string) string { return s + "!" },
+		"greet": func(name string) string { return "registered " + name },
+	}).Once()
+	ViewFacade = mockView
+
+	// The callback's FuncMap is applied on top of the registered functions, so a
+	// custom-delimiter callback keeps WithViewFuncs and package functions while an
+	// explicit entry still wins by name.
+	r, err := NewTemplate(RenderOptions{
+		FuncMap: template.FuncMap{
+			"greet": func(name string) string { return "Hello, " + name + "!" },
+		},
+	})
+	assert.Nil(t, err)
+	assert.NotNil(t, r)
+
+	var buf bytes.Buffer
+	assert.Nil(t, r.Template.ExecuteTemplate(&buf, "merged.tmpl", nil))
+	assert.Equal(t, "hey! Hello, User!", buf.String())
 }
