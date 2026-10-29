@@ -382,7 +382,7 @@ func TestNewTemplate_FacadeFuncsMergedWithOptions(t *testing.T) {
 	}()
 
 	assert.Nil(t, os.MkdirAll(viewsDir, os.ModePerm))
-	assert.Nil(t, file.PutContent(path.Resource("views", "merged.tmpl"), `{{ define "merged.tmpl" }}{{ shout "hey" }} {{ greet "User" }}{{ end }}`))
+	assert.Nil(t, file.PutContent(path.Resource("views", "merged.tmpl"), `{[ define "merged.tmpl" ]}{[ shout "hey" ]} {[ greet "User" ]}{[ end ]}`))
 
 	mockView := mocksview.NewView(t)
 	mockView.EXPECT().RegisteredViews().Return(nil).Once()
@@ -397,6 +397,7 @@ func TestNewTemplate_FacadeFuncsMergedWithOptions(t *testing.T) {
 	// custom-delimiter callback keeps WithViewFuncs and package functions while an
 	// explicit entry still wins by name.
 	r, err := NewTemplate(RenderOptions{
+		Delims: &Delims{Left: "{[", Right: "]}"},
 		FuncMap: template.FuncMap{
 			"greet": func(name string) string { return "Hello, " + name + "!" },
 		},
