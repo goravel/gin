@@ -198,6 +198,45 @@ func TestRoute_DefaultTemplateUsesViewFuncs(t *testing.T) {
 	assert.Equal(t, "Hello, Ada!", w.Body.String())
 }
 
+// TestRoute_TemplateCallbackNilRender guards that a callback returning no
+// renderer falls back to the default set instead of leaving HTMLRender nil,
+// which would fail every render after a successful CompileViews().
+func TestRoute_TemplateCallbackNilRender(t *testing.T) {
+	require.NoError(t, os.MkdirAll(path.Resource("views"), os.ModePerm))
+	require.NoError(t, file.PutContent(path.Resource("views", "home.tmpl"), `{{ define "home.tmpl" }}Home{{ end }}`))
+	defer func() {
+		ConfigFacade = nil
+		ViewFacade = nil
+		assert.Nil(t, file.Remove(path.Resource()))
+	}()
+
+	calls := 0
+	route, _ := newTemplateTestRoute(t, func() (render.HTMLRender, error) {
+		calls++
+
+		return nil, nil
+	})
+
+	mockView := mocksview.NewView(t)
+	mockView.EXPECT().RegisteredViews().Return(nil).Once()
+	mockView.EXPECT().RegisteredViewFS().Return(nil).Once()
+	mockView.EXPECT().Funcs().Return(nil).Once()
+	mockView.EXPECT().GetShared().Return(nil).Once()
+	ViewFacade = mockView
+
+	require.NoError(t, route.CompileViews())
+	assert.Equal(t, 1, calls)
+	require.NotNil(t, route.instance.HTMLRender)
+
+	route.Get("/home", func(ctx contractshttp.Context) contractshttp.Response {
+		return ctx.Response().View().Make("home.tmpl")
+	})
+	w := serve(t, route, "/home")
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, "Home", w.Body.String())
+	assert.Equal(t, 1, calls)
+}
+
 // TestRoute_CompileViews guards the view.Compiler contract: CompileViews compiles
 // the default set once, later serve calls reuse it, and an engine rebuild after
 // the compile keeps the renderer.

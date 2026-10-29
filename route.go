@@ -354,7 +354,7 @@ func (r *Route) init(globalMiddleware []contractshttp.Middleware) error {
 }
 
 // ensureTemplate compiles the view set once, from the configured callback or
-// DefaultTemplate(). It runs on CompileViews() or the first serve call, whichever
+// DefaultTemplate() when there is none or it returns a nil renderer. It runs on CompileViews() or the first serve call, whichever
 // comes first, so it sees every view and func registered during provider Boot.
 // With no view files HTMLRender stays nil. A compile error is sticky.
 func (r *Route) ensureTemplate() error {
@@ -366,7 +366,10 @@ func (r *Route) ensureTemplate() error {
 		var htmlRender render.HTMLRender
 		if r.templateCallback != nil {
 			htmlRender, r.templateErr = r.templateCallback()
-		} else {
+		}
+		// A callback returning no renderer falls back to the default set, as it
+		// did when init() invoked the callback.
+		if r.templateErr == nil && htmlRender == nil {
 			// Keep a nil *render.HTMLProduction from becoming a non-nil interface.
 			production, err := DefaultTemplate()
 			if production != nil {
