@@ -35,8 +35,7 @@ func (s *GroupTestSuite) SetupTest() {
 		config: s.mockConfig,
 		driver: "gin",
 	}
-	err := route.init(nil)
-	s.Require().Nil(err)
+	route.init(nil)
 
 	s.route = route
 }

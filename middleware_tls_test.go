@@ -9,7 +9,6 @@ import (
 	contractshttp "github.com/goravel/framework/contracts/http"
 	mocksconfig "github.com/goravel/framework/mocks/config"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestTls(t *testing.T) {
@@ -60,8 +59,7 @@ func TestTls(t *testing.T) {
 				config: mockConfig,
 				driver: "gin",
 			}
-			err := route.init([]contractshttp.Middleware{Tls()})
-			require.Nil(t, err)
+			route.init([]contractshttp.Middleware{Tls()})
 
 			route.Any("/any/{id}", func(ctx contractshttp.Context) contractshttp.Response {
 				return ctx.Response().Success().Json(contractshttp.Json{

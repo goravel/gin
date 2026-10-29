@@ -35,7 +35,7 @@ func newTemplateTestRoute(t *testing.T, templateConfig any) (*Route, *configmock
 		config: mockConfig,
 		driver: "gin",
 	}
-	require.NoError(t, route.init(nil))
+	route.init(nil)
 
 	return route, mockConfig
 }

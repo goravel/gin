@@ -26,8 +26,7 @@ func TestTimeoutMiddleware(t *testing.T) {
 		config: mockConfig,
 		driver: "gin",
 	}
-	err := route.init(nil)
-	require.Nil(t, err)
+	route.init(nil)
 
 	t.Run("timeout waits for handler completion", func(t *testing.T) {
 		var (
@@ -222,7 +221,7 @@ func TestTimeoutMiddleware_UnmatchedRoute(t *testing.T) {
 		config: mockConfig,
 		driver: "gin",
 	}
-	require.NoError(t, route.init([]contractshttp.Middleware{Timeout(time.Second)}))
+	route.init([]contractshttp.Middleware{Timeout(time.Second)})
 
 	route.Get("/users", func(ctx contractshttp.Context) contractshttp.Response {
 		return ctx.Response().Success().String("users")

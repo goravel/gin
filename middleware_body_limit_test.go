@@ -291,7 +291,7 @@ func newBodyLimitTestRoute(t *testing.T, limit int) *Route {
 		config: mockConfig,
 		driver: "gin",
 	}
-	require.NoError(t, route.init(nil))
+	route.init(nil)
 
 	return route
 }

@@ -76,9 +76,7 @@ func NewRoute(config config.Config, parameters map[string]any) (*Route, error) {
 		driver:           cast.ToString(parameters["driver"]),
 		globalMiddleware: globalMiddleware,
 	}
-	if err := route.init(globalMiddleware); err != nil {
-		return nil, err
-	}
+	route.init(globalMiddleware)
 
 	return route, nil
 }
@@ -114,9 +112,7 @@ func (r *Route) GetRoutes() []contractshttp.Info {
 
 func (r *Route) GlobalMiddleware(middleware ...contractshttp.Middleware) {
 	r.globalMiddleware = append(r.globalMiddleware, middleware...)
-	if err := r.init(r.globalMiddleware); err != nil {
-		panic(err)
-	}
+	r.init(r.globalMiddleware)
 }
 
 func (r *Route) Listen(l net.Listener) error {
@@ -179,9 +175,7 @@ func (r *Route) Info(name string) contractshttp.Info {
 
 func (r *Route) Recover(callback func(ctx contractshttp.Context, err any)) {
 	globalRecoverCallback = callback
-	if err := r.init(r.globalMiddleware); err != nil {
-		panic(err)
-	}
+	r.init(r.globalMiddleware)
 }
 
 func (r *Route) Run(host ...string) error {
@@ -280,9 +274,7 @@ func (r *Route) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 
 func (r *Route) SetGlobalMiddleware(middlewares []contractshttp.Middleware) {
 	r.globalMiddleware = middlewares
-	if err := r.init(r.globalMiddleware); err != nil {
-		panic(err)
-	}
+	r.init(r.globalMiddleware)
 }
 
 func (r *Route) Shutdown(ctx ...context.Context) error {
@@ -308,7 +300,7 @@ func (r *Route) Test(request *http.Request) (*http.Response, error) {
 	return recorder.Result(), nil
 }
 
-func (r *Route) init(globalMiddleware []contractshttp.Middleware) error {
+func (r *Route) init(globalMiddleware []contractshttp.Middleware) {
 	gin.SetMode(gin.ReleaseMode)
 	gin.DisableBindValidation()
 	engine := gin.New()
@@ -349,8 +341,6 @@ func (r *Route) init(globalMiddleware []contractshttp.Middleware) error {
 		[]contractshttp.Middleware{ResponseMiddleware()},
 	)
 	r.instance = engine
-
-	return nil
 }
 
 // ensureTemplate compiles the view set once, from the configured callback or

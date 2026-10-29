@@ -54,7 +54,7 @@ func (s *RouteTestSuite) SetupTest() {
 		config: s.mockConfig,
 		driver: "gin",
 	}
-	s.Require().Nil(s.route.init(nil))
+	s.route.init(nil)
 
 	routes = make(map[string]map[string]contractshttp.Info)
 }
@@ -741,7 +741,7 @@ func TestRoute_ServeHTTP_DeferredTemplatePackageViews(t *testing.T) {
 		config: mockConfig,
 		driver: "gin",
 	}
-	assert.Nil(t, route.init(nil))
+	route.init(nil)
 
 	// Boot() assigns ViewFacade and registers the package view directory.
 	mockView := mocksview.NewView(t)
@@ -785,7 +785,7 @@ func TestRoute_ServeHTTP_DeferredTemplateEmbeddedViews(t *testing.T) {
 		config: mockConfig,
 		driver: "gin",
 	}
-	assert.Nil(t, route.init(nil))
+	route.init(nil)
 
 	// Boot() assigns ViewFacade and registers the embedded filesystem.
 	mockView := mocksview.NewView(t)
@@ -836,7 +836,7 @@ func TestRoute_ServeHTTP_DeferredTemplateDefaultAppViews(t *testing.T) {
 		config: mockConfig,
 		driver: "gin",
 	}
-	assert.Nil(t, route.init(nil))
+	route.init(nil)
 
 	mockView := mocksview.NewView(t)
 	mockView.EXPECT().RegisteredViews().Return(nil).Once()
@@ -888,7 +888,7 @@ func TestRoute_ServeHTTP_StickyTemplateError(t *testing.T) {
 		config: mockConfig,
 		driver: "gin",
 	}
-	assert.Nil(t, route.init(nil))
+	route.init(nil)
 
 	route.Get("/", func(ctx contractshttp.Context) contractshttp.Response {
 		return ctx.Response().Success().String("ok")

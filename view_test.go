@@ -226,8 +226,7 @@ func TestView_Make(t *testing.T) {
 				config: mockConfig,
 				driver: "gin",
 			}
-			err = route.init(nil)
-			require.Nil(t, err)
+			route.init(nil)
 
 			err = test.setup(test.method, test.url)
 			require.Nil(t, err)
@@ -382,8 +381,7 @@ func TestView_First(t *testing.T) {
 				config: mockConfig,
 				driver: "gin",
 			}
-			err = route.init(nil)
-			require.Nil(t, err)
+			route.init(nil)
 
 			err = test.setup(test.method, test.url)
 			assert.Nil(t, err)
@@ -429,14 +427,13 @@ csrf_field={{ .csrf_field }}
 			config: mockConfig,
 			driver: "gin",
 		}
-		err := route.init(nil)
-		require.Nil(t, err)
+		route.init(nil)
 
 		var expectedToken string
 		route.Get("/csrf", func(ctx contractshttp.Context) contractshttp.Response {
 			sessionData := session.NewSession(sessionKey, nil, foundationjson.New())
 			ctx.Request().SetSession(sessionData)
-			err = sessionData.Regenerate()
+			err := sessionData.Regenerate()
 			assert.Nil(t, err)
 			expectedToken = sessionData.Token()
 
