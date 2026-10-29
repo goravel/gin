@@ -58,8 +58,7 @@ type Route struct {
 	htmlRender       render.HTMLRender                 // compiled renderer, re-attached by init() on engine rebuilds
 }
 
-// Route compiles the view set on request from the framework, which calls
-// CompileViews once every service provider has booted.
+// Compile-time assertion that Route satisfies view.Compiler.
 var _ contractsview.Compiler = (*Route)(nil)
 
 func NewRoute(config config.Config, parameters map[string]any) (*Route, error) {
