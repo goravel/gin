@@ -34,8 +34,7 @@ func (s *ContextResponseSuite) SetupTest() {
 		config: s.mockConfig,
 		driver: "gin",
 	}
-	err := s.route.init(nil)
-	s.Require().Nil(err)
+	s.route.init(nil)
 }
 
 func (s *ContextResponseSuite) TestCookie() {

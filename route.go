@@ -16,6 +16,7 @@ import (
 	"github.com/goravel/framework/contracts/config"
 	contractshttp "github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/contracts/route"
+	contractsview "github.com/goravel/framework/contracts/view"
 	"github.com/goravel/framework/http/middleware"
 	"github.com/goravel/framework/support"
 	"github.com/goravel/framework/support/color"
@@ -53,7 +54,12 @@ type Route struct {
 	tlsServer        *http.Server
 	templateOnce     sync.Once
 	templateErr      error
+	templateCallback func() (render.HTMLRender, error) // configured callback, invoked by ensureTemplate(), not init()
+	htmlRender       render.HTMLRender                 // compiled renderer, re-attached by init() on engine rebuilds
 }
+
+// Compile-time assertion that Route satisfies view.Compiler.
+var _ contractsview.Compiler = (*Route)(nil)
 
 func NewRoute(config config.Config, parameters map[string]any) (*Route, error) {
 	driver := cast.ToString(parameters["driver"])
@@ -69,9 +75,7 @@ func NewRoute(config config.Config, parameters map[string]any) (*Route, error) {
 		driver:           cast.ToString(parameters["driver"]),
 		globalMiddleware: globalMiddleware,
 	}
-	if err := route.init(globalMiddleware); err != nil {
-		return nil, err
-	}
+	route.init(globalMiddleware)
 
 	return route, nil
 }
@@ -107,9 +111,7 @@ func (r *Route) GetRoutes() []contractshttp.Info {
 
 func (r *Route) GlobalMiddleware(middleware ...contractshttp.Middleware) {
 	r.globalMiddleware = append(r.globalMiddleware, middleware...)
-	if err := r.init(r.globalMiddleware); err != nil {
-		panic(err)
-	}
+	r.init(r.globalMiddleware)
 }
 
 func (r *Route) Listen(l net.Listener) error {
@@ -172,9 +174,7 @@ func (r *Route) Info(name string) contractshttp.Info {
 
 func (r *Route) Recover(callback func(ctx contractshttp.Context, err any)) {
 	globalRecoverCallback = callback
-	if err := r.init(r.globalMiddleware); err != nil {
-		panic(err)
-	}
+	r.init(r.globalMiddleware)
 }
 
 func (r *Route) Run(host ...string) error {
@@ -273,9 +273,7 @@ func (r *Route) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 
 func (r *Route) SetGlobalMiddleware(middlewares []contractshttp.Middleware) {
 	r.globalMiddleware = middlewares
-	if err := r.init(r.globalMiddleware); err != nil {
-		panic(err)
-	}
+	r.init(r.globalMiddleware)
 }
 
 func (r *Route) Shutdown(ctx ...context.Context) error {
@@ -301,7 +299,7 @@ func (r *Route) Test(request *http.Request) (*http.Response, error) {
 	return recorder.Result(), nil
 }
 
-func (r *Route) init(globalMiddleware []contractshttp.Middleware) error {
+func (r *Route) init(globalMiddleware []contractshttp.Middleware) {
 	gin.SetMode(gin.ReleaseMode)
 	gin.DisableBindValidation()
 	engine := gin.New()
@@ -325,17 +323,14 @@ func (r *Route) init(globalMiddleware []contractshttp.Middleware) error {
 	case render.HTMLRender:
 		engine.HTMLRender = t
 	case func() (render.HTMLRender, error):
-		htmlRender, err := t()
-		if err != nil {
-			return err
-		}
-
-		engine.HTMLRender = htmlRender
+		// Deferred to ensureTemplate(): init() may run before providers boot, so
+		// compiling now would miss their views and funcs (goravel/goravel#989).
+		r.templateCallback = t
 	}
-	// NOTE: DefaultTemplate() is intentionally NOT called here. It is deferred to
-	// ensureTemplate(), invoked on the first Listen/Run/ServeHTTP call, so that views
-	// registered via View.LoadViewsFrom() in a provider's Boot() are picked up.
-	// See goravel/goravel#989.
+	// Carry a renderer compiled before this engine rebuild.
+	if engine.HTMLRender == nil && r.htmlRender != nil {
+		engine.HTMLRender = r.htmlRender
+	}
 
 	r.Router = NewGroup(
 		r.config,
@@ -345,39 +340,48 @@ func (r *Route) init(globalMiddleware []contractshttp.Middleware) error {
 		[]contractshttp.Middleware{ResponseMiddleware()},
 	)
 	r.instance = engine
-
-	return nil
 }
 
-// ensureTemplate lazily compiles the default template set on first use. It must
-// run after all service providers have booted so that ViewFacade is set and any
-// LoadViewsFrom()-registered directories are included.
-//
-// Compilation happens exactly once, at the first serve call. If no template
-// files exist, DefaultTemplate() returns (nil, nil) and HTMLRender stays nil
-// (gin's default), so views registered after that point are intentionally not
-// compiled. A compile failure is stored in templateErr and returned on every
-// call, so later requests keep failing with the real error instead of serving
-// with no renderer.
-//
-// The once/error state is Route-scoped while the compiled renderer lives on the
-// current engine (r.instance.HTMLRender), so a re-init() after first serve (via
-// GlobalMiddleware/SetGlobalMiddleware/Recover) would build a fresh engine that
-// the already-fired once will not recompile. This mirrors the bootstrap-only
-// design of re-init(), which already discards every registered route.
+// ensureTemplate compiles the view set once, from the configured callback or
+// DefaultTemplate() when there is none or it returns a nil renderer. It runs on CompileViews() or the first serve call, whichever
+// comes first, so it sees every view and func registered during provider Boot.
+// With no view files HTMLRender stays nil. A compile error is sticky.
 func (r *Route) ensureTemplate() error {
 	r.templateOnce.Do(func() {
 		if r.instance.HTMLRender != nil {
 			return
 		}
+
 		var htmlRender render.HTMLRender
-		htmlRender, r.templateErr = DefaultTemplate()
+		if r.templateCallback != nil {
+			htmlRender, r.templateErr = r.templateCallback()
+		}
+		// A callback returning no renderer falls back to the default set, as it
+		// did when init() invoked the callback.
+		if r.templateErr == nil && htmlRender == nil {
+			// Keep a nil *render.HTMLProduction from becoming a non-nil interface.
+			production, err := DefaultTemplate()
+			if production != nil {
+				htmlRender = production
+			}
+			r.templateErr = err
+		}
 		if r.templateErr != nil {
 			return
 		}
-		r.instance.HTMLRender = htmlRender
+
+		r.htmlRender = htmlRender
+		if htmlRender != nil {
+			r.instance.HTMLRender = htmlRender
+		}
 	})
 	return r.templateErr
+}
+
+// CompileViews implements view.Compiler; the framework calls it after every
+// provider has booted so compile errors surface at startup.
+func (r *Route) CompileViews() error {
+	return r.ensureTemplate()
 }
 
 func (r *Route) outputRoutes() {

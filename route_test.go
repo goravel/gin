@@ -54,7 +54,7 @@ func (s *RouteTestSuite) SetupTest() {
 		config: s.mockConfig,
 		driver: "gin",
 	}
-	s.Require().Nil(s.route.init(nil))
+	s.route.init(nil)
 
 	routes = make(map[string]map[string]contractshttp.Info)
 }
@@ -539,10 +539,11 @@ func (s *RouteTestSuite) TestNewRoute() {
 	s.Require().Nil(err)
 
 	tests := []struct {
-		name        string
-		parameters  map[string]any
-		setup       func()
-		expectError error
+		name                string
+		parameters          map[string]any
+		setup               func()
+		expectError         error
+		expectTemplateError error
 	}{
 		{
 			name:        "parameters is nil",
@@ -582,7 +583,9 @@ func (s *RouteTestSuite) TestNewRoute() {
 					return nil, errors.New("error")
 				}).Once()
 			},
-			expectError: errors.New("error"),
+			// The callback is deferred: construction succeeds and the error
+			// surfaces when the view set is compiled.
+			expectTemplateError: errors.New("error"),
 		},
 	}
 
@@ -599,6 +602,7 @@ func (s *RouteTestSuite) TestNewRoute() {
 				s.NoError(err)
 				s.NotNil(route)
 				s.Len(route.GetGlobalMiddleware(), 4)
+				s.Equal(tt.expectTemplateError, route.ensureTemplate())
 			}
 		})
 	}
@@ -737,12 +741,13 @@ func TestRoute_ServeHTTP_DeferredTemplatePackageViews(t *testing.T) {
 		config: mockConfig,
 		driver: "gin",
 	}
-	assert.Nil(t, route.init(nil))
+	route.init(nil)
 
 	// Boot() assigns ViewFacade and registers the package view directory.
 	mockView := mocksview.NewView(t)
 	mockView.EXPECT().RegisteredViews().Return([]string{pkgDir}).Once()
 	mockView.EXPECT().RegisteredViewFS().Return(nil).Once()
+	mockView.EXPECT().Funcs().Return(nil).Once()
 	mockView.EXPECT().GetShared().Return(nil).Once()
 	ViewFacade = mockView
 
@@ -780,12 +785,13 @@ func TestRoute_ServeHTTP_DeferredTemplateEmbeddedViews(t *testing.T) {
 		config: mockConfig,
 		driver: "gin",
 	}
-	assert.Nil(t, route.init(nil))
+	route.init(nil)
 
 	// Boot() assigns ViewFacade and registers the embedded filesystem.
 	mockView := mocksview.NewView(t)
 	mockView.EXPECT().RegisteredViews().Return(nil).Once()
 	mockView.EXPECT().RegisteredViewFS().Return([]fs.FS{subFS(t, embeddedViews, "testdata/views")}).Once()
+	mockView.EXPECT().Funcs().Return(nil).Once()
 	// Two requests, but the view sources are read only once: the template set is
 	// compiled on the first serve and reused afterwards.
 	mockView.EXPECT().GetShared().Return(nil).Twice()
@@ -830,11 +836,12 @@ func TestRoute_ServeHTTP_DeferredTemplateDefaultAppViews(t *testing.T) {
 		config: mockConfig,
 		driver: "gin",
 	}
-	assert.Nil(t, route.init(nil))
+	route.init(nil)
 
 	mockView := mocksview.NewView(t)
 	mockView.EXPECT().RegisteredViews().Return(nil).Once()
 	mockView.EXPECT().RegisteredViewFS().Return(nil).Once()
+	mockView.EXPECT().Funcs().Return(nil).Once()
 	mockView.EXPECT().GetShared().Return(nil).Once()
 	ViewFacade = mockView
 
@@ -881,7 +888,7 @@ func TestRoute_ServeHTTP_StickyTemplateError(t *testing.T) {
 		config: mockConfig,
 		driver: "gin",
 	}
-	assert.Nil(t, route.init(nil))
+	route.init(nil)
 
 	route.Get("/", func(ctx contractshttp.Context) contractshttp.Response {
 		return ctx.Response().Success().String("ok")
