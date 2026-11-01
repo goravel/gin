@@ -13,6 +13,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/gin-gonic/gin"
 	contractshttp "github.com/goravel/framework/contracts/http"
 	frameworkfilesystem "github.com/goravel/framework/filesystem"
 	foundationjson "github.com/goravel/framework/foundation/json"
@@ -160,6 +161,48 @@ func (s *ContextRequestSuite) TestAll_PostWithJson() {
 	s.Equal(http.StatusOK, code)
 }
 
+func (s *ContextRequestSuite) TestAll_PostWithJsonArray() {
+	originalLog := LogFacade
+	defer func() { LogFacade = originalLog }()
+
+	mockLog := mockslog.NewLog(s.T())
+	LogFacade = mockLog
+
+	s.route.Middleware(testAllMiddleware()).Post("/all-array", func(ctx contractshttp.Context) contractshttp.Response {
+		all := ctx.Request().All()
+		nameFromInput := ctx.Request().Input("name")
+		type Test struct {
+			Name string `json:"Name"`
+			Age  int    `json:"Age"`
+		}
+		var tests []Test
+		err := ctx.Request().Bind(&tests)
+		s.NoError(err)
+
+		return ctx.Response().Success().Json(contractshttp.Json{
+			"all":        all,
+			"middleware": ctx.Value("all"),
+			"name_input": nameFromInput,
+			"items":      tests,
+		})
+	})
+
+	payload := strings.NewReader(`[
+		{
+			"Name": "goravel",
+			"Age": 1
+		}
+	]`)
+	req, err := http.NewRequest("POST", "/all-array?a=1&a=2&name=3", payload)
+	s.Require().Nil(err)
+
+	req.Header.Set("Content-Type", "application/json")
+	code, body, _, _ := s.request(req)
+
+	s.Equal("{\"all\":{\"a\":[\"1\",\"2\"],\"name\":\"3\"},\"items\":[{\"Name\":\"goravel\",\"Age\":1}],\"middleware\":{\"a\":[\"1\",\"2\"],\"name\":\"3\"},\"name_input\":\"3\"}", body)
+	s.Equal(http.StatusOK, code)
+}
+
 func (s *ContextRequestSuite) TestAll_PostWithErrorJson() {
 	mockLog := &mockslog.Log{}
 	LogFacade = mockLog
@@ -192,6 +235,37 @@ func (s *ContextRequestSuite) TestAll_PostWithErrorJson() {
 	code, body, _, _ := s.request(req)
 
 	s.Equal("{\"age\":0,\"all\":{\"a\":[\"1\",\"2\"],\"name\":\"3\"},\"name\":\"\"}", body)
+	s.Equal(http.StatusOK, code)
+}
+
+func (s *ContextRequestSuite) TestAll_PostWithTruncatedMultipart() {
+	originalLog := LogFacade
+	defer func() { LogFacade = originalLog }()
+
+	mockLog := mockslog.NewLog(s.T())
+	LogFacade = mockLog
+	mockLog.EXPECT().Error(mock.MatchedBy(func(msg string) bool {
+		return strings.HasPrefix(msg, "parse multipart form error:")
+	})).Once()
+
+	s.route.Middleware(testAllMiddleware()).Post("/all-with-truncated-multipart", func(ctx contractshttp.Context) contractshttp.Response {
+		return ctx.Response().Success().Json(contractshttp.Json{
+			"all": ctx.Request().All(),
+		})
+	})
+
+	// The closing boundary never arrives, as with an interrupted upload.
+	payload := strings.NewReader("--BOUNDARY\r\n" +
+		"Content-Disposition: form-data; name=\"file\"; filename=\"x.png\"\r\n" +
+		"Content-Type: image/png\r\n\r\n" +
+		"partial-bytes")
+	req, err := http.NewRequest("POST", "/all-with-truncated-multipart?a=1", payload)
+	s.Require().Nil(err)
+
+	req.Header.Set("Content-Type", "multipart/form-data; boundary=BOUNDARY")
+	code, body, _, _ := s.request(req)
+
+	s.Equal("{\"all\":{\"a\":\"1\"}}", body)
 	s.Equal(http.StatusOK, code)
 }
 
@@ -2263,6 +2337,49 @@ func TestGetValueFromHttpBody(t *testing.T) {
 			assert.Equal(t, test.expectValue, value)
 		})
 	}
+}
+
+func TestGetHttpBody(t *testing.T) {
+	t.Run("JSON object payload populates map and restores body", func(t *testing.T) {
+		c, _ := gin.CreateTestContext(httptest.NewRecorder())
+		c.Request = httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"name":"goravel","age":1}`))
+		c.Request.Header.Set("Content-Type", "application/json")
+
+		ctx := NewContext(c)
+		body, err := getHttpBody(ctx)
+		assert.NoError(t, err)
+		assert.Equal(t, map[string]any{"name": "goravel", "age": float64(1)}, body)
+
+		restored, readErr := io.ReadAll(c.Request.Body)
+		assert.NoError(t, readErr)
+		assert.Equal(t, `{"name":"goravel","age":1}`, string(restored))
+	})
+
+	t.Run("JSON array payload returns empty map without error and restores body", func(t *testing.T) {
+		c, _ := gin.CreateTestContext(httptest.NewRecorder())
+		c.Request = httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`[{"name":"goravel"},{"name":"framework"}]`))
+		c.Request.Header.Set("Content-Type", "application/json")
+
+		ctx := NewContext(c)
+		body, err := getHttpBody(ctx)
+		assert.NoError(t, err)
+		assert.Empty(t, body)
+
+		restored, readErr := io.ReadAll(c.Request.Body)
+		assert.NoError(t, readErr)
+		assert.Equal(t, `[{"name":"goravel"},{"name":"framework"}]`, string(restored))
+	})
+
+	t.Run("Invalid JSON array payload returns error", func(t *testing.T) {
+		c, _ := gin.CreateTestContext(httptest.NewRecorder())
+		c.Request = httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`[{"name":"goravel",}]`))
+		c.Request.Header.Set("Content-Type", "application/json")
+
+		ctx := NewContext(c)
+		body, err := getHttpBody(ctx)
+		assert.Error(t, err)
+		assert.Nil(t, body)
+	})
 }
 
 // Timeout creates middleware to set a timeout for a request

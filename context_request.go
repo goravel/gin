@@ -44,7 +44,11 @@ func NewContextRequest(ctx *Context, log log.Log, validation contractsvalidate.V
 	request := contextRequestPool.Get().(*ContextRequest)
 	httpBody, err := getHttpBody(ctx)
 	if err != nil {
-		log.Error(fmt.Sprintf("%+v", err))
+		if isBodyTooLarge(err) {
+			abortBodyTooLarge(ctx.instance)
+		} else {
+			log.Error(fmt.Sprintf("%+v", err))
+		}
 	}
 	request.ctx = ctx
 	request.instance = ctx.instance
@@ -629,14 +633,21 @@ func getHttpBody(ctx *Context) (map[string]any, error) {
 	data := make(map[string]any)
 	if contentType == "application/json" {
 		bodyBytes, err := io.ReadAll(request.Body)
-		_ = request.Body.Close()
 		if err != nil {
-			return nil, fmt.Errorf("retrieve json error: %v", err)
+			// The body is deliberately not closed here: closing a server request
+			// body drains what is left of it, which stalls on a client that stopped
+			// sending. The server closes it itself once the response is out.
+			return nil, fmt.Errorf("retrieve json error: %w", err)
 		}
+		_ = request.Body.Close()
 
 		if len(bodyBytes) > 0 {
-			if err := json.Unmarshal(bodyBytes, &data); err != nil {
+			var rawData any
+			if err := json.Unmarshal(bodyBytes, &rawData); err != nil {
 				return nil, fmt.Errorf("decode json [%v] error: %v", string(bodyBytes), err)
+			}
+			if bodyMap, ok := rawData.(map[string]any); ok {
+				data = bodyMap
 			}
 
 			request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
@@ -647,7 +658,7 @@ func getHttpBody(ctx *Context) (map[string]any, error) {
 		if request.PostForm == nil {
 			const defaultMemory = 32 << 20
 			if err := request.ParseMultipartForm(defaultMemory); err != nil {
-				return nil, fmt.Errorf("parse multipart form error: %v", err)
+				return nil, fmt.Errorf("parse multipart form error: %w", err)
 			}
 		}
 		for k, v := range request.PostForm {
@@ -657,11 +668,16 @@ func getHttpBody(ctx *Context) (map[string]any, error) {
 				data[k] = v[0]
 			}
 		}
-		for k, v := range request.MultipartForm.File {
-			if len(v) > 1 {
-				data[k] = v
-			} else if len(v) == 1 {
-				data[k] = v[0]
+		// ParseMultipartForm sets PostForm before it reads the body, so if the
+		// parse failed in an earlier context of this request, or something else
+		// called ParseForm, MultipartForm is still nil here.
+		if request.MultipartForm != nil {
+			for k, v := range request.MultipartForm.File {
+				if len(v) > 1 {
+					data[k] = v
+				} else if len(v) == 1 {
+					data[k] = v[0]
+				}
 			}
 		}
 	}
@@ -669,7 +685,7 @@ func getHttpBody(ctx *Context) (map[string]any, error) {
 	if contentType == "application/x-www-form-urlencoded" {
 		if request.PostForm == nil {
 			if err := request.ParseForm(); err != nil {
-				return nil, fmt.Errorf("parse form error: %v", err)
+				return nil, fmt.Errorf("parse form error: %w", err)
 			}
 		}
 		for k, v := range request.PostForm {

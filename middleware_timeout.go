@@ -24,7 +24,14 @@ func (t *TimeoutMiddleware) Handle(ctx contractshttp.Context) {
 		return
 	}
 
-	t.tm(ctx.(*Context).Instance())
+	// gin-contrib/timeout swaps in a buffered writer and does not restore the
+	// original one after the chain finishes. gin writes its default 404 after
+	// the global middleware return, so without restoring it the status is lost
+	// and the client gets an empty 200.
+	instance := ctx.(*Context).Instance()
+	writer := instance.Writer
+	t.tm(instance)
+	instance.Writer = writer
 }
 
 // Timeout creates middleware to set a timeout for a request
