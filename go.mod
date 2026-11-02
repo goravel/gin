@@ -7,7 +7,7 @@ toolchain go1.27.3
 require (
 	github.com/gin-contrib/timeout v1.2.4
 	github.com/gin-gonic/gin v1.12.0
-	github.com/goravel/framework v1.18.1-0.20261026075349-ee5302da9928
+	github.com/goravel/framework v1.18.1-0.20261102081250-2aefabc56e78
 	github.com/rs/cors v1.11.1
 	github.com/spf13/cast v1.10.0
 	github.com/stretchr/testify v1.12.1
@@ -134,7 +134,7 @@ require (
 	golang.org/x/tools v0.52.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260928230214-8a89bd6388cc // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260928230214-8a89bd6388cc // indirect
-	google.golang.org/grpc v1.86.0-dev.0.20261016230555-3d85ab3cf6bf // indirect
+	google.golang.org/grpc v1.86.0-dev.0.20261023181330-80c1e76a540c // indirect
 	google.golang.org/protobuf v1.36.12 // indirect
 	gorm.io/gorm v1.31.2 // indirect
 )
