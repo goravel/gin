@@ -1,11 +1,11 @@
 module github.com/goravel/gin
 
-go 1.26.0
+go 1.26.10
 
 toolchain go1.27.3
 
 require (
-	github.com/gin-contrib/timeout v1.2.3
+	github.com/gin-contrib/timeout v1.2.4
 	github.com/gin-gonic/gin v1.12.0
 	github.com/goravel/framework v1.18.1-0.20261026075349-ee5302da9928
 	github.com/rs/cors v1.11.1
