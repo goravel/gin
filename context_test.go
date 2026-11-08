@@ -147,10 +147,11 @@ func TestContext_Concurrent(t *testing.T) {
 			require.NotNil(t, contexts[0].values)
 			for _, ctx := range contexts {
 				require.Same(t, contexts[0].values, ctx.values)
-				for i := 0; i < goroutines; i++ {
-					require.Equal(t, "v", ctx.Value(i))
-					require.Equal(t, "v", ctx.Context().Value(i))
-				}
+			}
+
+			for i := 0; i < goroutines; i++ {
+				require.Equal(t, "v", contexts[0].Value(i))
+				require.Equal(t, "v", contexts[0].Context().Value(i))
 			}
 		}
 	})

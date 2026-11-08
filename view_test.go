@@ -413,7 +413,6 @@ csrf_token={{ .csrf_token }}
 	mockView := mocksview.NewView(t)
 	ViewFacade = mockView
 	mockView.EXPECT().RegisteredViews().Return(nil).Once()
-	mockView.EXPECT().GetShared().Return(map[string]any{}).Once()
 
 	mockConfig.EXPECT().Get("http.drivers.gin.template").Return(nil).Once()
 
@@ -424,6 +423,8 @@ csrf_token={{ .csrf_token }}
 	require.Nil(t, route.init(nil))
 
 	t.Run("CSRF token", func(t *testing.T) {
+		mockView.EXPECT().GetShared().Return(map[string]any{}).Once()
+
 		route.Get("/csrf", func(ctx contractshttp.Context) contractshttp.Response {
 			sessionData := session.NewSession(sessionKey, nil, foundationjson.New())
 			ctx.Request().SetSession(sessionData)
