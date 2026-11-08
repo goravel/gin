@@ -35,6 +35,10 @@ var contextPool = sync.Pool{New: func() any {
 	return &Context{}
 }}
 
+// holderMu makes the holder lookup and publish in NewContext atomic, so two
+// wrappers of one gin.Context cannot install separate holders.
+var holderMu sync.Mutex
+
 // requestValues holds the values shared by every *Context wrapping one
 // gin.Context. The lock lives here because middleware and handler each get
 // their own *Context over the same gin.Context.
@@ -48,36 +52,32 @@ type requestValue struct {
 	value any
 }
 
-func newRequestValues() *requestValues {
-	return &requestValues{}
-}
+func (rv *requestValues) load(key any) (any, bool) {
+	rv.mu.RLock()
+	defer rv.mu.RUnlock()
 
-func (s *requestValues) load(key any) (any, bool) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	value, ok := s.values[key]
+	value, ok := rv.values[key]
 	return value, ok
 }
 
-func (s *requestValues) store(key any, value any) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+func (rv *requestValues) store(key any, value any) {
+	rv.mu.Lock()
+	defer rv.mu.Unlock()
 
-	if s.values == nil {
-		s.values = make(map[any]any)
+	if rv.values == nil {
+		rv.values = make(map[any]any)
 	}
-	s.values[key] = value
+	rv.values[key] = value
 }
 
 // snapshot copies the entries under the read lock so the context chain can be
 // built without holding it.
-func (s *requestValues) snapshot() []requestValue {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+func (rv *requestValues) snapshot() []requestValue {
+	rv.mu.RLock()
+	defer rv.mu.RUnlock()
 
-	entries := make([]requestValue, 0, len(s.values))
-	for key, value := range s.values {
+	entries := make([]requestValue, 0, len(rv.values))
+	for key, value := range rv.values {
 		entries = append(entries, requestValue{key: key, value: value})
 	}
 	return entries
@@ -100,12 +100,12 @@ func NewContext(c *gin.Context) *Context {
 	ctx.instance = c
 	// The pool may hand back a Context from another request, and every wrapper
 	// of one gin.Context must share a single holder.
-	ctx.values = nil
-	if existing, ok := c.Get(contextKey); ok {
-		ctx.values, _ = existing.(*requestValues)
-	}
+	holderMu.Lock()
+	defer holderMu.Unlock()
+	existing, _ := c.Get(contextKey)
+	ctx.values, _ = existing.(*requestValues)
 	if ctx.values == nil {
-		ctx.values = newRequestValues()
+		ctx.values = &requestValues{}
 		c.Set(contextKey, ctx.values)
 	}
 	return ctx
@@ -135,13 +135,7 @@ func (c *Context) Response() contractshttp.ContextResponse {
 }
 
 func (c *Context) WithValue(key any, value any) {
-	if c.values == nil {
-		// Only NewContext produces a usable Context: c.instance is nil on a zero value.
-		c.values = newRequestValues()
-		if c.instance != nil {
-			c.instance.Set(contextKey, c.values)
-		}
-	}
+	// NewContext always sets values; a nil holder here is a programming error.
 	c.values.store(key, value)
 }
 
@@ -184,13 +178,29 @@ func (c *Context) Err() error {
 }
 
 func (c *Context) Value(key any) any {
-	if c.values != nil {
-		if value, ok := c.values.load(key); ok {
-			return value
-		}
+	if value, ok := valueOf(c.instance, key); ok {
+		return value
 	}
 
 	return c.instance.Request.Context().Value(key)
+}
+
+// valueOf reads a request value from the holder shared through c.
+func valueOf(c *gin.Context, key any) (any, bool) {
+	if c == nil {
+		return nil, false
+	}
+
+	v, ok := c.Get(contextKey)
+	if !ok {
+		return nil, false
+	}
+	values, ok := v.(*requestValues)
+	if !ok {
+		return nil, false
+	}
+
+	return values.load(key)
 }
 
 func (c *Context) Instance() *gin.Context {

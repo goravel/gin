@@ -86,7 +86,7 @@ func TestContext_Concurrent(t *testing.T) {
 		})
 	}
 
-	t.Run("first write wins", func(t *testing.T) {
+	t.Run("both writes are kept", func(t *testing.T) {
 		ginCtx, _ := gin.CreateTestContext(httptest.NewRecorder())
 		ginCtx.Request = httptest.NewRequest("GET", "/", nil)
 
@@ -112,6 +112,35 @@ func TestContext_Concurrent(t *testing.T) {
 		// write, so one of these values was lost.
 		require.Equal(t, "writer", reader.Value("first"))
 		require.Equal(t, "reader", writer.Value("second"))
+	})
+
+	t.Run("concurrent construction shares one holder", func(t *testing.T) {
+		ginCtx, _ := gin.CreateTestContext(httptest.NewRecorder())
+		ginCtx.Request = httptest.NewRequest("GET", "/", nil)
+
+		const goroutines = 10
+
+		contexts := make([]*Context, goroutines)
+		var wg sync.WaitGroup
+		start := make(chan struct{})
+
+		for i := 0; i < goroutines; i++ {
+			wg.Add(1)
+			go func(idx int) {
+				defer wg.Done()
+
+				<-start
+				contexts[idx] = NewContext(ginCtx)
+			}(i)
+		}
+
+		close(start)
+		wg.Wait()
+
+		require.NotNil(t, contexts[0].values)
+		for _, ctx := range contexts {
+			require.Same(t, contexts[0].values, ctx.values)
+		}
 	})
 }
 
@@ -160,8 +189,9 @@ func runConcurrentContext(t *testing.T, writer, reader *Context) {
 	close(start)
 	wg.Wait()
 
-	// Every writer stores the same value under key 0, so both read paths must
-	// see it.
-	require.Equal(t, "value", reader.Value(0))
-	require.Equal(t, "value", reader.Context().Value(0))
+	// Each writer stores under its own key; every key must be readable.
+	for i := 0; i < goroutines; i++ {
+		require.Equal(t, "value", reader.Value(i))
+		require.Equal(t, "value", reader.Context().Value(i))
+	}
 }

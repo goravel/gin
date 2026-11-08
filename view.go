@@ -21,17 +21,13 @@ func NewView(instance *gin.Context) *View {
 func (receive *View) Make(view string, data ...any) contractshttp.Response {
 	shared := ViewFacade.GetShared()
 
-	if v, ok := receive.instance.Get(contextKey); ok {
-		if values, ok := v.(*requestValues); ok {
-			if sessionValue, exists := values.load(sessionKey); exists {
-				if session, ok := sessionValue.(contractsession.Session); ok {
-					token := session.Token()
-					shared["csrf_token"] = token
-					shared["csrf_field"] = template.HTML(
-						fmt.Sprintf(`<input type="hidden" name="_token" value="%s" />`, template.HTMLEscapeString(token)),
-					)
-				}
-			}
+	if sessionValue, ok := valueOf(receive.instance, sessionKey); ok {
+		if session, ok := sessionValue.(contractsession.Session); ok {
+			token := session.Token()
+			shared["csrf_token"] = token
+			shared["csrf_field"] = template.HTML(
+				fmt.Sprintf(`<input type="hidden" name="_token" value="%s" />`, template.HTMLEscapeString(token)),
+			)
 		}
 	}
 	if len(data) == 0 {
