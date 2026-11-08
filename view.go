@@ -21,7 +21,7 @@ func NewView(instance *gin.Context) *View {
 func (receive *View) Make(view string, data ...any) contractshttp.Response {
 	shared := ViewFacade.GetShared()
 
-	if sessionValue, ok := valueOf(receive.instance, sessionKey); ok {
+	if sessionValue, ok := requestValueOf(receive.instance, sessionKey); ok {
 		if session, ok := sessionValue.(contractsession.Session); ok {
 			token := session.Token()
 			shared["csrf_token"] = token

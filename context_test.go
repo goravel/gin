@@ -130,7 +130,9 @@ func TestContext_Concurrent(t *testing.T) {
 				defer wg.Done()
 
 				<-start
-				contexts[idx] = NewContext(ginCtx)
+				ctx := NewContext(ginCtx)
+				ctx.WithValue(idx, "v")
+				contexts[idx] = ctx
 			}(i)
 		}
 
@@ -140,7 +142,35 @@ func TestContext_Concurrent(t *testing.T) {
 		require.NotNil(t, contexts[0].values)
 		for _, ctx := range contexts {
 			require.Same(t, contexts[0].values, ctx.values)
+			for i := 0; i < goroutines; i++ {
+				require.Equal(t, "v", ctx.Value(i))
+				require.Equal(t, "v", ctx.Context().Value(i))
+			}
 		}
+	})
+
+	t.Run("pooled Context does not keep the old request's values", func(t *testing.T) {
+		oldGinCtx, _ := gin.CreateTestContext(httptest.NewRecorder())
+		oldGinCtx.Request = httptest.NewRequest("GET", "/old", nil)
+		newGinCtx, _ := gin.CreateTestContext(httptest.NewRecorder())
+		newGinCtx.Request = httptest.NewRequest("GET", "/new", nil)
+
+		stale := &Context{instance: oldGinCtx, values: &requestValues{}}
+		stale.values.store("old", "value")
+
+		oldPool := contextPool
+		contextPool = &sync.Pool{New: func() any { return stale }}
+		defer func() { contextPool = oldPool }()
+
+		ctx := NewContext(newGinCtx)
+		require.Same(t, stale, ctx)
+		require.Nil(t, ctx.Value("old"))
+
+		ctx.WithValue("new", "value")
+		holder, ok := newGinCtx.Get(contextKey)
+		require.True(t, ok)
+		require.Same(t, ctx.values, holder)
+		require.Equal(t, "value", ctx.Value("new"))
 	})
 }
 

@@ -31,7 +31,7 @@ func Background() contractshttp.Context {
 	return NewContext(ctx)
 }
 
-var contextPool = sync.Pool{New: func() any {
+var contextPool = &sync.Pool{New: func() any {
 	return &Context{}
 }}
 
@@ -87,7 +87,9 @@ type Context struct {
 	instance *gin.Context
 	request  contractshttp.ContextRequest
 	response contractshttp.ContextResponse
-	values   *requestValues
+	// values is replaced by NewContext on every use; the gin.Context keeps the
+	// current holder, so pool cleanup does not clear it.
+	values *requestValues
 }
 
 func NewContext(c *gin.Context) *Context {
@@ -178,15 +180,17 @@ func (c *Context) Err() error {
 }
 
 func (c *Context) Value(key any) any {
-	if value, ok := valueOf(c.instance, key); ok {
-		return value
+	if c.values != nil {
+		if value, ok := c.values.load(key); ok {
+			return value
+		}
 	}
 
 	return c.instance.Request.Context().Value(key)
 }
 
-// valueOf reads a request value from the holder shared through c.
-func valueOf(c *gin.Context, key any) (any, bool) {
+// requestValueOf reads a request value from the holder shared through c.
+func requestValueOf(c *gin.Context, key any) (any, bool) {
 	if c == nil {
 		return nil, false
 	}

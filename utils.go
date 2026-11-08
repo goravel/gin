@@ -31,7 +31,6 @@ func handlerToGinHandler(handler httpcontract.HandlerFunc) gin.HandlerFunc {
 			contextResponsePool.Put(context.response)
 			context.request = nil
 			context.response = nil
-			// values is left for NewContext to replace: the gin.Context still holds it.
 			contextPool.Put(context)
 		}()
 
@@ -51,7 +50,6 @@ func middlewareToGinHandler(middleware httpcontract.Middleware) gin.HandlerFunc 
 			contextResponsePool.Put(context.response)
 			context.request = nil
 			context.response = nil
-			// values is left for NewContext to replace: the gin.Context still holds it.
 			contextPool.Put(context)
 		}()
 
