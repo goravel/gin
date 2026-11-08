@@ -413,22 +413,22 @@ csrf_token={{ .csrf_token }}
 	mockView := mocksview.NewView(t)
 	ViewFacade = mockView
 	mockView.EXPECT().RegisteredViews().Return(nil).Once()
-	mockView.EXPECT().GetShared().Return(map[string]any{}).Once()
+
+	mockConfig.EXPECT().Get("http.drivers.gin.template").Return(nil).Once()
+
+	route := &Route{
+		config: mockConfig,
+		driver: "gin",
+	}
+	require.Nil(t, route.init(nil))
 
 	t.Run("CSRF token", func(t *testing.T) {
-		mockConfig.EXPECT().Get("http.drivers.gin.template").Return(nil).Once()
-
-		route := &Route{
-			config: mockConfig,
-			driver: "gin",
-		}
-		err := route.init(nil)
-		require.Nil(t, err)
+		mockView.EXPECT().GetShared().Return(map[string]any{}).Once()
 
 		route.Get("/csrf", func(ctx contractshttp.Context) contractshttp.Response {
 			sessionData := session.NewSession(sessionKey, nil, foundationjson.New())
 			ctx.Request().SetSession(sessionData)
-			err = sessionData.Regenerate()
+			err := sessionData.Regenerate()
 			assert.Nil(t, err)
 
 			return ctx.Response().View().Make("csrf.tmpl")
@@ -439,6 +439,25 @@ csrf_token={{ .csrf_token }}
 		w := httptest.NewRecorder()
 		route.ServeHTTP(w, req)
 		assert.Regexp(t, `^\ncsrf_token=([A-Za-z0-9\-_]+)\n$`, w.Body.String())
+	})
+
+	t.Run("non-session value under the session key", func(t *testing.T) {
+		mockView.EXPECT().GetShared().Return(map[string]any{}).Once()
+
+		route.Get("/csrf-without-session", func(ctx contractshttp.Context) contractshttp.Response {
+			ctx.WithValue(sessionKey, "not-a-session")
+
+			return ctx.Response().View().Make("csrf.tmpl")
+		})
+
+		req, err := http.NewRequest("GET", "/csrf-without-session", nil)
+		assert.Nil(t, err)
+		w := httptest.NewRecorder()
+
+		require.NotPanics(t, func() {
+			route.ServeHTTP(w, req)
+		})
+		assert.Equal(t, "\ncsrf_token=\n", w.Body.String())
 	})
 }
 
