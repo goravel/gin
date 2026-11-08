@@ -31,14 +31,65 @@ func Background() contractshttp.Context {
 	return NewContext(ctx)
 }
 
-var contextPool = sync.Pool{New: func() any {
+var contextPool = &sync.Pool{New: func() any {
 	return &Context{}
 }}
+
+// holderMu makes the holder lookup and publish in NewContext atomic, so two
+// wrappers of one gin.Context cannot install separate holders.
+var holderMu sync.Mutex
+
+// requestValues holds the values shared by every *Context wrapping one
+// gin.Context. The lock lives here because middleware and handler each get
+// their own *Context over the same gin.Context.
+type requestValues struct {
+	mu     sync.RWMutex
+	values map[any]any
+}
+
+type requestValue struct {
+	key   any
+	value any
+}
+
+func (rv *requestValues) load(key any) (any, bool) {
+	rv.mu.RLock()
+	defer rv.mu.RUnlock()
+
+	value, ok := rv.values[key]
+	return value, ok
+}
+
+func (rv *requestValues) store(key any, value any) {
+	rv.mu.Lock()
+	defer rv.mu.Unlock()
+
+	if rv.values == nil {
+		rv.values = make(map[any]any)
+	}
+	rv.values[key] = value
+}
+
+// snapshot copies the entries under the read lock so the context chain can be
+// built without holding it.
+func (rv *requestValues) snapshot() []requestValue {
+	rv.mu.RLock()
+	defer rv.mu.RUnlock()
+
+	entries := make([]requestValue, 0, len(rv.values))
+	for key, value := range rv.values {
+		entries = append(entries, requestValue{key: key, value: value})
+	}
+	return entries
+}
 
 type Context struct {
 	instance *gin.Context
 	request  contractshttp.ContextRequest
 	response contractshttp.ContextResponse
+	// values is replaced by NewContext on every use; the gin.Context keeps the
+	// current holder, so pool cleanup does not clear it.
+	values *requestValues
 }
 
 func NewContext(c *gin.Context) *Context {
@@ -49,6 +100,16 @@ func NewContext(c *gin.Context) *Context {
 		c.Request = httptest.NewRequest(nethttp.MethodGet, "/", nil)
 	}
 	ctx.instance = c
+	// The pool may hand back a Context from another request, and every wrapper
+	// of one gin.Context must share a single holder.
+	holderMu.Lock()
+	defer holderMu.Unlock()
+	existing, _ := c.Get(contextKey)
+	ctx.values, _ = existing.(*requestValues)
+	if ctx.values == nil {
+		ctx.values = &requestValues{}
+		c.Set(contextKey, ctx.values)
+	}
 	return ctx
 }
 
@@ -76,9 +137,8 @@ func (c *Context) Response() contractshttp.ContextResponse {
 }
 
 func (c *Context) WithValue(key any, value any) {
-	values := c.getGoravelContextValues()
-	values[key] = value
-	c.instance.Set(contextKey, values)
+	// NewContext always sets values; a nil holder here is a programming error.
+	c.values.store(key, value)
 }
 
 func (c *Context) WithContext(ctx context.Context) {
@@ -88,17 +148,19 @@ func (c *Context) WithContext(ctx context.Context) {
 
 func (c *Context) Context() context.Context {
 	ctx := c.instance.Request.Context()
-	values := c.getGoravelContextValues()
-	for key, value := range values {
+	if c.values == nil {
+		return ctx
+	}
+	for _, entry := range c.values.snapshot() {
 		skip := false
 		for _, internalContextKey := range internalContextKeys {
-			if key == internalContextKey {
+			if entry.key == internalContextKey {
 				skip = true
 			}
 		}
 
 		if !skip {
-			ctx = context.WithValue(ctx, key, value)
+			ctx = context.WithValue(ctx, entry.key, entry.value)
 		}
 	}
 
@@ -118,22 +180,33 @@ func (c *Context) Err() error {
 }
 
 func (c *Context) Value(key any) any {
-	if value, exist := c.getGoravelContextValues()[key]; exist {
-		return value
+	if c.values != nil {
+		if value, ok := c.values.load(key); ok {
+			return value
+		}
 	}
 
 	return c.instance.Request.Context().Value(key)
 }
 
-func (c *Context) Instance() *gin.Context {
-	return c.instance
+// requestValueOf reads a request value from the holder shared through c.
+func requestValueOf(c *gin.Context, key any) (any, bool) {
+	if c == nil {
+		return nil, false
+	}
+
+	v, ok := c.Get(contextKey)
+	if !ok {
+		return nil, false
+	}
+	values, ok := v.(*requestValues)
+	if !ok {
+		return nil, false
+	}
+
+	return values.load(key)
 }
 
-func (c *Context) getGoravelContextValues() map[any]any {
-	if val, exist := c.instance.Get(contextKey); exist {
-		if goravelCtxVal, ok := val.(map[any]any); ok {
-			return goravelCtxVal
-		}
-	}
-	return make(map[any]any)
+func (c *Context) Instance() *gin.Context {
+	return c.instance
 }

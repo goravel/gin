@@ -21,11 +21,9 @@ func NewView(instance *gin.Context) *View {
 func (receive *View) Make(view string, data ...any) contractshttp.Response {
 	shared := ViewFacade.GetShared()
 
-	if contextValues, exists := receive.instance.Get(contextKey); exists {
-		contextValuesMap := contextValues.(map[any]any)
-		if session := contextValuesMap[sessionKey]; session != nil {
-			sessionValue := session.(contractsession.Session)
-			token := sessionValue.Token()
+	if sessionValue, ok := requestValueOf(receive.instance, sessionKey); ok {
+		if session, ok := sessionValue.(contractsession.Session); ok {
+			token := session.Token()
 			shared["csrf_token"] = token
 			shared["csrf_field"] = template.HTML(
 				fmt.Sprintf(`<input type="hidden" name="_token" value="%s" />`, template.HTMLEscapeString(token)),
