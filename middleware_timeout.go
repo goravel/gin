@@ -1,7 +1,10 @@
 package gin
 
 import (
+	"context"
+	"errors"
 	"fmt"
+	"net/http"
 	"time"
 
 	gintimeout "github.com/gin-contrib/timeout"
@@ -32,6 +35,17 @@ func (t *TimeoutMiddleware) Handle(ctx contractshttp.Context) {
 	writer := instance.Writer
 	t.tm(instance)
 	instance.Writer = writer
+
+	// gin-contrib/timeout picks between "handler finished" and "timer fired"
+	// with a select. When the handler returns right after the deadline both
+	// cases are ready and the finish branch can win: it flushes an empty buffer
+	// and returns without writing the timeout response, leaving the client with
+	// gin's implicit 200 instead of 408. Write that response ourselves; the
+	// Written check keeps an application response that already reached the
+	// client untouched.
+	if errors.Is(instance.Request.Context().Err(), context.DeadlineExceeded) && !writer.Written() {
+		instance.String(http.StatusRequestTimeout, http.StatusText(http.StatusRequestTimeout))
+	}
 }
 
 // Timeout creates middleware to set a timeout for a request

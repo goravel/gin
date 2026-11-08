@@ -4,7 +4,6 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
-	"runtime"
 	"testing"
 	"time"
 
@@ -79,16 +78,29 @@ func TestTimeoutMiddleware(t *testing.T) {
 		}
 
 		assert.Equal(t, contractshttp.StatusRequestTimeout, w.Code)
-		// Skip body assertion on Windows due to a known data race between
-		// gintimeout.Copy() and responseMiddleware.WithValue() accessing
-		// gin.Context.Keys concurrently. The status code assertion still
-		// verifies the timeout fires correctly.
-		if runtime.GOOS != "windows" {
-			assert.Equal(t, http.StatusText(contractshttp.StatusRequestTimeout), w.Body.String())
-		}
+		assert.Equal(t, http.StatusText(contractshttp.StatusRequestTimeout), w.Body.String())
 		assert.ErrorIs(t, err, context.DeadlineExceeded)
 		assert.True(t, hasDeadline)
 		assert.False(t, deadline.IsZero())
+	})
+
+	t.Run("timeout response is written when the handler returns after the deadline", func(t *testing.T) {
+		route.Middleware(Timeout(5*time.Second)).Get("/timeout-parent-deadline", func(ctx contractshttp.Context) contractshttp.Response {
+			<-ctx.Done()
+
+			return ctx.Response().Status(contractshttp.StatusRequestTimeout).String("timeout")
+		})
+
+		w := httptest.NewRecorder()
+		parent, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+		defer cancel()
+		req, err := http.NewRequestWithContext(parent, http.MethodGet, "/timeout-parent-deadline", nil)
+		require.NoError(t, err)
+
+		route.ServeHTTP(w, req)
+
+		assert.Equal(t, contractshttp.StatusRequestTimeout, w.Code)
+		assert.Equal(t, http.StatusText(contractshttp.StatusRequestTimeout), w.Body.String())
 	})
 
 	t.Run("normal request", func(t *testing.T) {
