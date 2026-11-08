@@ -41,9 +41,10 @@ func (t *TimeoutMiddleware) Handle(ctx contractshttp.Context) {
 	// cases are ready and the finish branch can win: it flushes an empty buffer
 	// and returns without writing the timeout response, leaving the client with
 	// gin's implicit 200 instead of 408. Write that response ourselves; the
-	// Written check keeps an application response that already reached the
-	// client untouched.
-	if errors.Is(instance.Request.Context().Err(), context.DeadlineExceeded) && !writer.Written() {
+	// Written and Status checks keep a response the application already
+	// produced (body or status only) untouched.
+	if errors.Is(instance.Request.Context().Err(), context.DeadlineExceeded) &&
+		!writer.Written() && writer.Status() == http.StatusOK {
 		instance.String(http.StatusRequestTimeout, http.StatusText(http.StatusRequestTimeout))
 	}
 }

@@ -103,6 +103,59 @@ func TestTimeoutMiddleware(t *testing.T) {
 		assert.Equal(t, http.StatusText(contractshttp.StatusRequestTimeout), w.Body.String())
 	})
 
+	t.Run("nested timeout writes a single response body", func(t *testing.T) {
+		release := make(chan struct{})
+		route.Middleware(Timeout(5*time.Second), Timeout(50*time.Millisecond)).Get("/nested-timeout", func(ctx contractshttp.Context) contractshttp.Response {
+			<-ctx.Done()
+			<-release
+
+			return nil
+		})
+
+		w := httptest.NewRecorder()
+		req, err := http.NewRequest(http.MethodGet, "/nested-timeout", nil)
+		require.NoError(t, err)
+
+		done := make(chan struct{})
+		go func() {
+			route.ServeHTTP(w, req)
+			close(done)
+		}()
+
+		// Let the inner timeout fire so its response reaches the outer writer.
+		time.Sleep(150 * time.Millisecond)
+		close(release)
+
+		select {
+		case <-done:
+		case <-time.After(5 * time.Second):
+			t.Fatal("nested timeout request did not complete")
+		}
+
+		assert.Equal(t, contractshttp.StatusRequestTimeout, w.Code)
+		assert.Equal(t, http.StatusText(contractshttp.StatusRequestTimeout), w.Body.String())
+	})
+
+	t.Run("aborted status survives an expired deadline", func(t *testing.T) {
+		route.Middleware(Timeout(5*time.Second)).Get("/abort-after-deadline", func(ctx contractshttp.Context) contractshttp.Response {
+			<-ctx.Done()
+			ctx.Request().Abort(http.StatusServiceUnavailable)
+
+			return nil
+		})
+
+		w := httptest.NewRecorder()
+		parent, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+		defer cancel()
+		req, err := http.NewRequestWithContext(parent, http.MethodGet, "/abort-after-deadline", nil)
+		require.NoError(t, err)
+
+		route.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusServiceUnavailable, w.Code)
+		assert.Empty(t, w.Body.String())
+	})
+
 	t.Run("normal request", func(t *testing.T) {
 		route.Middleware(Timeout(1*time.Second)).Get("/normal", func(ctx contractshttp.Context) contractshttp.Response {
 			return ctx.Response().Success().String("normal")
