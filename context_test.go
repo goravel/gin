@@ -115,36 +115,42 @@ func TestContext_Concurrent(t *testing.T) {
 	})
 
 	t.Run("concurrent construction shares one holder", func(t *testing.T) {
-		ginCtx, _ := gin.CreateTestContext(httptest.NewRecorder())
-		ginCtx.Request = httptest.NewRequest("GET", "/", nil)
+		const (
+			goroutines = 10
+			rounds     = 200
+		)
 
-		const goroutines = 10
+		// One round closes the publish window too early to be a real guard of holderMu.
+		for round := 0; round < rounds; round++ {
+			ginCtx, _ := gin.CreateTestContext(httptest.NewRecorder())
+			ginCtx.Request = httptest.NewRequest("GET", "/", nil)
 
-		contexts := make([]*Context, goroutines)
-		var wg sync.WaitGroup
-		start := make(chan struct{})
+			contexts := make([]*Context, goroutines)
+			var wg sync.WaitGroup
+			start := make(chan struct{})
 
-		for i := 0; i < goroutines; i++ {
-			wg.Add(1)
-			go func(idx int) {
-				defer wg.Done()
-
-				<-start
-				ctx := NewContext(ginCtx)
-				ctx.WithValue(idx, "v")
-				contexts[idx] = ctx
-			}(i)
-		}
-
-		close(start)
-		wg.Wait()
-
-		require.NotNil(t, contexts[0].values)
-		for _, ctx := range contexts {
-			require.Same(t, contexts[0].values, ctx.values)
 			for i := 0; i < goroutines; i++ {
-				require.Equal(t, "v", ctx.Value(i))
-				require.Equal(t, "v", ctx.Context().Value(i))
+				wg.Add(1)
+				go func(idx int) {
+					defer wg.Done()
+
+					<-start
+					ctx := NewContext(ginCtx)
+					ctx.WithValue(idx, "v")
+					contexts[idx] = ctx
+				}(i)
+			}
+
+			close(start)
+			wg.Wait()
+
+			require.NotNil(t, contexts[0].values)
+			for _, ctx := range contexts {
+				require.Same(t, contexts[0].values, ctx.values)
+				for i := 0; i < goroutines; i++ {
+					require.Equal(t, "v", ctx.Value(i))
+					require.Equal(t, "v", ctx.Context().Value(i))
+				}
 			}
 		}
 	})
