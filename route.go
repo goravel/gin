@@ -7,7 +7,9 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -24,7 +26,7 @@ import (
 	"github.com/spf13/cast"
 )
 
-// map[path]map[method]info
+// map[domain+path]map[method]info
 var routes = make(map[string]map[string]contractshttp.Info)
 
 var globalRecoverCallback func(ctx contractshttp.Context, err any) = defaultRecoverCallback
@@ -50,6 +52,8 @@ type Route struct {
 	driver           string
 	globalMiddleware []contractshttp.Middleware
 	instance         *gin.Engine
+	domains          []*domainRouter
+	engineHandlers   []gin.HandlerFunc // what every engine runs first: logs, body limit and global middleware
 	server           *http.Server
 	tlsServer        *http.Server
 	templateOnce     sync.Once
@@ -124,7 +128,7 @@ func (r *Route) Listen(l net.Listener) error {
 
 	r.server = &http.Server{
 		Addr:           l.Addr().String(),
-		Handler:        http.AllowQuerySemicolons(r.instance),
+		Handler:        http.AllowQuerySemicolons(http.HandlerFunc(r.serveEngine)),
 		MaxHeaderBytes: r.config.GetInt(fmt.Sprintf("http.drivers.%s.header_limit", r.driver), 4096) << 10,
 	}
 
@@ -149,7 +153,7 @@ func (r *Route) ListenTLSWithCert(l net.Listener, certFile, keyFile string) erro
 
 	r.tlsServer = &http.Server{
 		Addr:           l.Addr().String(),
-		Handler:        http.AllowQuerySemicolons(r.instance),
+		Handler:        http.AllowQuerySemicolons(http.HandlerFunc(r.serveEngine)),
 		MaxHeaderBytes: r.config.GetInt(fmt.Sprintf("http.drivers.%s.header_limit", r.driver), 4096) << 10,
 	}
 
@@ -197,7 +201,7 @@ func (r *Route) Run(host ...string) error {
 
 	r.server = &http.Server{
 		Addr:           host[0],
-		Handler:        http.AllowQuerySemicolons(r.instance),
+		Handler:        http.AllowQuerySemicolons(http.HandlerFunc(r.serveEngine)),
 		MaxHeaderBytes: r.config.GetInt(fmt.Sprintf("http.drivers.%s.header_limit", r.driver), 4096) << 10,
 	}
 
@@ -242,7 +246,7 @@ func (r *Route) RunTLSWithCert(host, certFile, keyFile string) error {
 
 	r.tlsServer = &http.Server{
 		Addr:           host,
-		Handler:        http.AllowQuerySemicolons(r.instance),
+		Handler:        http.AllowQuerySemicolons(http.HandlerFunc(r.serveEngine)),
 		MaxHeaderBytes: r.config.GetInt(fmt.Sprintf("http.drivers.%s.header_limit", r.driver), 4096) << 10,
 	}
 
@@ -268,7 +272,7 @@ func (r *Route) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 
 		return
 	}
-	r.instance.ServeHTTP(writer, request)
+	r.serveEngine(writer, request)
 }
 
 func (r *Route) SetGlobalMiddleware(middlewares []contractshttp.Middleware) {
@@ -316,7 +320,8 @@ func (r *Route) init(globalMiddleware []contractshttp.Middleware) {
 	ginMiddleware = append(ginMiddleware, bodyLimitMiddleware(bodyLimit))
 
 	globalMiddleware = append([]contractshttp.Middleware{&recoverMiddleware{}}, globalMiddleware...)
-	engine.Use(append(ginMiddleware, middlewaresToGinHandlers(globalMiddleware)...)...)
+	r.engineHandlers = append(ginMiddleware, middlewaresToGinHandlers(globalMiddleware)...)
+	engine.Use(r.engineHandlers...)
 
 	template := r.config.Get("http.drivers." + r.driver + ".template")
 	switch t := template.(type) {
@@ -332,14 +337,80 @@ func (r *Route) init(globalMiddleware []contractshttp.Middleware) {
 		engine.HTMLRender = r.htmlRender
 	}
 
-	r.Router = NewGroup(
+	group := NewGroup(
 		r.config,
 		engine.Group("/"),
 		"",
 		[]contractshttp.Middleware{},
 		[]contractshttp.Middleware{ResponseMiddleware()},
-	)
+	).(*Group)
+	group.domains = r
+	r.Router = group
 	r.instance = engine
+	r.domains = nil
+}
+
+// domainRouter returns the router of the domain, creating its engine on first
+// use. The engine runs the same handlers as the main one, and passes a
+// request it has no route for to the main engine, whose routes match any host.
+func (r *Route) domainRouter(domain string) gin.IRouter {
+	var router *domainRouter
+	for _, existing := range r.domains {
+		if existing.domain == strings.ToLower(domain) {
+			router = existing
+			break
+		}
+	}
+
+	if router == nil {
+		engine := gin.New()
+		engine.MaxMultipartMemory = r.instance.MaxMultipartMemory
+		engine.HTMLRender = r.instance.HTMLRender
+		engine.NoRoute(func(ctx *gin.Context) {
+			r.instance.ServeHTTP(ctx.Writer, ctx.Request)
+			ctx.Abort()
+		})
+
+		router = newDomainRouter(domain, engine)
+		r.domains = append(r.domains, router)
+	}
+
+	// The handlers go on the group rather than the engine, so they don't run
+	// twice for a request passed to the main engine.
+	handlers := append(slices.Clone(r.engineHandlers), router.domainParamsMiddleware())
+
+	return router.engine.Group("/", handlers...)
+}
+
+// serveEngine serves the request with the engine of its domain.
+func (r *Route) serveEngine(writer http.ResponseWriter, request *http.Request) {
+	r.engineFor(request).ServeHTTP(writer, request)
+}
+
+// engineFor returns the engine of the request's domain: a domain without
+// parameters first, then the ones with parameters in the order they were
+// registered, then the main engine.
+func (r *Route) engineFor(request *http.Request) *gin.Engine {
+	if len(r.domains) == 0 {
+		return r.instance
+	}
+
+	host := requestHost(request)
+	for _, router := range r.domains {
+		if router.pattern == nil && router.domain == host {
+			return router.engine
+		}
+	}
+	for _, router := range r.domains {
+		if router.pattern == nil {
+			continue
+		}
+		if _, ok := router.match(host); ok {
+			return router.engine
+		}
+	}
+
+	return r.instance
 }
 
 // ensureTemplate compiles the view set once, from the configured callback or
@@ -373,6 +444,9 @@ func (r *Route) ensureTemplate() error {
 		r.htmlRender = htmlRender
 		if htmlRender != nil {
 			r.instance.HTMLRender = htmlRender
+			for _, router := range r.domains {
+				router.engine.HTMLRender = htmlRender
+			}
 		}
 	})
 	return r.templateErr
