@@ -15,7 +15,7 @@ import (
 
 // domainRegistry returns the router of a domain, creating it on first use.
 type domainRegistry interface {
-	domainRouter(domain string) gin.IRouter
+	domainRouter(domain string) (gin.IRouter, string)
 }
 
 type Group struct {
@@ -57,11 +57,13 @@ func (r *Group) Domain(domain string) contractsroute.Router {
 		return r
 	}
 
+	instance, name := r.domains.domainRouter(domain)
+
 	return &Group{
 		config:              r.config,
-		domain:              domain,
+		domain:              name,
 		domains:             r.domains,
-		instance:            r.domains.domainRouter(domain),
+		instance:            instance,
 		prefix:              r.prefix,
 		middlewares:         r.middlewares,
 		lastMiddlewares:     r.lastMiddlewares,

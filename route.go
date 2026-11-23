@@ -7,9 +7,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
-	"slices"
 	"sort"
-	"strings"
 	"sync"
 	"time"
 
@@ -22,6 +20,7 @@ import (
 	"github.com/goravel/framework/http/middleware"
 	"github.com/goravel/framework/support"
 	"github.com/goravel/framework/support/color"
+	supporthttp "github.com/goravel/framework/support/http"
 	"github.com/goravel/framework/support/str"
 	"github.com/spf13/cast"
 )
@@ -351,12 +350,19 @@ func (r *Route) init(globalMiddleware []contractshttp.Middleware) {
 }
 
 // domainRouter returns the router of the domain, creating its engine on first
-// use. The engine runs the same handlers as the main one, and passes a
-// request it has no route for to the main engine, whose routes match any host.
-func (r *Route) domainRouter(domain string) gin.IRouter {
+// use, and the domain as the routes record it. The engine runs the same
+// handlers as the main one, and passes a request it has no route for to the
+// main engine, whose routes match any host. An invalid domain panics, as an
+// invalid route does.
+func (r *Route) domainRouter(domain string) (gin.IRouter, string) {
+	parsed, err := supporthttp.ParseDomain(domain)
+	if err != nil {
+		panic(err)
+	}
+
 	var router *domainRouter
 	for _, existing := range r.domains {
-		if existing.domain == strings.ToLower(domain) {
+		if existing.domain.String() == parsed.String() {
 			router = existing
 			break
 		}
@@ -371,15 +377,16 @@ func (r *Route) domainRouter(domain string) gin.IRouter {
 			ctx.Abort()
 		})
 
-		router = newDomainRouter(domain, engine)
+		router = &domainRouter{domain: parsed, engine: engine}
 		r.domains = append(r.domains, router)
 	}
 
 	// The handlers go on the group rather than the engine, so they don't run
-	// twice for a request passed to the main engine.
-	handlers := append(slices.Clone(r.engineHandlers), router.domainParamsMiddleware())
+	// twice for a request passed to the main engine. The domain middleware is
+	// first, so the global middleware finds the route's Info.
+	handlers := append([]gin.HandlerFunc{router.domainMiddleware()}, r.engineHandlers...)
 
-	return router.engine.Group("/", handlers...)
+	return router.engine.Group("/", handlers...), parsed.String()
 }
 
 // serveEngine serves the request with the engine of its domain.
@@ -395,17 +402,19 @@ func (r *Route) engineFor(request *http.Request) *gin.Engine {
 		return r.instance
 	}
 
-	host := requestHost(request)
 	for _, router := range r.domains {
-		if router.pattern == nil && router.domain == host {
+		if router.domain.HasParams() {
+			continue
+		}
+		if _, ok := router.domain.Match(request.Host); ok {
 			return router.engine
 		}
 	}
 	for _, router := range r.domains {
-		if router.pattern == nil {
+		if !router.domain.HasParams() {
 			continue
 		}
-		if _, ok := router.match(host); ok {
+		if _, ok := router.domain.Match(request.Host); ok {
 			return router.engine
 		}
 	}

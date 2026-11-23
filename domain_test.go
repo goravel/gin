@@ -7,6 +7,7 @@ import (
 
 	contractshttp "github.com/goravel/framework/contracts/http"
 	contractsroute "github.com/goravel/framework/contracts/route"
+	"github.com/goravel/framework/errors"
 	configmocks "github.com/goravel/framework/mocks/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -136,43 +137,45 @@ func TestDomainWithFallback(t *testing.T) {
 func TestDomainRoutesInfo(t *testing.T) {
 	route := newDomainTestRoute(t)
 
-	route.Domain("admin.example.com").Get("/", stringHandler("admin home")).Name("admin.home")
+	route.Domain("Admin.Example.com.").Get("/", stringHandler("admin home")).Name("admin.home")
 	route.Get("/", stringHandler("home")).Name("home")
 
-	assert.Equal(t, contractshttp.Info{
-		Domain:  "admin.example.com",
-		Handler: "github.com/goravel/gin.stringHandler.func1",
-		Method:  "GET|HEAD",
-		Name:    "admin.home",
-		Path:    "/",
-	}, route.Info("admin.home"))
-	assert.Equal(t, contractshttp.Info{
-		Handler: "github.com/goravel/gin.stringHandler.func1",
-		Method:  "GET|HEAD",
-		Name:    "home",
-		Path:    "/",
-	}, route.Info("home"))
+	admin := route.Info("admin.home")
+	assert.Equal(t, "admin.example.com", admin.Domain)
+	assert.Equal(t, "/", admin.Path)
+	assert.Equal(t, "GET|HEAD", admin.Method)
+
+	home := route.Info("home")
+	assert.Empty(t, home.Domain)
+	assert.Equal(t, "/", home.Path)
 	assert.Len(t, route.GetRoutes(), 2)
 }
 
-func TestDomainRouterMatch(t *testing.T) {
-	router := newDomainRouter("{account}.{region}.Example.com", nil)
+func TestDomainRequestInfo(t *testing.T) {
+	route := newDomainTestRoute(t)
 
-	params, ok := router.match("goravel.eu.example.com")
-	assert.True(t, ok)
-	assert.Equal(t, []string{"account", "region"}, router.params)
-	assert.Len(t, params, 2)
-	assert.Equal(t, "goravel", params.ByName("account"))
-	assert.Equal(t, "eu", params.ByName("region"))
+	infoName := func(ctx contractshttp.Context) contractshttp.Response {
+		return ctx.Response().String(http.StatusOK, ctx.Request().Info().Name)
+	}
+	route.Domain("admin.example.com").Middleware(&abortMiddlewareStruct{}).
+		Get("/", infoName).Name("admin.home").WithoutMiddleware(&abortMiddlewareStruct{})
+	route.Middleware(&abortMiddlewareStruct{}).Get("/", infoName).Name("home")
 
-	_, ok = router.match("eu.example.com")
-	assert.False(t, ok)
-	_, ok = router.match("goravel.eu.example.org")
-	assert.False(t, ok)
+	// The domain route finds its own Info, so its excluded middleware is skipped.
+	recorder := serveHost(t, route, "GET", "admin.example.com", "/")
+	assert.Equal(t, http.StatusOK, recorder.Code)
+	assert.Equal(t, "admin.home", recorder.Body.String())
 
-	static := newDomainRouter("Admin.Example.com", nil)
-	_, ok = static.match("admin.example.com")
-	assert.True(t, ok)
-	_, ok = static.match("adminXexample.com")
-	assert.False(t, ok)
+	// The route on any host with the same path keeps its middleware.
+	assert.Equal(t, http.StatusNonAuthoritativeInfo, serveHost(t, route, "GET", "example.com", "/").Code)
+}
+
+func TestDomainInvalid(t *testing.T) {
+	route := newDomainTestRoute(t)
+
+	for _, domain := range []string{"", "https://example.com", "example.com:8080", "*.example.com"} {
+		assert.PanicsWithError(t, errors.RouteInvalidDomain.Args(domain).Error(), func() {
+			route.Domain(domain)
+		}, domain)
+	}
 }
