@@ -3,6 +3,8 @@ package gin
 import (
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"testing"
 
 	contractshttp "github.com/goravel/framework/contracts/http"
@@ -73,6 +75,7 @@ func TestDomain(t *testing.T) {
 		return ctx.Response().String(http.StatusOK, "account "+ctx.Request().Route("account"))
 	})
 	route.Get("/", stringHandler("home"))
+	route.Post("/", stringHandler("home post"))
 	route.Get("/about", stringHandler("about"))
 
 	tests := []struct {
@@ -94,7 +97,8 @@ func TestDomain(t *testing.T) {
 		{name: "a path the domain doesn't have falls back to any host", method: "GET", host: "admin.example.com", path: "/about", expectCode: http.StatusOK, expectBody: "about"},
 		{name: "a domain route is not on other hosts", method: "GET", host: "example.com", path: "/users/1", expectCode: http.StatusNotFound},
 		{name: "not found on the domain", method: "GET", host: "admin.example.com", path: "/missing", expectCode: http.StatusNotFound},
-		{name: "a method the domain doesn't have falls back", method: "POST", host: "admin.example.com", path: "/", expectCode: http.StatusNotFound},
+		{name: "a method the domain doesn't have falls back", method: "POST", host: "admin.example.com", path: "/", expectCode: http.StatusOK, expectBody: "home post"},
+		{name: "a method no route has", method: "PUT", host: "admin.example.com", path: "/", expectCode: http.StatusNotFound},
 	}
 
 	for _, test := range tests {
@@ -173,9 +177,87 @@ func TestDomainRequestInfo(t *testing.T) {
 func TestDomainInvalid(t *testing.T) {
 	route := newDomainTestRoute(t)
 
-	for _, domain := range []string{"", "https://example.com", "example.com:8080", "*.example.com"} {
+	for _, domain := range []string{"", "https://example.com", "example.com:8080", "example.com/admin", "*.example.com"} {
 		assert.PanicsWithError(t, errors.RouteInvalidDomain.Args(domain).Error(), func() {
 			route.Domain(domain)
 		}, domain)
+	}
+}
+
+func TestDomainParameterRequestInfo(t *testing.T) {
+	route := newDomainTestRoute(t)
+
+	route.Domain("{Account}.example.com").Get("/", func(ctx contractshttp.Context) contractshttp.Response {
+		info := ctx.Request().Info()
+		return ctx.Response().String(http.StatusOK, info.Name+" "+info.Domain+" "+ctx.Request().Route("Account"))
+	}).Name("account.home")
+
+	assert.Equal(t, "account.home {Account}.example.com abc", serveHost(t, route, "GET", "ABC.example.com", "/").Body.String())
+}
+
+func TestDomainsWithTheSameParameters(t *testing.T) {
+	route := newDomainTestRoute(t)
+
+	route.Domain("{account}.example.com").Get("/", func(ctx contractshttp.Context) contractshttp.Response {
+		return ctx.Response().String(http.StatusOK, "account "+ctx.Request().Route("account"))
+	}).Name("account.home")
+	route.Domain("{tenant}.example.com").Get("/about", func(ctx contractshttp.Context) contractshttp.Response {
+		return ctx.Response().String(http.StatusOK, "tenant "+ctx.Request().Route("tenant")+" "+ctx.Request().Info().Name)
+	}).Name("tenant.about")
+
+	assert.Equal(t, "account acme", serveHost(t, route, "GET", "acme.example.com", "/").Body.String())
+	assert.Equal(t, "tenant acme tenant.about", serveHost(t, route, "GET", "acme.example.com", "/about").Body.String())
+	assert.Equal(t, "{tenant}.example.com", route.Info("tenant.about").Domain)
+}
+
+func TestDomainParameterWithThePathParameterName(t *testing.T) {
+	route := newDomainTestRoute(t)
+
+	route.Domain("{account}.example.com").Get("/tenants/{account}", func(ctx contractshttp.Context) contractshttp.Response {
+		return ctx.Response().String(http.StatusOK, ctx.Request().Route("account")+" "+ctx.Request().Input("account")+" "+ctx.Request().All()["account"].(string))
+	})
+
+	assert.Equal(t, "path path path", serveHost(t, route, "GET", "acme.example.com", "/tenants/path").Body.String())
+}
+
+func TestDomainStatic(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "a.txt"), []byte("file"), 0o644))
+
+	counter := &countMiddleware{}
+	route := newDomainTestRoute(t, counter)
+
+	route.Domain("admin.example.com").Group(func(router contractsroute.Router) {
+		router.Static("/s", dir)
+		router.StaticFS("/fs", http.Dir(dir))
+		router.StaticFile("/one.txt", filepath.Join(dir, "a.txt"))
+	})
+	route.Get("/s/missing.txt", stringHandler("any host"))
+	route.Get("/fs/missing.txt", stringHandler("any host"))
+
+	tests := []struct {
+		path       string
+		expectCode int
+		expectBody string
+	}{
+		{path: "/s/a.txt", expectCode: http.StatusOK, expectBody: "file"},
+		{path: "/fs/a.txt", expectCode: http.StatusOK, expectBody: "file"},
+		{path: "/one.txt", expectCode: http.StatusOK, expectBody: "file"},
+		// A missing file is a 404 of the domain, not a route of any host.
+		{path: "/s/missing.txt", expectCode: http.StatusNotFound},
+		{path: "/fs/missing.txt", expectCode: http.StatusNotFound},
+	}
+
+	for _, test := range tests {
+		t.Run(test.path, func(t *testing.T) {
+			counter.count = 0
+			recorder := serveHost(t, route, "GET", "admin.example.com", test.path)
+
+			assert.Equal(t, test.expectCode, recorder.Code)
+			if test.expectBody != "" {
+				assert.Equal(t, test.expectBody, recorder.Body.String())
+			}
+			assert.Equal(t, 1, counter.count)
+		})
 	}
 }

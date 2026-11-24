@@ -352,8 +352,9 @@ func (r *Route) init(globalMiddleware []contractshttp.Middleware) {
 // domainRouter returns the router of the domain, creating its engine on first
 // use, and the domain as the routes record it. The engine runs the same
 // handlers as the main one, and passes a request it has no route for to the
-// main engine, whose routes match any host. An invalid domain panics, as an
-// invalid route does.
+// main engine, whose routes match any host. Domains that differ only in their
+// parameter names share the engine, and each route reads its own names. An
+// invalid domain panics, as an invalid route does.
 func (r *Route) domainRouter(domain string) (gin.IRouter, string) {
 	parsed, err := supporthttp.ParseDomain(domain)
 	if err != nil {
@@ -362,7 +363,7 @@ func (r *Route) domainRouter(domain string) (gin.IRouter, string) {
 
 	var router *domainRouter
 	for _, existing := range r.domains {
-		if existing.domain.String() == parsed.String() {
+		if existing.domain.Key() == parsed.Key() {
 			router = existing
 			break
 		}
@@ -373,6 +374,14 @@ func (r *Route) domainRouter(domain string) (gin.IRouter, string) {
 		engine.MaxMultipartMemory = r.instance.MaxMultipartMemory
 		engine.HTMLRender = r.instance.HTMLRender
 		engine.NoRoute(func(ctx *gin.Context) {
+			// A static route of the domain that doesn't find the file ends up
+			// here after the domain's handlers ran, so it answers 404 rather
+			// than running them again on the main engine.
+			if _, ok := ctx.Get(routeDomainKey); ok {
+				ctx.AbortWithStatus(http.StatusNotFound)
+				return
+			}
+
 			r.instance.ServeHTTP(ctx.Writer, ctx.Request)
 			ctx.Abort()
 		})
@@ -384,7 +393,7 @@ func (r *Route) domainRouter(domain string) (gin.IRouter, string) {
 	// The handlers go on the group rather than the engine, so they don't run
 	// twice for a request passed to the main engine. The domain middleware is
 	// first, so the global middleware finds the route's Info.
-	handlers := append([]gin.HandlerFunc{router.domainMiddleware()}, r.engineHandlers...)
+	handlers := append([]gin.HandlerFunc{domainMiddleware(parsed)}, r.engineHandlers...)
 
 	return router.engine.Group("/", handlers...), parsed.String()
 }
@@ -396,7 +405,7 @@ func (r *Route) serveEngine(writer http.ResponseWriter, request *http.Request) {
 
 // engineFor returns the engine of the request's domain: a domain without
 // parameters first, then the ones with parameters in the order they were
-// registered, then the main engine.
+// first registered, then the main engine.
 func (r *Route) engineFor(request *http.Request) *gin.Engine {
 	if len(r.domains) == 0 {
 		return r.instance
