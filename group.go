@@ -53,10 +53,6 @@ func (r *Group) Group(handler contractsroute.GroupFunc) {
 }
 
 func (r *Group) Domain(domain string) contractsroute.Router {
-	if r.domains == nil {
-		return r
-	}
-
 	instance, name := r.domains.domainRouter(domain)
 
 	return &Group{

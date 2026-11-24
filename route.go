@@ -305,12 +305,11 @@ func (r *Route) Test(request *http.Request) (*http.Response, error) {
 func (r *Route) init(globalMiddleware []contractshttp.Middleware) {
 	gin.SetMode(gin.ReleaseMode)
 	gin.DisableBindValidation()
-	engine := gin.New()
 	bodyLimit := int64(r.config.GetInt(fmt.Sprintf("http.drivers.%s.body_limit", r.driver), defaultBodyLimitKB)) << 10
 	if bodyLimit <= 0 {
 		bodyLimit = defaultBodyLimit
 	}
-	engine.MaxMultipartMemory = bodyLimit
+	engine := newEngine(bodyLimit, nil)
 
 	ginMiddleware := []gin.HandlerFunc{}
 	if r.config.GetBool("app.debug") {
@@ -370,9 +369,7 @@ func (r *Route) domainRouter(domain string) (gin.IRouter, string) {
 	}
 
 	if router == nil {
-		engine := gin.New()
-		engine.MaxMultipartMemory = r.instance.MaxMultipartMemory
-		engine.HTMLRender = r.instance.HTMLRender
+		engine := newEngine(r.instance.MaxMultipartMemory, r.instance.HTMLRender)
 		engine.NoRoute(func(ctx *gin.Context) {
 			// A static route of the domain that doesn't find the file ends up
 			// here after the domain's handlers ran, so it answers 404 rather
@@ -396,6 +393,16 @@ func (r *Route) domainRouter(domain string) (gin.IRouter, string) {
 	handlers := append([]gin.HandlerFunc{domainMiddleware(parsed)}, r.engineHandlers...)
 
 	return router.engine.Group("/", handlers...), parsed.String()
+}
+
+// newEngine returns an engine with the settings the main engine and the
+// engines of the domains share.
+func newEngine(maxMultipartMemory int64, htmlRender render.HTMLRender) *gin.Engine {
+	engine := gin.New()
+	engine.MaxMultipartMemory = maxMultipartMemory
+	engine.HTMLRender = htmlRender
+
+	return engine
 }
 
 // serveEngine serves the request with the engine of its domain.

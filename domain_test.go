@@ -90,7 +90,6 @@ func TestDomain(t *testing.T) {
 		{name: "with a port and in upper case", method: "GET", host: "Admin.Example.com:3000", path: "/", expectCode: http.StatusOK, expectBody: "admin home"},
 		{name: "with a path parameter", method: "GET", host: "admin.example.com", path: "/users/1", expectCode: http.StatusOK, expectBody: "admin user 1"},
 		{name: "HEAD on the domain", method: "HEAD", host: "admin.example.com", path: "/", expectCode: http.StatusOK},
-		{name: "a static domain before a parameter", method: "GET", host: "admin.example.com", path: "/", expectCode: http.StatusOK, expectBody: "admin home"},
 		{name: "with a domain parameter", method: "GET", host: "goravel.example.com", path: "/", expectCode: http.StatusOK, expectBody: "account goravel"},
 		{name: "a parameter matches one label", method: "GET", host: "a.b.example.com", path: "/", expectCode: http.StatusOK, expectBody: "home"},
 		{name: "another host uses the routes without a domain", method: "GET", host: "example.com", path: "/", expectCode: http.StatusOK, expectBody: "home"},
@@ -260,4 +259,69 @@ func TestDomainStatic(t *testing.T) {
 			assert.Equal(t, 1, counter.count)
 		})
 	}
+}
+
+func TestDomainGroupAndPrefixInfo(t *testing.T) {
+	route := newDomainTestRoute(t)
+
+	route.Domain("admin.example.com").Group(func(router contractsroute.Router) {
+		router.Prefix("api").Get("/users", stringHandler("admin users")).Name("admin.api.users")
+	})
+	route.Domain("admin.example.com").Prefix("v2").Group(func(router contractsroute.Router) {
+		router.Get("/users", stringHandler("admin v2 users")).Name("admin.v2.users")
+	})
+
+	assert.Equal(t, "admin.example.com", route.Info("admin.api.users").Domain)
+	assert.Equal(t, "/api/users", route.Info("admin.api.users").Path)
+	assert.Equal(t, "admin.example.com", route.Info("admin.v2.users").Domain)
+	assert.Equal(t, "/v2/users", route.Info("admin.v2.users").Path)
+	assert.Equal(t, "admin v2 users", serveHost(t, route, "GET", "admin.example.com", "/v2/users").Body.String())
+}
+
+func TestDomainWithTwoParameters(t *testing.T) {
+	route := newDomainTestRoute(t)
+
+	route.Domain("{account}.{region}.example.com").Get("/", func(ctx contractshttp.Context) contractshttp.Response {
+		return ctx.Response().String(http.StatusOK, ctx.Request().Route("account")+" "+ctx.Request().Route("region"))
+	})
+
+	assert.Equal(t, "goravel eu", serveHost(t, route, "GET", "goravel.eu.example.com", "/").Body.String())
+}
+
+func TestDomainStaticOtherMethods(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "a.txt"), []byte("file"), 0o644))
+
+	counter := &countMiddleware{}
+	route := newDomainTestRoute(t, counter)
+
+	route.Domain("admin.example.com").Static("/s", dir)
+	route.Post("/s/a.txt", stringHandler("any host post"))
+	route.Put("/s/a.txt", stringHandler("any host put"))
+
+	for method, expectBody := range map[string]string{"POST": "any host post", "PUT": "any host put"} {
+		counter.count = 0
+		recorder := serveHost(t, route, method, "admin.example.com", "/s/a.txt")
+
+		assert.Equal(t, http.StatusOK, recorder.Code, method)
+		assert.Equal(t, expectBody, recorder.Body.String(), method)
+		assert.Equal(t, 1, counter.count, method)
+	}
+
+	counter.count = 0
+	recorder := serveHost(t, route, "HEAD", "admin.example.com", "/s/a.txt")
+	assert.Equal(t, http.StatusOK, recorder.Code)
+	assert.Equal(t, 1, counter.count)
+}
+
+func TestDomainsWithTheSameParametersAndPath(t *testing.T) {
+	route := newDomainTestRoute(t)
+
+	route.Domain("{account}.example.com").Get("/", stringHandler("account"))
+
+	// The domains match the same hosts, so they share the routes, and gin
+	// rejects the same path twice.
+	assert.Panics(t, func() {
+		route.Domain("{tenant}.example.com").Get("/", stringHandler("tenant"))
+	})
 }
