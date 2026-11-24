@@ -11,7 +11,7 @@ require (
 	github.com/rs/cors v1.11.1
 	github.com/spf13/cast v1.10.0
 	github.com/stretchr/testify v1.12.1
-	github.com/unrolled/secure v1.17.0
+	github.com/unrolled/secure v1.18.0
 )
 
 require (
