@@ -312,7 +312,7 @@ func (r *ContextRequest) Path() string {
 }
 
 func (r *ContextRequest) Info() contractshttp.Info {
-	methodToInfo, exist := routes[r.OriginPath()]
+	methodToInfo, exist := routes[routeKey(r.instance.GetString(routeDomainKey), r.OriginPath())]
 	if !exist {
 		return contractshttp.Info{}
 	}
