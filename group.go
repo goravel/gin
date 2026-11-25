@@ -13,7 +13,8 @@ import (
 	"github.com/goravel/framework/support/str"
 )
 
-// domainRegistry returns the router of a domain, creating it on first use.
+// domainRegistry hands out the route group of a domain, with the domain its
+// routes record, creating the engine on first use.
 type domainRegistry interface {
 	domainRouter(domain string) (gin.IRouter, string)
 }

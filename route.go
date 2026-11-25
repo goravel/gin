@@ -52,7 +52,7 @@ type Route struct {
 	globalMiddleware []contractshttp.Middleware
 	instance         *gin.Engine
 	domains          []*domainRouter
-	engineHandlers   []gin.HandlerFunc // what every engine runs first: logs, body limit and global middleware
+	engineHandlers   []gin.HandlerFunc // logs, body limit and global middleware, run after the domain middleware
 	server           *http.Server
 	tlsServer        *http.Server
 	templateOnce     sync.Once
@@ -335,15 +335,13 @@ func (r *Route) init(globalMiddleware []contractshttp.Middleware) {
 		engine.HTMLRender = r.htmlRender
 	}
 
-	group := NewGroup(
-		r.config,
-		engine.Group("/"),
-		"",
-		[]contractshttp.Middleware{},
-		[]contractshttp.Middleware{ResponseMiddleware()},
-	).(*Group)
-	group.domains = r
-	r.Router = group
+	r.Router = &Group{
+		config:          r.config,
+		instance:        engine.Group("/"),
+		middlewares:     []contractshttp.Middleware{},
+		lastMiddlewares: []contractshttp.Middleware{ResponseMiddleware()},
+		domains:         r,
+	}
 	r.instance = engine
 	r.domains = nil
 }
